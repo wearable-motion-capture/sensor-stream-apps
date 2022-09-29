@@ -1,4 +1,5 @@
-package com.example.android.wearable.sensorrecord
+package com.example.sensorrecord.presentation
+
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -9,8 +10,8 @@ import androidx.wear.compose.material.ToggleChip
 import androidx.wear.compose.material.ToggleChipDefaults
 
 @Composable
-fun ToggleChip(
-    text : String,
+fun SensorToggleChip(
+    text: String,
     checked: Boolean,
     onChecked: (Boolean) -> Unit,
     modifier: Modifier = Modifier
@@ -35,10 +36,8 @@ fun ToggleChip(
     )
 }
 
-
-
 @Composable
-fun TextDisplay(text: String, modifier: Modifier = Modifier) {
+fun SensorTextDisplay(text: String, modifier: Modifier = Modifier) {
     Text(
         modifier = modifier,
         textAlign = TextAlign.Center,

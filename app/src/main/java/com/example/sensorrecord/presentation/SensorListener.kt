@@ -1,4 +1,4 @@
-package com.example.android.wearable.sensorrecord
+package com.example.sensorrecord.presentation
 
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -16,8 +16,6 @@ class SensorListener(val onReadout: (FloatArray) -> Unit) : SensorEventListener 
 
     // we get the data in through the on sensor changed trigger
     override fun onSensorChanged(event: SensorEvent) {
-        if (event.sensor.type == Sensor.TYPE_LINEAR_ACCELERATION) {
-            onReadout(event.values)
-        }
+        onReadout(event.values)
     }
 }
