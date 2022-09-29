@@ -24,7 +24,8 @@ class SensorViewModel : ViewModel() {
     fun onAccSensorReadout(newReadout: FloatArray) {
         // only record if the toggle chip was turned on
         if (_recording.value) {
-            _accReadout.value = newReadout[0].toString()
+            _accReadout.value =
+                String.format("%.1f %.1f %.1f", newReadout[0], newReadout[1], newReadout[2])
         }
     }
 
