@@ -8,13 +8,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.wear.compose.material.*
 import com.example.sensorrecord.presentation.theme.SensorRecordTheme
+import kotlinx.coroutines.delay
 
 
 /**
@@ -70,17 +69,17 @@ class MainActivity : ComponentActivity() {
         sensorManager.registerListener(
             accSensorEventListener,
             sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION),
-            SensorManager.SENSOR_DELAY_NORMAL
+            SensorManager.SENSOR_DELAY_FASTEST
         )
         sensorManager.registerListener(
             gravSensorEventListener,
             sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY),
-            SensorManager.SENSOR_DELAY_NORMAL
+            SensorManager.SENSOR_DELAY_FASTEST
         )
         sensorManager.registerListener(
             gyroSensorEventListener,
             sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE),
-            SensorManager.SENSOR_DELAY_NORMAL
+            SensorManager.SENSOR_DELAY_FASTEST
         )
     }
 
@@ -119,8 +118,29 @@ fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
                 modifier
             )
         }
-        item { SensorTextDisplay(accRead, modifier) }
-        item { SensorTextDisplay(graRead, modifier) }
-        item { SensorTextDisplay(gyrRead, modifier) }
+        item { SensorTextDisplay("accl ${accRead}", modifier) }
+        item { SensorTextDisplay("grav ${graRead}", modifier) }
+        item { SensorTextDisplay("gyro ${gyrRead}", modifier) }
+        item { Timer(50L, recording, { viewModel.timedSensorValues(it) }, modifier) }
     }
+}
+
+@Composable
+fun Timer(
+    interval: Long = 100L,
+    isTimerRunning: Boolean = false,
+    trigger: (Long) -> Unit,
+    modifier: Modifier
+) {
+
+    var totalTime by remember { mutableStateOf(0L) }
+
+    LaunchedEffect(key1 = totalTime, key2 = isTimerRunning) {
+        if (isTimerRunning) {
+            delay(interval)
+            totalTime += interval
+            trigger(totalTime)
+        }
+    }
+    SensorTextDisplay(text = String.format("%.4f", totalTime * 0.001), modifier)
 }
