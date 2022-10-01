@@ -1,19 +1,31 @@
 package com.example.sensorrecord.presentation
 
 import android.content.Context
+import android.content.Intent
 import android.hardware.Sensor
 import android.hardware.SensorManager
+import android.net.Uri
 import android.os.Bundle
+import android.provider.DocumentsContract
+import android.provider.MediaStore
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.*
-
 import androidx.compose.ui.Modifier
+import androidx.core.app.ActivityCompat
+import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.wear.compose.material.*
 import com.example.sensorrecord.presentation.theme.SensorRecordTheme
 import kotlinx.coroutines.delay
+import java.io.File
+import java.io.FileWriter
+import java.io.IOException
+import java.text.DateFormat.getDateTimeInstance
+import java.text.SimpleDateFormat
+import android.os.Environment
+import java.util.*
 
 
 /**
@@ -32,6 +44,9 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             SensorRecordTheme {
+
+                saveFile(this.baseContext, "test", "csv")
+
 
                 // access and observe sensors
                 sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -94,6 +109,7 @@ class MainActivity : ComponentActivity() {
         sensorManager.unregisterListener(gyroSensorEventListener)
         sensorManager.unregisterListener(gravSensorEventListener)
     }
+
 }
 
 @Composable
@@ -143,4 +159,34 @@ fun Timer(
         }
     }
     SensorTextDisplay(text = String.format("%.4f", totalTime * 0.001), modifier)
+}
+
+
+private fun saveFile(myContext: Context, txtInfo: String, fileExt: String): Uri {
+
+    // create filename from current date and time
+    val sdf = SimpleDateFormat("yyyy-MM-DD_hh-mm-ss")
+    val currentDate = sdf.format(Date())
+    val fileName = "_${currentDate}.$fileExt"
+
+    // most basic files directory
+    //  /storage/emulated/0/Documents/_2022-09-273_05-08-49.csv
+    val contentUri = Environment.getExternalStoragePublicDirectory("Documents")
+
+    // create file and write to storage
+    val textFile = File(contentUri, fileName)
+    try {
+        val fOut = FileWriter(textFile)
+        fOut.write(txtInfo)
+        fOut.flush()
+        fOut.close()
+    } catch (e: IOException) {
+        e.printStackTrace()
+        println("Text file creation failed.")
+    }
+
+    // Parse the file and path to uri
+    var sharedUri = Uri.parse(textFile.absolutePath)
+    println("Text file created at $sharedUri.")
+    return sharedUri
 }
