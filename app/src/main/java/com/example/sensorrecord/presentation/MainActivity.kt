@@ -1,31 +1,20 @@
 package com.example.sensorrecord.presentation
 
 import android.content.Context
-import android.content.Intent
 import android.hardware.Sensor
 import android.hardware.SensorManager
-import android.net.Uri
 import android.os.Bundle
-import android.provider.DocumentsContract
-import android.provider.MediaStore
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.core.app.ActivityCompat
-import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.wear.compose.material.*
 import com.example.sensorrecord.presentation.theme.SensorRecordTheme
 import kotlinx.coroutines.delay
-import java.io.File
-import java.io.FileWriter
-import java.io.IOException
-import java.text.DateFormat.getDateTimeInstance
-import java.text.SimpleDateFormat
-import android.os.Environment
-import java.util.*
+import java.time.Duration
+import java.time.LocalDateTime
 
 
 /**
@@ -44,10 +33,6 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             SensorRecordTheme {
-
-                saveFile(this.baseContext, "test", "csv")
-
-
                 // access and observe sensors
                 sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
                 registerSensorListeners()
@@ -118,7 +103,10 @@ fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
     val accRead by viewModel.accReadout.collectAsState()
     val graRead by viewModel.gravReadout.collectAsState()
     val gyrRead by viewModel.gyroReadout.collectAsState()
-    val recording by viewModel.recording.collectAsState()
+    val recordingTrigger by viewModel.recordingTrigger.collectAsState()
+    val startTimeStamp by viewModel.startTimeStamp.collectAsState()
+    val measureInterval: Long =
+        10L // The interval in milliseconds between every sensor readout (1000/interval = Hz)
 
     // scaling lazy column allows to scroll through items with fancy scaling when
     // they leave the screen top or bottom
@@ -129,7 +117,7 @@ fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
         item {
             SensorToggleChip(
                 "Record Sensors",
-                recording,
+                recordingTrigger,
                 { viewModel.recordSwitch(it) },
                 modifier
             )
@@ -137,56 +125,51 @@ fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
         item { SensorTextDisplay("accl ${accRead}", modifier) }
         item { SensorTextDisplay("grav ${graRead}", modifier) }
         item { SensorTextDisplay("gyro ${gyrRead}", modifier) }
-        item { Timer(50L, recording, { viewModel.timedSensorValues(it) }, modifier) }
+        item {
+            Timer(
+                startTimeStamp,
+                measureInterval,
+                recordingTrigger,
+                { viewModel.timedSensorValues(it) },
+                modifier
+            )
+        }
     }
 }
 
 @Composable
 fun Timer(
+    start: LocalDateTime,
     interval: Long = 100L,
-    isTimerRunning: Boolean = false,
+    recordTrigger: Boolean = false,
     trigger: (Long) -> Unit,
     modifier: Modifier
 ) {
 
-    var totalTime by remember { mutableStateOf(0L) }
+    // A count for measurements taken. The delay function is not accurate because estimation time
+    // must be added. Therefore, we keep track of passed time in a separate calculation
+    var steps by remember { mutableStateOf(0L) }
 
-    LaunchedEffect(key1 = totalTime, key2 = isTimerRunning) {
-        if (isTimerRunning) {
+    // A while loop that doesn't block the co-routine
+    LaunchedEffect(key1 = steps, key2 = recordTrigger) {
+        // only do something if we want to record
+        if (recordTrigger) {
+            // estimate time difference to given start point as our time stamp
+            val diff = Duration.between(start, LocalDateTime.now()).toMillis()
+            // delay by a given amount of milliseconds
             delay(interval)
-            totalTime += interval
-            trigger(totalTime)
+            // increase step count to trigger LaunchedEffect again
+            steps += 1
+            // call the event with estimated time stamp
+            trigger(diff)
         }
     }
-    SensorTextDisplay(text = String.format("%.4f", totalTime * 0.001), modifier)
+    // display elapsed time in seconds
+    SensorTextDisplay(
+        text = String.format(
+            "%.4f",
+            Duration.between(start, LocalDateTime.now()).toMillis() * 0.001
+        ), modifier
+    )
 }
 
-
-private fun saveFile(myContext: Context, txtInfo: String, fileExt: String): Uri {
-
-    // create filename from current date and time
-    val sdf = SimpleDateFormat("yyyy-MM-DD_hh-mm-ss")
-    val currentDate = sdf.format(Date())
-    val fileName = "_${currentDate}.$fileExt"
-
-    // most basic files directory
-    //  /storage/emulated/0/Documents/_2022-09-273_05-08-49.csv
-    val contentUri = Environment.getExternalStoragePublicDirectory("Documents")
-
-    // create file and write to storage
-    val textFile = File(contentUri, fileName)
-    try {
-        val fOut = FileWriter(textFile)
-        fOut.write(txtInfo)
-        fOut.flush()
-        fOut.close()
-    } catch (e: IOException) {
-        e.printStackTrace()
-        println("Text file creation failed.")
-    }
-
-    // Parse the file and path to uri
-    var sharedUri = Uri.parse(textFile.absolutePath)
-    println("Text file created at $sharedUri.")
-    return sharedUri
-}
