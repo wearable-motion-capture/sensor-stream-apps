@@ -101,15 +101,15 @@ class SensorViewModel : ViewModel() {
 fun saveToDatedCSV(start: LocalDateTime, data: java.util.ArrayList<FloatArray>): Uri {
 
     // create filename from current date and time
-    val currentDate = (DateTimeFormatter.ISO_LOCAL_DATE_TIME).format(start)
-    val fileName = "_${currentDate}.csv"
+    val currentDate = (DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss-SSS")).format(start)
+    val fileName = "sensorrecord_${currentDate}.csv"
 
     // most basic files directory
-    //  /storage/emulated/0/Documents/_2022-09-273_05-08-49.csv
-    val contentUri = Environment.getExternalStoragePublicDirectory("Documents")
+    // /storage/emulated/0/Documents/_2022-09-273_05-08-49.csv
+    val path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
 
-    // create file and write to storage
-    val textFile = File(contentUri, fileName)
+
+    val textFile = File(path, fileName)
     try {
         val fOut = FileWriter(textFile)
         for (arr in data) {
@@ -121,6 +121,7 @@ fun saveToDatedCSV(start: LocalDateTime, data: java.util.ArrayList<FloatArray>):
         e.printStackTrace()
         println("Text file creation failed.")
     }
+
 
     // Parse the file and path to uri
     var sharedUri = Uri.parse(textFile.absolutePath)

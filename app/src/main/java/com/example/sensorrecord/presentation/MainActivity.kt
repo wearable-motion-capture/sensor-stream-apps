@@ -1,13 +1,15 @@
 package com.example.sensorrecord.presentation
 
 import android.content.Context
+import android.content.Intent
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.os.Bundle
+import android.os.PowerManager
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.wear.compose.material.*
@@ -15,7 +17,6 @@ import com.example.sensorrecord.presentation.theme.SensorRecordTheme
 import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.LocalDateTime
-
 
 /**
  * The main activity registers sensor listeners and creates the UI
@@ -37,13 +38,41 @@ class MainActivity : ComponentActivity() {
                 sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
                 registerSensorListeners()
 
+                createFile()
+
                 // create view and UI
                 // Modifiers used by our Wear composables.
                 val contentModifier = Modifier.fillMaxWidth()
                 MainUI(sensorViewModel, contentModifier)
+
+                // keep screen on
+                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                // keep CPU on
+                //TODO: handle wake Lock properly when app shuts down
+                val wakeLock: PowerManager.WakeLock =
+                    (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
+                        newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyApp::MyWakelockTag").apply {
+                            acquire()
+                        }
+                    }
+
             }
         }
     }
+
+    // Request code for creating a PDF document.
+    val CREATE_FILE = 1
+
+    private fun createFile() {
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/pdf"
+            putExtra(Intent.EXTRA_TITLE, "invoice.pdf")
+
+        }
+        startActivityForResult(intent, CREATE_FILE)
+    }
+
 
     fun registerSensorListeners() {
 
@@ -90,11 +119,15 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
-        sensorManager.unregisterListener(accSensorEventListener)
-        sensorManager.unregisterListener(gyroSensorEventListener)
-        sensorManager.unregisterListener(gravSensorEventListener)
-    }
 
+        if (!this::sensorManager.isInitialized) {
+            return
+        } else {
+            sensorManager.unregisterListener(accSensorEventListener)
+            sensorManager.unregisterListener(gyroSensorEventListener)
+            sensorManager.unregisterListener(gravSensorEventListener)
+        }
+    }
 }
 
 @Composable
@@ -105,8 +138,9 @@ fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
     val gyrRead by viewModel.gyroReadout.collectAsState()
     val recordingTrigger by viewModel.recordingTrigger.collectAsState()
     val startTimeStamp by viewModel.startTimeStamp.collectAsState()
-    val measureInterval: Long =
+    val measureInterval =
         10L // The interval in milliseconds between every sensor readout (1000/interval = Hz)
+
 
     // scaling lazy column allows to scroll through items with fancy scaling when
     // they leave the screen top or bottom
@@ -136,6 +170,7 @@ fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
         }
     }
 }
+
 
 @Composable
 fun Timer(
