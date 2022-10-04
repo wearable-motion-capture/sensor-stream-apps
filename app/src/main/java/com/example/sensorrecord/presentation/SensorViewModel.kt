@@ -1,5 +1,6 @@
 package com.example.sensorrecord.presentation
 
+import android.hardware.SensorManager
 import android.net.Uri
 import android.os.Environment
 import androidx.lifecycle.ViewModel
@@ -10,7 +11,6 @@ import java.io.FileWriter
 import java.io.IOException
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import kotlin.collections.ArrayList
 
 
 /**
@@ -21,26 +21,28 @@ import kotlin.collections.ArrayList
 class SensorViewModel : ViewModel() {
     // State
     // A change in MutableStateFlow values triggers a redraw of elements that use it
-    private val _accReadout = MutableStateFlow("0.0 0.0 0.0")
-    val accReadout = _accReadout.asStateFlow()
+    private val _recordingTrigger = MutableStateFlow(false)
+    val recordingTrigger = _recordingTrigger.asStateFlow()
 
-    private val _gravReadout = MutableStateFlow("0.0 0.0 0.0")
-    val gravReadout = _gravReadout.asStateFlow()
+    private val _startTimeStamp = MutableStateFlow<LocalDateTime>(LocalDateTime.now())
+    val startTimeStamp = _startTimeStamp.asStateFlow()
 
-    private val _gyroReadout = MutableStateFlow("0.0 0.0 0.0")
-    val gyroReadout = _gyroReadout.asStateFlow()
+    private val _yaw = MutableStateFlow(0f)
+    val yaw = _yaw.asStateFlow() // yaw, rotation around z axis
+    private val _pit = MutableStateFlow(0f)
+    val pitch = _pit.asStateFlow() // pitch, rotation around x axis
+    private val _rol = MutableStateFlow(0f)
+    val roll = _rol.asStateFlow() // roll, rotation around y axis
 
-    private val _recordingT = MutableStateFlow(false)
-    val recordingTrigger = _recordingT.asStateFlow()
-
-    private val _startTS = MutableStateFlow<LocalDateTime>(LocalDateTime.now())
-    val startTimeStamp = _startTS.asStateFlow()
 
     // Internal sensor reads that get updated as fast as possible
-    private var grav: FloatArray = floatArrayOf(0f, 0f, 0f)
-    private var gyro: FloatArray = floatArrayOf(0f, 0f, 0f)
-    private var accl: FloatArray = floatArrayOf(0f, 0f, 0f)
-    private var data: ArrayList<FloatArray> = ArrayList()
+    private var grav: FloatArray = FloatArray(3) // gravity
+    private var magn: FloatArray = FloatArray(3) // magnetic
+    private var gyro: FloatArray = FloatArray(3) // gyroscope
+    private var accl: FloatArray = FloatArray(3) // raw acceleration
+    private var orient: FloatArray = FloatArray(3) // estimated orientation
+    private var rotMat: FloatArray = FloatArray(16) // estimated rotation matrix
+    private var data: ArrayList<FloatArray> = ArrayList() // all recorded data
 
 
     // Events
@@ -51,13 +53,15 @@ class SensorViewModel : ViewModel() {
      */
     fun timedSensorValues(secTime: Long) {
         // only record observations if the switch was turned on
-        if (_recordingT.value) {
-            _accReadout.value =
-                String.format("%.1f %.1f %.1f", accl[0], accl[1], accl[2])
-            _gravReadout.value =
-                String.format("%.1f %.1f %.1f", grav[0], grav[1], grav[2])
-            _gyroReadout.value =
-                String.format("%.1f %.1f %.1f", gyro[0], gyro[1], gyro[2])
+        if (_recordingTrigger.value) {
+            if (SensorManager.getRotationMatrix(rotMat, null, grav, magn)) {
+                println("rot mat ${rotMat}")
+                SensorManager.getOrientation(rotMat, orient)
+                // 1 radian = 57.2957795 degrees
+                _yaw.value = orient[0] * 57.29578f
+                _pit.value = orient[1] * 57.29578f
+                _rol.value = orient[2] * 57.29578f
+            }
             data.add(
                 floatArrayOf(
                     secTime.toFloat(),
@@ -70,7 +74,7 @@ class SensorViewModel : ViewModel() {
     }
 
     // Individual sensor reads are triggered by their onValueChanged events
-    fun onAccSensorReadout(newReadout: FloatArray) {
+    fun onAcclSensorReadout(newReadout: FloatArray) {
         accl = newReadout
     }
 
@@ -82,16 +86,20 @@ class SensorViewModel : ViewModel() {
         gyro = newReadout
     }
 
+    fun onMagnSensorReadout(newReadout: FloatArray) {
+        magn = newReadout
+    }
+
     // changes with the ClipToggle
     fun recordSwitch(state: Boolean) {
-        _recordingT.value = state
+        _recordingTrigger.value = state
         //if turned on, record exact start time
         if (state) {
-            _startTS.value = LocalDateTime.now()
+            _startTimeStamp.value = LocalDateTime.now()
         }
         // if turned off, safe data an clear
         if (!state) {
-            saveToDatedCSV(_startTS.value, data)
+            saveToDatedCSV(_startTimeStamp.value, data)
             data.clear()
         }
     }

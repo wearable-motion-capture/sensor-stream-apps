@@ -1,7 +1,6 @@
 package com.example.sensorrecord.presentation
 
 import android.content.Context
-import android.content.Intent
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.os.Bundle
@@ -24,10 +23,11 @@ import java.time.LocalDateTime
 class MainActivity : ComponentActivity() {
 
     private lateinit var sensorManager: SensorManager
+    private val sensorViewModel: SensorViewModel = SensorViewModel()
     var accSensorEventListener: SensorListener? = null
     var gravSensorEventListener: SensorListener? = null
     var gyroSensorEventListener: SensorListener? = null
-    val sensorViewModel = SensorViewModel()
+    var magnSensorEventListener: SensorListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,8 +37,6 @@ class MainActivity : ComponentActivity() {
                 // access and observe sensors
                 sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
                 registerSensorListeners()
-
-                createFile()
 
                 // create view and UI
                 // Modifiers used by our Wear composables.
@@ -60,19 +58,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Request code for creating a PDF document.
-    val CREATE_FILE = 1
-
-    private fun createFile() {
-        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-            addCategory(Intent.CATEGORY_OPENABLE)
-            type = "application/pdf"
-            putExtra(Intent.EXTRA_TITLE, "invoice.pdf")
-
-        }
-        startActivityForResult(intent, CREATE_FILE)
-    }
-
 
     fun registerSensorListeners() {
 
@@ -83,7 +68,7 @@ class MainActivity : ComponentActivity() {
         // create sensor listeners
         if (accSensorEventListener == null) {
             accSensorEventListener =
-                SensorListener { sensorViewModel.onAccSensorReadout(it) }
+                SensorListener { sensorViewModel.onAcclSensorReadout(it) }
         }
         if (gravSensorEventListener == null) {
             gravSensorEventListener =
@@ -93,11 +78,15 @@ class MainActivity : ComponentActivity() {
             gyroSensorEventListener =
                 SensorListener { sensorViewModel.onGyroSensorReadout(it) }
         }
+        if (magnSensorEventListener == null) {
+            magnSensorEventListener =
+                SensorListener { sensorViewModel.onMagnSensorReadout(it) }
+        }
 
         // register them
         sensorManager.registerListener(
             accSensorEventListener,
-            sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION),
+            sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
             SensorManager.SENSOR_DELAY_FASTEST
         )
         sensorManager.registerListener(
@@ -108,6 +97,11 @@ class MainActivity : ComponentActivity() {
         sensorManager.registerListener(
             gyroSensorEventListener,
             sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE),
+            SensorManager.SENSOR_DELAY_FASTEST
+        )
+        sensorManager.registerListener(
+            gyroSensorEventListener,
+            sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD),
             SensorManager.SENSOR_DELAY_FASTEST
         )
     }
@@ -126,6 +120,7 @@ class MainActivity : ComponentActivity() {
             sensorManager.unregisterListener(accSensorEventListener)
             sensorManager.unregisterListener(gyroSensorEventListener)
             sensorManager.unregisterListener(gravSensorEventListener)
+            sensorManager.unregisterListener(magnSensorEventListener)
         }
     }
 }
@@ -133,9 +128,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
 
-    val accRead by viewModel.accReadout.collectAsState()
-    val graRead by viewModel.gravReadout.collectAsState()
-    val gyrRead by viewModel.gyroReadout.collectAsState()
+    val yaw by viewModel.yaw.collectAsState()
+    val pitch by viewModel.pitch.collectAsState()
+    val roll by viewModel.roll.collectAsState()
     val recordingTrigger by viewModel.recordingTrigger.collectAsState()
     val startTimeStamp by viewModel.startTimeStamp.collectAsState()
     val measureInterval =
@@ -156,9 +151,9 @@ fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
                 modifier
             )
         }
-        item { SensorTextDisplay("accl ${accRead}", modifier) }
-        item { SensorTextDisplay("grav ${graRead}", modifier) }
-        item { SensorTextDisplay("gyro ${gyrRead}", modifier) }
+        item { SensorTextDisplay("yaw ${yaw}", modifier) }
+        item { SensorTextDisplay("pitch ${pitch}", modifier) }
+        item { SensorTextDisplay("roll ${roll}", modifier) }
         item {
             Timer(
                 startTimeStamp,
