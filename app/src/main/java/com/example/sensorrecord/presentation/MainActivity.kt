@@ -116,8 +116,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
 
-    val lacc by viewModel.linearAcc.collectAsState()
-    val recordingTrigger by viewModel.recordingTrigger.collectAsState()
+    val state by viewModel.currentState.collectAsState()
+    val recordingOn by viewModel.recordingOn.collectAsState()
     val startTimeStamp by viewModel.startTimeStamp.collectAsState()
     val measureInterval =
         10L // The interval in milliseconds between every sensor readout (1000/interval = Hz)
@@ -131,36 +131,38 @@ fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
     ) {
         item {
             SensorToggleChip(
-                "Record Sensors",
-                recordingTrigger,
-                { viewModel.recordSwitch(it) },
-                modifier
+                text = "Record Sensors",
+                checked = recordingOn,
+                onChecked = { viewModel.recordTrigger(it) },
+                modifier = modifier
             )
         }
-        item { SensorTextDisplay(lacc, modifier) }
         item {
-            Timer(
-                startTimeStamp,
-                measureInterval,
-                recordingTrigger,
-                { viewModel.timedSensorValues(it) },
-                modifier
+            SensorTimer(
+                start = startTimeStamp,
+                interval = measureInterval,
+                recordOn = recordingOn,
+                onTick = { viewModel.recordSensorValues(it) },
+                modifier = modifier
             )
+        }
+        item {
+            SensorTextDisplay(text = state, modifier = modifier)
         }
     }
 }
 
 
 @Composable
-/**
- * Some sensors observe in distinct frequencies (Hz). This timer collects measurements from all sensors
- * in a fixed given interval to sync data collection.
- */
-fun Timer(
+        /**
+         * Some sensors observe in distinct frequencies (Hz). This timer collects measurements from all sensors
+         * in a fixed given interval to sync data collection.
+         */
+fun SensorTimer(
     start: LocalDateTime,
     interval: Long = 100L,
-    recordTrigger: Boolean = false,
-    trigger: (Long) -> Unit,
+    recordOn: Boolean = false,
+    onTick: (Long) -> Unit,
     modifier: Modifier
 ) {
 
@@ -169,9 +171,9 @@ fun Timer(
     var steps by remember { mutableStateOf(0L) }
 
     // A while loop that doesn't block the co-routine
-    LaunchedEffect(key1 = steps, key2 = recordTrigger) {
+    LaunchedEffect(key1 = steps, key2 = recordOn) {
         // only do something if we want to record
-        if (recordTrigger) {
+        if (recordOn) {
             // estimate time difference to given start point as our time stamp
             val diff = Duration.between(start, LocalDateTime.now()).toMillis()
             // delay by a given amount of milliseconds
@@ -179,13 +181,12 @@ fun Timer(
             // increase step count to trigger LaunchedEffect again
             steps += 1
             // call the event with estimated time stamp
-            trigger(diff)
+            onTick(diff)
         }
     }
     // display elapsed time in seconds
     SensorTextDisplay(
-        text = String.format(
-            "%.4f",
+        text = "%.4f ".format(
             Duration.between(start, LocalDateTime.now()).toMillis() * 0.001
         ), modifier
     )

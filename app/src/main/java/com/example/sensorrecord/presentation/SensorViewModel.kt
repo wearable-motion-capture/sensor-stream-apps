@@ -1,7 +1,6 @@
 package com.example.sensorrecord.presentation
 
 import android.hardware.SensorManager
-import android.net.Uri
 import android.os.Environment
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,14 +21,14 @@ import java.time.format.DateTimeFormatter
 class SensorViewModel : ViewModel() {
     // State
     // A change in MutableStateFlow values triggers a redraw of elements that use it
-    private val _recordingTrigger = MutableStateFlow(false)
-    val recordingTrigger = _recordingTrigger.asStateFlow()
+    private val _recordingOn = MutableStateFlow(false)
+    val recordingOn = _recordingOn.asStateFlow()
 
     private val _startTimeStamp = MutableStateFlow<LocalDateTime>(LocalDateTime.now())
     val startTimeStamp = _startTimeStamp.asStateFlow()
 
-    private val _lacc = MutableStateFlow("acc 0, 0, 0")
-    val linearAcc = _lacc.asStateFlow()
+    private val _currentState = MutableStateFlow("waiting for trigger")
+    val currentState = _currentState.asStateFlow()
 
     // Internal sensor reads that get updated as fast as possible
     private var grav: FloatArray = FloatArray(3) // gravity
@@ -37,7 +36,6 @@ class SensorViewModel : ViewModel() {
     private var magn: FloatArray = FloatArray(3) // magnetic
     private var gyro: FloatArray = FloatArray(3) // gyroscope
     private var accl: FloatArray = FloatArray(3) // raw acceleration
-    private var orient: FloatArray = FloatArray(3) // estimated orientation
     private var rotVec: FloatArray = FloatArray(3) // Rotation Vector sensor or estimation
     private var quatVec: FloatArray = FloatArray(4) // Quaternion Vector estimation
     private var rotMat: FloatArray = FloatArray(9) // estimated rotation matrix
@@ -50,11 +48,9 @@ class SensorViewModel : ViewModel() {
      * To fetch all data at the same time, this function is called in fixed timed intervals
      * by Timer in MainActivity.kt
      */
-    fun timedSensorValues(secTime: Long) {
+    fun recordSensorValues(secTime: Long) {
         // only record observations if the switch was turned on
-        if (_recordingTrigger.value) {
-            // update linear acceleration state flow
-            _lacc.value = "acc %.1f, %.1f, %.1f".format(lacc[0], lacc[1], lacc[2])
+        if (_recordingOn.value) {
             // update rotation matrix
             SensorManager.getRotationMatrix(rotMat, null, accl, magn)
             SensorManager.getQuaternionFromVector(quatVec, rotVec)
@@ -98,15 +94,16 @@ class SensorViewModel : ViewModel() {
     }
 
     // changes with the ClipToggle
-    fun recordSwitch(state: Boolean) {
-        _recordingTrigger.value = state
+    fun recordTrigger(state: Boolean) {
+        _recordingOn.value = state
         //if turned on, record exact start time
         if (state) {
             _startTimeStamp.value = LocalDateTime.now()
+            _currentState.value = "recording..."
         }
         // if turned off, safe data an clear
         if (!state) {
-            saveToDatedCSV(_startTimeStamp.value, data)
+            _currentState.value = saveToDatedCSV(_startTimeStamp.value, data)
             data.clear()
         }
     }
@@ -117,7 +114,7 @@ class SensorViewModel : ViewModel() {
  * Documents folder of the Android device that runs this app. The file name uses the input LocalDateTime
  * for a unique name.
  */
-fun saveToDatedCSV(start: LocalDateTime, data: java.util.ArrayList<FloatArray>): Uri {
+fun saveToDatedCSV(start: LocalDateTime, data: java.util.ArrayList<FloatArray>): String {
 
     // create unique filename from current date and time
     val currentDate = (DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss-SSS")).format(start)
@@ -153,12 +150,12 @@ fun saveToDatedCSV(start: LocalDateTime, data: java.util.ArrayList<FloatArray>):
         fOut.close()
     } catch (e: IOException) {
         e.printStackTrace()
-        println("Text file creation failed.")
+        println("Log file creation failed.")
+        return "failed - ${e}"
     }
 
 
     // Parse the file and path to uri
-    var sharedUri = Uri.parse(textFile.absolutePath)
-    println("Text file created at $sharedUri.")
-    return sharedUri
+    println("Text file created at ${textFile.absolutePath}.")
+    return "saved - waiting for trigger"
 }
