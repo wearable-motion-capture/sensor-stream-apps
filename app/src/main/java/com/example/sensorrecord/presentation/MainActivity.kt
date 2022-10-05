@@ -62,7 +62,7 @@ class MainActivity : ComponentActivity() {
                 // keep screen on
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                 // keep CPU on
-//                //TODO: handle wake Lock properly when app shuts down
+//                //TODO: It seems, the above flag is enough - if shutdowns still happen, handle wake Lock properly with a release()
 //                val wakeLock: PowerManager.WakeLock =
 //                    (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
 //                        newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyApp::MyWakelockTag").apply {

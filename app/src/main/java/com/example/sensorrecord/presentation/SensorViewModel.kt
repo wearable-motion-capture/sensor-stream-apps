@@ -39,6 +39,7 @@ class SensorViewModel : ViewModel() {
     private var accl: FloatArray = FloatArray(3) // raw acceleration
     private var orient: FloatArray = FloatArray(3) // estimated orientation
     private var rotVec: FloatArray = FloatArray(3) // Rotation Vector sensor or estimation
+    private var quatVec: FloatArray = FloatArray(4) // Quaternion Vector estimation
     private var rotMat: FloatArray = FloatArray(9) // estimated rotation matrix
     private var data: ArrayList<FloatArray> = ArrayList() // all recorded data
 
@@ -56,6 +57,7 @@ class SensorViewModel : ViewModel() {
             _lacc.value = "acc %.1f, %.1f, %.1f".format(lacc[0], lacc[1], lacc[2])
             // update rotation matrix
             SensorManager.getRotationMatrix(rotMat, null, accl, magn)
+            SensorManager.getQuaternionFromVector(quatVec, rotVec)
             // write to data
             data.add(
                 floatArrayOf(
@@ -63,7 +65,8 @@ class SensorViewModel : ViewModel() {
                     rotMat[0], rotMat[1], rotMat[2],
                     rotMat[3], rotMat[4], rotMat[5],
                     rotMat[6], rotMat[7], rotMat[8],
-                    lacc[0], lacc[1], lacc[2]
+                    lacc[0], lacc[1], lacc[2],
+                    quatVec[0], quatVec[1], quatVec[2], quatVec[3]
                 )
             )
         }
@@ -103,29 +106,48 @@ class SensorViewModel : ViewModel() {
         }
         // if turned off, safe data an clear
         if (!state) {
-            //saveToDatedCSV(_startTimeStamp.value, data)
+            saveToDatedCSV(_startTimeStamp.value, data)
             data.clear()
         }
     }
 }
 
-
+/**
+ * Parses data from SensorViewModel into a CSV with header and stores it into the public shared
+ * Documents folder of the Android device that runs this app. The file name uses the input LocalDateTime
+ * for a unique name.
+ */
 fun saveToDatedCSV(start: LocalDateTime, data: java.util.ArrayList<FloatArray>): Uri {
 
-    // create filename from current date and time
+    // create unique filename from current date and time
     val currentDate = (DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss-SSS")).format(start)
     val fileName = "sensorrecord_${currentDate}.csv"
 
-    // most basic files directory
+    // permission rules only allow to write into the public shared directory
     // /storage/emulated/0/Documents/_2022-09-273_05-08-49.csv
     val path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-
-
     val textFile = File(path, fileName)
+
+    // try to write data into a file at above location
     try {
         val fOut = FileWriter(textFile)
+        // write header
+        fOut.write(
+            "millisec, " +
+                    "rotMat[0], rotMat[1], rotMat[2]," +
+                    "rotMat[3], rotMat[4], rotMat[5]," +
+                    "rotMat[6], rotMat[7], rotMat[8]," +
+                    "lacc_x, lacc_y, lacc_z," +
+                    "quat_w, quat_x, quat_y, quat_z \n"
+        )
+        // write row-by-row
         for (arr in data) {
-            fOut.write("${arr[0]},${arr[1]},${arr[2]}\n")
+            fOut.write("%d,".format(arr[0].toInt())) // milliseconds as integer
+            // round all floats to .4 precision
+            for (entry in arr.slice(1 until arr.size - 1)) {
+                fOut.write("%.4f,".format(entry))
+            }
+            fOut.write("%.4f\n".format(arr[arr.size - 1])) // new line at the end
         }
         fOut.flush()
         fOut.close()
