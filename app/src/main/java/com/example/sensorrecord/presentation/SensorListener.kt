@@ -5,10 +5,12 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 
 /**
+ * A simple class to register a listener for sensors. The code variable is a Sensor number
+ * (e.g. TYPE_GYROSCOPE)
  * As per the unidirectional data flow design pattern, events flow up. Thus, this listener calls
- * the onReadout lambda function when onSensorChanged is triggered.
+ * the input onReadout lambda function when onSensorChanged is triggered.
  */
-class SensorListener(val code : Int, val onReadout: (FloatArray) -> Unit) : SensorEventListener {
+class SensorListener(val code: Int, val onReadout: (FloatArray) -> Unit) : SensorEventListener {
 
     override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
         // method to check accuracy changed in sensor.

@@ -17,7 +17,8 @@ import java.time.Duration
 import java.time.LocalDateTime
 
 /**
- * The main activity registers sensor listeners and creates the UI
+ * The MainActivity is where the app starts. It creates the ViewModel, registers sensor listeners
+ * and handles the UI.
  */
 class MainActivity : ComponentActivity() {
 
@@ -151,6 +152,10 @@ fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
 
 
 @Composable
+/**
+ * Some sensors observe in distinct frequencies (Hz). This timer collects measurements from all sensors
+ * in a fixed given interval to sync data collection.
+ */
 fun Timer(
     start: LocalDateTime,
     interval: Long = 100L,

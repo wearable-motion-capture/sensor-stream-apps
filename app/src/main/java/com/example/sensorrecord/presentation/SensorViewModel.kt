@@ -14,9 +14,10 @@ import java.time.format.DateTimeFormatter
 
 
 /**
- * This App follows the unidirectional data flow design pattern with the new Jetpack Compose UI world.
- * It keeps the permanent state of the screen in this ViewModel.
- * It exposes that state as FlowData that the view "observes" and reacts to.
+ * This App follows the unidirectional data flow design pattern of the Jetpack Compose UI.
+ * We keep the permanent state of the screen in this ViewModel.
+ * It exposes the state as FlowData, which the view "observes" and reacts to.
+ * The state is altered via callbacks (Events).
  */
 class SensorViewModel : ViewModel() {
     // State
