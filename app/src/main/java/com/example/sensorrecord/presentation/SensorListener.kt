@@ -8,7 +8,7 @@ import android.hardware.SensorEventListener
  * As per the unidirectional data flow design pattern, events flow up. Thus, this listener calls
  * the onReadout lambda function when onSensorChanged is triggered.
  */
-class SensorListener(val onReadout: (FloatArray) -> Unit) : SensorEventListener {
+class SensorListener(val code : Int, val onReadout: (FloatArray) -> Unit) : SensorEventListener {
 
     override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
         // method to check accuracy changed in sensor.

@@ -4,7 +4,6 @@ import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.os.Bundle
-import android.os.PowerManager
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -24,10 +23,26 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var sensorManager: SensorManager
     private val sensorViewModel: SensorViewModel = SensorViewModel()
-    var accSensorEventListener: SensorListener? = null
-    var gravSensorEventListener: SensorListener? = null
-    var gyroSensorEventListener: SensorListener? = null
-    var magnSensorEventListener: SensorListener? = null
+    var listeners_setup = listOf(
+        SensorListener(
+            Sensor.TYPE_LINEAR_ACCELERATION
+        ) { sensorViewModel.onLaccReadout(it) },
+        SensorListener(
+            Sensor.TYPE_ACCELEROMETER
+        ) { sensorViewModel.onAcclReadout(it) },
+        SensorListener(
+            Sensor.TYPE_MAGNETIC_FIELD
+        ) { sensorViewModel.onMagnReadout(it) },
+        SensorListener(
+            Sensor.TYPE_GRAVITY
+        ) { sensorViewModel.onGravReadout(it) },
+        SensorListener(
+            Sensor.TYPE_GYROSCOPE
+        ) { sensorViewModel.onGyroReadout(it) },
+        SensorListener(
+            Sensor.TYPE_ROTATION_VECTOR
+        ) { sensorViewModel.onRotVecReadout(it) },
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,81 +61,53 @@ class MainActivity : ComponentActivity() {
                 // keep screen on
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                 // keep CPU on
-                //TODO: handle wake Lock properly when app shuts down
-                val wakeLock: PowerManager.WakeLock =
-                    (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
-                        newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyApp::MyWakelockTag").apply {
-                            acquire()
-                        }
-                    }
+//                //TODO: handle wake Lock properly when app shuts down
+//                val wakeLock: PowerManager.WakeLock =
+//                    (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
+//                        newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyApp::MyWakelockTag").apply {
+//                            acquire()
+//                        }
+//                    }
 
             }
         }
     }
 
-
     fun registerSensorListeners() {
-
-        if (!this::sensorManager.isInitialized) {
-            return
+        // register all listeners with their assigned codes
+        for (l in listeners_setup) {
+            sensorManager.registerListener(
+                l,
+                sensorManager.getDefaultSensor(l.code),
+                SensorManager.SENSOR_DELAY_FASTEST
+            )
         }
-
-        // create sensor listeners
-        if (accSensorEventListener == null) {
-            accSensorEventListener =
-                SensorListener { sensorViewModel.onAcclSensorReadout(it) }
-        }
-        if (gravSensorEventListener == null) {
-            gravSensorEventListener =
-                SensorListener { sensorViewModel.onGravSensorReadout(it) }
-        }
-        if (gyroSensorEventListener == null) {
-            gyroSensorEventListener =
-                SensorListener { sensorViewModel.onGyroSensorReadout(it) }
-        }
-        if (magnSensorEventListener == null) {
-            magnSensorEventListener =
-                SensorListener { sensorViewModel.onMagnSensorReadout(it) }
-        }
-
-        // register them
-        sensorManager.registerListener(
-            accSensorEventListener,
-            sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
-            SensorManager.SENSOR_DELAY_FASTEST
-        )
-        sensorManager.registerListener(
-            gravSensorEventListener,
-            sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY),
-            SensorManager.SENSOR_DELAY_FASTEST
-        )
-        sensorManager.registerListener(
-            gyroSensorEventListener,
-            sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE),
-            SensorManager.SENSOR_DELAY_FASTEST
-        )
-        sensorManager.registerListener(
-            gyroSensorEventListener,
-            sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD),
-            SensorManager.SENSOR_DELAY_FASTEST
-        )
     }
 
+    /**
+     * Re-register SensorListeners when app starts up from background
+     */
     override fun onResume() {
         super.onResume()
-        registerSensorListeners()
-    }
-
-    override fun onPause() {
-        super.onPause()
-
         if (!this::sensorManager.isInitialized) {
             return
         } else {
-            sensorManager.unregisterListener(accSensorEventListener)
-            sensorManager.unregisterListener(gyroSensorEventListener)
-            sensorManager.unregisterListener(gravSensorEventListener)
-            sensorManager.unregisterListener(magnSensorEventListener)
+            registerSensorListeners()
+        }
+    }
+
+    /**
+     * Unregister SensorListeners when app is in background
+     */
+    override fun onPause() {
+        super.onPause()
+        if (!this::sensorManager.isInitialized) {
+            return
+        } else {
+            // unregister listeners
+            for (l in listeners_setup) {
+                sensorManager.unregisterListener(l)
+            }
         }
     }
 }
@@ -128,9 +115,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
 
-    val yaw by viewModel.yaw.collectAsState()
-    val pitch by viewModel.pitch.collectAsState()
-    val roll by viewModel.roll.collectAsState()
+    val lacc by viewModel.linearAcc.collectAsState()
     val recordingTrigger by viewModel.recordingTrigger.collectAsState()
     val startTimeStamp by viewModel.startTimeStamp.collectAsState()
     val measureInterval =
@@ -151,9 +136,7 @@ fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
                 modifier
             )
         }
-        item { SensorTextDisplay("yaw ${yaw}", modifier) }
-        item { SensorTextDisplay("pitch ${pitch}", modifier) }
-        item { SensorTextDisplay("roll ${roll}", modifier) }
+        item { SensorTextDisplay(lacc, modifier) }
         item {
             Timer(
                 startTimeStamp,
