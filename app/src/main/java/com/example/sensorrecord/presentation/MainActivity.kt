@@ -117,7 +117,6 @@ class MainActivity : ComponentActivity() {
 fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
 
     val state by viewModel.currentState.collectAsState()
-    val recordingOn by viewModel.recordingOn.collectAsState()
     val startTimeStamp by viewModel.startTimeStamp.collectAsState()
     val measureInterval =
         10L // The interval in milliseconds between every sensor readout (1000/interval = Hz)
@@ -132,7 +131,7 @@ fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
         item {
             SensorToggleChip(
                 text = "Record Sensors",
-                checked = recordingOn,
+                checked = (state == STATE.recording),
                 onChecked = { viewModel.recordTrigger(it) },
                 modifier = modifier
             )
@@ -141,13 +140,13 @@ fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
             SensorTimer(
                 start = startTimeStamp,
                 interval = measureInterval,
-                recordOn = recordingOn,
+                state = state,
                 onTick = { viewModel.recordSensorValues(it) },
                 modifier = modifier
             )
         }
         item {
-            SensorTextDisplay(text = state, modifier = modifier)
+            SensorTextDisplay(text = state.name, modifier = modifier)
         }
     }
 }
@@ -161,7 +160,7 @@ fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
 fun SensorTimer(
     start: LocalDateTime,
     interval: Long = 100L,
-    recordOn: Boolean = false,
+    state: STATE = STATE.ready,
     onTick: (Long) -> Unit,
     modifier: Modifier
 ) {
@@ -171,9 +170,9 @@ fun SensorTimer(
     var steps by remember { mutableStateOf(0L) }
 
     // A while loop that doesn't block the co-routine
-    LaunchedEffect(key1 = steps, key2 = recordOn) {
+    LaunchedEffect(key1 = steps, key2 = state) {
         // only do something if we want to record
-        if (recordOn) {
+        if (state == STATE.recording) {
             // estimate time difference to given start point as our time stamp
             val diff = Duration.between(start, LocalDateTime.now()).toMillis()
             // delay by a given amount of milliseconds

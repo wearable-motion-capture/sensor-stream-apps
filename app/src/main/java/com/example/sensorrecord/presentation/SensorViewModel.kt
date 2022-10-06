@@ -2,6 +2,7 @@ package com.example.sensorrecord.presentation
 
 import android.hardware.SensorManager
 import android.os.Environment
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -10,7 +11,17 @@ import java.io.FileWriter
 import java.io.IOException
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import kotlin.concurrent.thread
 
+// for logging
+private const val TAG = "SensorViewModel"
+
+enum class STATE {
+    ready, // app waits for user to trigger the recording
+    recording, // recording sensor data into memory
+    processing, // processing sensor data from memory into CSV. When finished, back to WAITING
+    error // error state. Stop using the app
+}
 
 /**
  * This App follows the unidirectional data flow design pattern of the Jetpack Compose UI.
@@ -21,13 +32,10 @@ import java.time.format.DateTimeFormatter
 class SensorViewModel : ViewModel() {
     // State
     // A change in MutableStateFlow values triggers a redraw of elements that use it
-    private val _recordingOn = MutableStateFlow(false)
-    val recordingOn = _recordingOn.asStateFlow()
-
     private val _startTimeStamp = MutableStateFlow<LocalDateTime>(LocalDateTime.now())
     val startTimeStamp = _startTimeStamp.asStateFlow()
 
-    private val _currentState = MutableStateFlow("waiting for trigger")
+    private val _currentState = MutableStateFlow(STATE.ready)
     val currentState = _currentState.asStateFlow()
 
     // Internal sensor reads that get updated as fast as possible
@@ -50,7 +58,7 @@ class SensorViewModel : ViewModel() {
      */
     fun recordSensorValues(secTime: Long) {
         // only record observations if the switch was turned on
-        if (_recordingOn.value) {
+        if (_currentState.value == STATE.recording) {
             // update rotation matrix
             SensorManager.getRotationMatrix(rotMat, null, accl, magn)
             SensorManager.getQuaternionFromVector(quatVec, rotVec)
@@ -58,11 +66,22 @@ class SensorViewModel : ViewModel() {
             data.add(
                 floatArrayOf(
                     secTime.toFloat(),
-                    rotMat[0], rotMat[1], rotMat[2],
-                    rotMat[3], rotMat[4], rotMat[5],
-                    rotMat[6], rotMat[7], rotMat[8],
-                    lacc[0], lacc[1], lacc[2],
-                    quatVec[0], quatVec[1], quatVec[2], quatVec[3]
+                    rotMat[0],
+                    rotMat[1],
+                    rotMat[2],
+                    rotMat[3],
+                    rotMat[4],
+                    rotMat[5],
+                    rotMat[6],
+                    rotMat[7],
+                    rotMat[8],
+                    lacc[0],
+                    lacc[1],
+                    lacc[2],
+                    quatVec[0],
+                    quatVec[1],
+                    quatVec[2],
+                    quatVec[3]
                 )
             )
         }
@@ -94,17 +113,28 @@ class SensorViewModel : ViewModel() {
     }
 
     // changes with the ClipToggle
-    fun recordTrigger(state: Boolean) {
-        _recordingOn.value = state
-        //if turned on, record exact start time
-        if (state) {
-            _startTimeStamp.value = LocalDateTime.now()
-            _currentState.value = "recording..."
+    fun recordTrigger(checked: Boolean) {
+        // no actions allowed if not in ready or recording state
+        if (_currentState.value != STATE.ready &&
+            _currentState.value != STATE.recording
+        ) {
+            Log.v(TAG, "still processing previous recording - cannot record yet")
+            return
         }
-        // if turned off, safe data an clear
-        if (!state) {
-            _currentState.value = saveToDatedCSV(_startTimeStamp.value, data)
-            data.clear()
+
+        if (checked) {
+            //if turned on, record exact start time
+            _currentState.value = STATE.recording
+            _startTimeStamp.value = LocalDateTime.now()
+        } else {
+            // if turned off, safe data an clear
+            _currentState.value = STATE.processing
+            // data processing in separate thread to not jack the UI
+            thread {
+                // next state determined by whether data processing was successful 
+                _currentState.value = saveToDatedCSV(_startTimeStamp.value, data)
+                data.clear()
+            }
         }
     }
 }
@@ -114,7 +144,7 @@ class SensorViewModel : ViewModel() {
  * Documents folder of the Android device that runs this app. The file name uses the input LocalDateTime
  * for a unique name.
  */
-fun saveToDatedCSV(start: LocalDateTime, data: java.util.ArrayList<FloatArray>): String {
+fun saveToDatedCSV(start: LocalDateTime, data: java.util.ArrayList<FloatArray>): STATE {
 
     // create unique filename from current date and time
     val currentDate = (DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss-SSS")).format(start)
@@ -130,12 +160,7 @@ fun saveToDatedCSV(start: LocalDateTime, data: java.util.ArrayList<FloatArray>):
         val fOut = FileWriter(textFile)
         // write header
         fOut.write(
-            "millisec, " +
-                    "rotMat[0], rotMat[1], rotMat[2]," +
-                    "rotMat[3], rotMat[4], rotMat[5]," +
-                    "rotMat[6], rotMat[7], rotMat[8]," +
-                    "lacc_x, lacc_y, lacc_z," +
-                    "quat_w, quat_x, quat_y, quat_z \n"
+            "millisec, " + "rotMat[0], rotMat[1], rotMat[2]," + "rotMat[3], rotMat[4], rotMat[5]," + "rotMat[6], rotMat[7], rotMat[8]," + "lacc_x, lacc_y, lacc_z," + "quat_w, quat_x, quat_y, quat_z \n"
         )
         // write row-by-row
         for (arr in data) {
@@ -151,11 +176,11 @@ fun saveToDatedCSV(start: LocalDateTime, data: java.util.ArrayList<FloatArray>):
     } catch (e: IOException) {
         e.printStackTrace()
         println("Log file creation failed.")
-        return "failed - ${e}"
+        return STATE.error
     }
 
 
     // Parse the file and path to uri
     println("Text file created at ${textFile.absolutePath}.")
-    return "saved - waiting for trigger"
+    return STATE.ready
 }
