@@ -2,12 +2,10 @@ package com.example.sensorrecord.presentation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.wear.compose.material.Icon
-import androidx.wear.compose.material.Text
-import androidx.wear.compose.material.ToggleChip
-import androidx.wear.compose.material.ToggleChipDefaults
+import androidx.wear.compose.material.*
 
 @Composable
 fun SensorToggleChip(
@@ -37,10 +35,19 @@ fun SensorToggleChip(
 }
 
 @Composable
-fun SensorTextDisplay(text: String, modifier: Modifier = Modifier) {
+fun StateTextDisplay(state: STATE, modifier: Modifier = Modifier) {
+    var color = Color.Red
+    if (state == STATE.ready) {
+        color = Color.Green
+    } else if (state == STATE.processing) {
+        color = Color.Yellow
+    }
     Text(
         modifier = modifier,
         textAlign = TextAlign.Center,
-        text = text,
+        text = state.name,
+        style = MaterialTheme.typography.body1.copy(
+            color = color
+        )
     )
 }

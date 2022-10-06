@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.wear.compose.material.*
 import com.example.sensorrecord.presentation.theme.SensorRecordTheme
 import kotlinx.coroutines.delay
@@ -146,7 +147,7 @@ fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
             )
         }
         item {
-            SensorTextDisplay(text = state.name, modifier = modifier)
+            StateTextDisplay(state = state, modifier = modifier)
         }
     }
 }
@@ -184,10 +185,12 @@ fun SensorTimer(
         }
     }
     // display elapsed time in seconds
-    SensorTextDisplay(
+    Text(
+        modifier = modifier,
+        textAlign = TextAlign.Center,
         text = "%.4f ".format(
             Duration.between(start, LocalDateTime.now()).toMillis() * 0.001
-        ), modifier
+        )
     )
 }
 
