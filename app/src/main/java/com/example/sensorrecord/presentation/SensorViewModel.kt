@@ -46,7 +46,9 @@ class SensorViewModel : ViewModel() {
     private var accl: FloatArray = FloatArray(3) // raw acceleration
     private var rotVec: FloatArray = FloatArray(3) // Rotation Vector sensor or estimation
     private var quatVec: FloatArray = FloatArray(4) // Quaternion Vector estimation
-    private var rotMat: FloatArray = FloatArray(9) // estimated rotation matrix
+
+    // private var rotMat: FloatArray = FloatArray(9) // estimated rotation matrix
+    private var sixDof: FloatArray = FloatArray(15) // the 6DOF pose estimation readout
     private var data: ArrayList<FloatArray> = ArrayList() // all recorded data
 
 
@@ -60,40 +62,39 @@ class SensorViewModel : ViewModel() {
         // only record observations if the switch was turned on
         if (_currentState.value == STATE.recording) {
             // update rotation matrix
-            SensorManager.getRotationMatrix(rotMat, null, accl, magn)
+            // SensorManager.getRotationMatrix(rotMat, null, accl, magn)
             SensorManager.getQuaternionFromVector(quatVec, rotVec)
             // write to data
             data.add(
                 floatArrayOf(
-                    secTime.toFloat(),
-                    rotMat[0],
-                    rotMat[1],
-                    rotMat[2],
-                    rotMat[3],
-                    rotMat[4],
-                    rotMat[5],
-                    rotMat[6],
-                    rotMat[7],
-                    rotMat[8],
-                    lacc[0],
-                    lacc[1],
-                    lacc[2],
-                    quatVec[0],
-                    quatVec[1],
-                    quatVec[2],
-                    quatVec[3]
+                    secTime.toFloat(), quatVec[0], // quaternion from rotation vector w
+                    quatVec[1], // x
+                    quatVec[2], // y
+                    quatVec[3], // z
+                    lacc[0], // linear acceleration x
+                    lacc[1], // y
+                    lacc[2] // z
                 )
             )
         }
     }
 
     // Individual sensor reads are triggered by their onValueChanged events
-    fun onAcclReadout(newReadout: FloatArray) {
-        accl = newReadout
-    }
-
     fun onLaccReadout(newReadout: FloatArray) {
         lacc = newReadout
+    }
+
+    fun onRotVecReadout(newReadout: FloatArray) {
+        rotVec = newReadout
+    }
+
+    fun on6DofReadout(newReadout: FloatArray) {
+        print("readout");
+        sixDof = newReadout
+    }
+
+    fun onAcclReadout(newReadout: FloatArray) {
+        accl = newReadout
     }
 
     fun onGravReadout(newReadout: FloatArray) {
@@ -108,16 +109,10 @@ class SensorViewModel : ViewModel() {
         magn = newReadout
     }
 
-    fun onRotVecReadout(newReadout: FloatArray) {
-        rotVec = newReadout
-    }
-
     // changes with the ClipToggle
     fun recordTrigger(checked: Boolean) {
         // no actions allowed if not in ready or recording state
-        if (_currentState.value != STATE.ready &&
-            _currentState.value != STATE.recording
-        ) {
+        if (_currentState.value != STATE.ready && _currentState.value != STATE.recording) {
             Log.v(TAG, "still processing previous recording - cannot record yet")
             return
         }
@@ -160,7 +155,9 @@ fun saveToDatedCSV(start: LocalDateTime, data: java.util.ArrayList<FloatArray>):
         val fOut = FileWriter(textFile)
         // write header
         fOut.write(
-            "millisec, " + "rotMat[0], rotMat[1], rotMat[2]," + "rotMat[3], rotMat[4], rotMat[5]," + "rotMat[6], rotMat[7], rotMat[8]," + "lacc_x, lacc_y, lacc_z," + "quat_w, quat_x, quat_y, quat_z \n"
+            "millisec, " +
+                    "quat_w, quat_x, quat_y, quat_z, " +
+                    "lacc_x, lacc_y, lacc_z \n"
         )
         // write row-by-row
         for (arr in data) {

@@ -25,25 +25,28 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var sensorManager: SensorManager
     private val sensorViewModel: SensorViewModel = SensorViewModel()
-    var listeners_setup = listOf(
+    private var _listenersSetup = listOf(
         SensorListener(
             Sensor.TYPE_LINEAR_ACCELERATION
         ) { sensorViewModel.onLaccReadout(it) },
         SensorListener(
-            Sensor.TYPE_ACCELEROMETER
-        ) { sensorViewModel.onAcclReadout(it) },
-        SensorListener(
-            Sensor.TYPE_MAGNETIC_FIELD
-        ) { sensorViewModel.onMagnReadout(it) },
-        SensorListener(
-            Sensor.TYPE_GRAVITY
-        ) { sensorViewModel.onGravReadout(it) },
-        SensorListener(
-            Sensor.TYPE_GYROSCOPE
-        ) { sensorViewModel.onGyroReadout(it) },
-        SensorListener(
             Sensor.TYPE_ROTATION_VECTOR
         ) { sensorViewModel.onRotVecReadout(it) },
+//        SensorListener(
+//            Sensor.TYPE_ACCELEROMETER
+//        ) { sensorViewModel.onAcclReadout(it) },
+//        SensorListener(
+//            Sensor.TYPE_MAGNETIC_FIELD
+//        ) { sensorViewModel.onMagnReadout(it) },
+//        SensorListener(
+//            Sensor.TYPE_GRAVITY
+//        ) { sensorViewModel.onGravReadout(it) },
+//        SensorListener(
+//            Sensor.TYPE_GYROSCOPE
+//        ) { sensorViewModel.onGyroReadout(it) },
+//        SensorListener( //6DOF is not available for smart watch
+//            Sensor.TYPE_POSE_6DOF // 6DOF is a high-energy sensor. It only operates if screen is on
+//        ) { sensorViewModel.on6DofReadout(it) }
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,14 +78,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    fun registerSensorListeners() {
+    private fun registerSensorListeners() {
         // register all listeners with their assigned codes
-        for (l in listeners_setup) {
-            sensorManager.registerListener(
+        for (l in _listenersSetup) {
+            val check = sensorManager.registerListener(
                 l,
                 sensorManager.getDefaultSensor(l.code),
                 SensorManager.SENSOR_DELAY_FASTEST
             )
+            if (check) {
+                println("device has %s".format(l.code));
+            }
         }
     }
 
@@ -107,7 +113,7 @@ class MainActivity : ComponentActivity() {
             return
         } else {
             // unregister listeners
-            for (l in listeners_setup) {
+            for (l in _listenersSetup) {
                 sensorManager.unregisterListener(l)
             }
         }
