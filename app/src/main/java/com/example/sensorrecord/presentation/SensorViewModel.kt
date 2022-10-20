@@ -1,6 +1,5 @@
 package com.example.sensorrecord.presentation
 
-import android.hardware.SensorManager
 import android.os.Environment
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -39,15 +38,13 @@ class SensorViewModel : ViewModel() {
     val currentState = _currentState.asStateFlow()
 
     // Internal sensor reads that get updated as fast as possible
-    private var rotVec: FloatArray = FloatArray(3) // Rotation Vector sensor or estimation
+    private var rotVec: FloatArray = FloatArray(4) // Rotation Vector sensor or estimation
     private var lacc: FloatArray = FloatArray(3) // linear acceleration (without gravity)
-    private var pres: FloatArray = FloatArray(1) // Atmospheric pressure in hPa (millibar)
     private var accl: FloatArray = FloatArray(3) // raw acceleration
+    private var pres: FloatArray = FloatArray(1) // Atmospheric pressure in hPa (millibar)
     private var gyro: FloatArray = FloatArray(3) // gyroscope
     private var magn: FloatArray = FloatArray(3) // magnetic
     private var grav: FloatArray = FloatArray(3) // gravity
-    private var quatVec: FloatArray = FloatArray(4) // Quaternion Vector estimation
-    private var rotMat: FloatArray = FloatArray(9) // estimated rotation matrix
 
 
     private var data: ArrayList<FloatArray> = ArrayList() // all recorded data
@@ -62,28 +59,21 @@ class SensorViewModel : ViewModel() {
     fun recordSensorValues(secTime: Long) {
         // only record observations if the switch was turned on
         if (_currentState.value == STATE.recording) {
-            SensorManager.getRotationMatrix(rotMat, null, accl, magn)
-            SensorManager.getQuaternionFromVector(quatVec, rotVec)
             // write to data
             data.add(
                 floatArrayOf(
                     secTime.toFloat(),
-                    rotVec[0], // rotation vector euler x
+                    rotVec[0], // rotation vector  is a quaternion x
                     rotVec[1], // y
                     rotVec[2], // z
-                    rotVec[3], // z
-                    quatVec[0],
-                    quatVec[1],
-                    quatVec[2],
-                    quatVec[2],
-                    // TODO: complete and update header
+                    rotVec[3], // w
                     lacc[0], // linear acceleration x
                     lacc[1], // y
                     lacc[2], // z
-                    pres[0], // atmospheric pressure
                     accl[0], // unfiltered acceleration x
                     accl[1], // y
                     accl[2], // z
+                    pres[0], // atmospheric pressure
                     gyro[0], // Angular speed around the x-axis
                     gyro[1], // y
                     gyro[2], // z
@@ -92,7 +82,7 @@ class SensorViewModel : ViewModel() {
                     magn[2], // z
                     grav[0], // vector indicating the direction and magnitude of gravity X
                     grav[1], // y
-                    grav[2] // z
+                    grav[2]  // z
                 )
             )
         }
@@ -174,13 +164,13 @@ fun saveToDatedCSV(start: LocalDateTime, data: java.util.ArrayList<FloatArray>):
         // write header
         fOut.write(
             "millisec, " +
-                    "rot_x, rot_y, rot_z, " +
-                    "lacc_x, lacc_y, lacc_z, " +
+                    "qrot[x], qrot[y], qrot[z], qrot[w], " +
+                    "lacc[x], lacc[y], lacc[z], " +
+                    "accl[x], accl[y], accl[z], " +
                     "pres, " +
-                    "accl_x, accl_y, accl_z, " +
-                    "gyro_x, gyro_y, gyro_z, " +
-                    "magn_x, magn_y, magn_z, " +
-                    "grav_x, grav_y, grav_z \n"
+                    "gyro[x], gyro[y], gyro[z], " +
+                    "magn[x], magn[y], magn[z], " +
+                    "grav[x], grav[y], grav[z] \n"
         )
         // write row-by-row
         for (arr in data) {
@@ -195,12 +185,11 @@ fun saveToDatedCSV(start: LocalDateTime, data: java.util.ArrayList<FloatArray>):
         fOut.close()
     } catch (e: IOException) {
         e.printStackTrace()
-        println("Log file creation failed.")
+        Log.v(TAG, "Log file creation failed.")
         return STATE.error
     }
-
-
+    
     // Parse the file and path to uri
-    println("Text file created at ${textFile.absolutePath}.")
+    Log.v(TAG, "Text file created at ${textFile.absolutePath}.")
     return STATE.ready
 }
