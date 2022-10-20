@@ -39,16 +39,14 @@ class SensorViewModel : ViewModel() {
     val currentState = _currentState.asStateFlow()
 
     // Internal sensor reads that get updated as fast as possible
-    private var grav: FloatArray = FloatArray(3) // gravity
-    private var lacc: FloatArray = FloatArray(3) // linear acceleration (without gravity)
-    private var magn: FloatArray = FloatArray(3) // magnetic
-    private var gyro: FloatArray = FloatArray(3) // gyroscope
-    private var accl: FloatArray = FloatArray(3) // raw acceleration
     private var rotVec: FloatArray = FloatArray(3) // Rotation Vector sensor or estimation
-    private var quatVec: FloatArray = FloatArray(4) // Quaternion Vector estimation
+    private var lacc: FloatArray = FloatArray(3) // linear acceleration (without gravity)
+    private var pres: FloatArray = FloatArray(1) // Atmospheric pressure in hPa (millibar)
+    private var accl: FloatArray = FloatArray(3) // raw acceleration
+    private var gyro: FloatArray = FloatArray(3) // gyroscope
+    private var magn: FloatArray = FloatArray(3) // magnetic
+    private var grav: FloatArray = FloatArray(3) // gravity
 
-    // private var rotMat: FloatArray = FloatArray(9) // estimated rotation matrix
-    private var sixDof: FloatArray = FloatArray(15) // the 6DOF pose estimation readout
     private var data: ArrayList<FloatArray> = ArrayList() // all recorded data
 
 
@@ -61,19 +59,28 @@ class SensorViewModel : ViewModel() {
     fun recordSensorValues(secTime: Long) {
         // only record observations if the switch was turned on
         if (_currentState.value == STATE.recording) {
-            // update rotation matrix
-            // SensorManager.getRotationMatrix(rotMat, null, accl, magn)
-            SensorManager.getQuaternionFromVector(quatVec, rotVec)
             // write to data
             data.add(
                 floatArrayOf(
-                    secTime.toFloat(), quatVec[0], // quaternion from rotation vector w
-                    quatVec[1], // x
-                    quatVec[2], // y
-                    quatVec[3], // z
+                    rotVec[0], // rotation vector euler x
+                    rotVec[1], // y
+                    rotVec[2], // z
                     lacc[0], // linear acceleration x
                     lacc[1], // y
-                    lacc[2] // z
+                    lacc[2], // z
+                    pres[0], // atmospheric pressure
+                    accl[0], // unfiltered acceleration x
+                    accl[1], // y
+                    accl[2], // z
+                    gyro[0], // Angular speed around the x-axis
+                    gyro[1], // y
+                    gyro[2], // z
+                    magn[0], // the ambient magnetic field in the x-axis
+                    magn[1], // y
+                    magn[2], // z
+                    grav[0], // vector indicating the direction and magnitude of gravity X
+                    grav[1], // y
+                    grav[2] // z
                 )
             )
         }
@@ -88,11 +95,6 @@ class SensorViewModel : ViewModel() {
         rotVec = newReadout
     }
 
-    fun on6DofReadout(newReadout: FloatArray) {
-        print("readout");
-        sixDof = newReadout
-    }
-
     fun onAcclReadout(newReadout: FloatArray) {
         accl = newReadout
     }
@@ -103,6 +105,10 @@ class SensorViewModel : ViewModel() {
 
     fun onGyroReadout(newReadout: FloatArray) {
         gyro = newReadout
+    }
+
+    fun onPressureReadout(newReadout: FloatArray) {
+        pres = newReadout
     }
 
     fun onMagnReadout(newReadout: FloatArray) {
@@ -156,8 +162,13 @@ fun saveToDatedCSV(start: LocalDateTime, data: java.util.ArrayList<FloatArray>):
         // write header
         fOut.write(
             "millisec, " +
-                    "quat_w, quat_x, quat_y, quat_z, " +
-                    "lacc_x, lacc_y, lacc_z \n"
+                    "rot_x, rot_y, rot_z, " +
+                    "lacc_x, lacc_y, lacc_z, " +
+                    "pres, " +
+                    "accl_x, accl_y, accl_z, " +
+                    "gyro_x, gyro_y, gyro_z, " +
+                    "magn_x, magn_y, magn_z, " +
+                    "grav_x, grav_y, grav_z \n"
         )
         // write row-by-row
         for (arr in data) {

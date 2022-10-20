@@ -28,25 +28,25 @@ class MainActivity : ComponentActivity() {
     private var _listenersSetup = listOf(
         SensorListener(
             Sensor.TYPE_LINEAR_ACCELERATION
-        ) { sensorViewModel.onLaccReadout(it) },
+        ) { sensorViewModel.onLaccReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), excluding the force of gravity.
+        SensorListener(
+            Sensor.TYPE_ACCELEROMETER
+        ) { sensorViewModel.onAcclReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), including the force of gravity.
         SensorListener(
             Sensor.TYPE_ROTATION_VECTOR
         ) { sensorViewModel.onRotVecReadout(it) },
-//        SensorListener(
-//            Sensor.TYPE_ACCELEROMETER
-//        ) { sensorViewModel.onAcclReadout(it) },
-//        SensorListener(
-//            Sensor.TYPE_MAGNETIC_FIELD
-//        ) { sensorViewModel.onMagnReadout(it) },
-//        SensorListener(
-//            Sensor.TYPE_GRAVITY
-//        ) { sensorViewModel.onGravReadout(it) },
-//        SensorListener(
-//            Sensor.TYPE_GYROSCOPE
-//        ) { sensorViewModel.onGyroReadout(it) },
-//        SensorListener( //6DOF is not available for smart watch
-//            Sensor.TYPE_POSE_6DOF // 6DOF is a high-energy sensor. It only operates if screen is on
-//        ) { sensorViewModel.on6DofReadout(it) }
+        SensorListener(
+            Sensor.TYPE_MAGNETIC_FIELD // All values are in micro-Tesla (uT) and measure the ambient magnetic field in the X, Y and Z axis.
+        ) { sensorViewModel.onMagnReadout(it) },
+        SensorListener(
+            Sensor.TYPE_GRAVITY
+        ) { sensorViewModel.onGravReadout(it) },
+        SensorListener(
+            Sensor.TYPE_GYROSCOPE
+        ) { sensorViewModel.onGyroReadout(it) },
+        SensorListener(
+            Sensor.TYPE_PRESSURE
+        ) { sensorViewModel.onPressureReadout(it) }
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,6 +56,14 @@ class MainActivity : ComponentActivity() {
             SensorRecordTheme {
                 // access and observe sensors
                 sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+
+
+                // getSensorList(Sensor.TYPE_ALL) lists all the sensors present in the device
+//                val deviceSensors: List<Sensor> = sensorManager.getSensorList(Sensor.TYPE_ALL)
+//                for (device in deviceSensors) {
+//                    println(device.toString())
+//                }
+
                 registerSensorListeners()
 
                 // create view and UI
