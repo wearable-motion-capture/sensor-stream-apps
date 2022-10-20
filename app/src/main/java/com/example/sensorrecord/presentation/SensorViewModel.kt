@@ -46,6 +46,9 @@ class SensorViewModel : ViewModel() {
     private var gyro: FloatArray = FloatArray(3) // gyroscope
     private var magn: FloatArray = FloatArray(3) // magnetic
     private var grav: FloatArray = FloatArray(3) // gravity
+    private var quatVec: FloatArray = FloatArray(4) // Quaternion Vector estimation
+    private var rotMat: FloatArray = FloatArray(9) // estimated rotation matrix
+
 
     private var data: ArrayList<FloatArray> = ArrayList() // all recorded data
 
@@ -59,12 +62,21 @@ class SensorViewModel : ViewModel() {
     fun recordSensorValues(secTime: Long) {
         // only record observations if the switch was turned on
         if (_currentState.value == STATE.recording) {
+            SensorManager.getRotationMatrix(rotMat, null, accl, magn)
+            SensorManager.getQuaternionFromVector(quatVec, rotVec)
             // write to data
             data.add(
                 floatArrayOf(
+                    secTime.toFloat(),
                     rotVec[0], // rotation vector euler x
                     rotVec[1], // y
                     rotVec[2], // z
+                    rotVec[3], // z
+                    quatVec[0],
+                    quatVec[1],
+                    quatVec[2],
+                    quatVec[2],
+                    // TODO: complete and update header
                     lacc[0], // linear acceleration x
                     lacc[1], // y
                     lacc[2], // z
