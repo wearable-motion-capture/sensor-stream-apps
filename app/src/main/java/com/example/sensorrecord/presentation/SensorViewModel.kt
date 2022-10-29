@@ -163,14 +163,14 @@ fun saveToDatedCSV(start: LocalDateTime, data: java.util.ArrayList<FloatArray>):
         val fOut = FileWriter(textFile)
         // write header
         fOut.write(
-            "millisec, " +
-                    "qrot[x], qrot[y], qrot[z], qrot[w], " +
-                    "lacc[x], lacc[y], lacc[z], " +
-                    "accl[x], accl[y], accl[z], " +
-                    "pres, " +
-                    "gyro[x], gyro[y], gyro[z], " +
-                    "magn[x], magn[y], magn[z], " +
-                    "grav[x], grav[y], grav[z] \n"
+            "millisec," +
+                    "qrot_x,qrot_y,qrot_z,qrot_w," +
+                    "lacc_x,lacc_y,lacc_z," +
+                    "accl_x,accl_y,accl_z," +
+                    "pres," +
+                    "gyro_x,gyro_y,gyro_z," +
+                    "magn_x,magn_y,magn_z," +
+                    "grav_x,grav_y,grav_z\n"
         )
         // write row-by-row
         for (arr in data) {
@@ -188,7 +188,7 @@ fun saveToDatedCSV(start: LocalDateTime, data: java.util.ArrayList<FloatArray>):
         Log.v(TAG, "Log file creation failed.")
         return STATE.error
     }
-    
+
     // Parse the file and path to uri
     Log.v(TAG, "Text file created at ${textFile.absolutePath}.")
     return STATE.ready

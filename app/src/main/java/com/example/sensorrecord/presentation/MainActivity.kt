@@ -26,6 +26,21 @@ class MainActivity : ComponentActivity() {
     private lateinit var sensorManager: SensorManager
     private val sensorViewModel: SensorViewModel = SensorViewModel()
     private var _listenersSetup = listOf(
+
+
+        // 21 Samsung HR Batch Sensor/Samsung HR None Wakeup Sensor / TYPE_HEART_RATE
+        // TODO: test these
+        // 69658 Samsung Altitude Sensor
+        // 69666 Samsung HR Sensor
+        // 69667 Samsung DailyHR Sensor
+        // 69668 Samsung PPGBatch Sensor
+        // 69669 AFE4500S ECG
+        // 69670 Samsung HrmBP Sensor
+        // 69679 Samsung PPG IHRN Sensor
+        // 69682 Samsung HR Raw Sensor
+        // 69683 Samsung HR Raw Fac Sensor
+        // 69684 Samsung HR Raw Fac2 Sensor
+
         SensorListener(
             Sensor.TYPE_LINEAR_ACCELERATION
         ) { sensorViewModel.onLaccReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), excluding the force of gravity.
@@ -58,11 +73,11 @@ class MainActivity : ComponentActivity() {
                 sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
 
-                // getSensorList(Sensor.TYPE_ALL) lists all the sensors present in the device
-//                val deviceSensors: List<Sensor> = sensorManager.getSensorList(Sensor.TYPE_ALL)
-//                for (device in deviceSensors) {
-//                    println(device.toString())
-//                }
+                //getSensorList(Sensor.TYPE_ALL) lists all the sensors present in the device
+                val deviceSensors: List<Sensor> = sensorManager.getSensorList(Sensor.TYPE_ALL)
+                for (device in deviceSensors) {
+                    println(device.toString())
+                }
 
                 registerSensorListeners()
 
@@ -133,8 +148,8 @@ fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
 
     val state by viewModel.currentState.collectAsState()
     val startTimeStamp by viewModel.startTimeStamp.collectAsState()
-    val measureInterval =
-        10L // The interval in milliseconds between every sensor readout (1000/interval = Hz)
+    // The interval in milliseconds between every sensor readout (1000/interval = Hz)
+    val measureInterval = 1L // a setting of 1 means basically as fast as possible
 
 
     // scaling lazy column allows to scroll through items with fancy scaling when
