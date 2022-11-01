@@ -38,10 +38,12 @@ class SensorViewModel : ViewModel() {
     val currentState = _currentState.asStateFlow()
 
     // Internal sensor reads that get updated as fast as possible
-    private var rotVec: FloatArray = FloatArray(4) // Rotation Vector sensor or estimation
+    private var rotVec: FloatArray = FloatArray(5) // Rotation Vector sensor or estimation
     private var lacc: FloatArray = FloatArray(3) // linear acceleration (without gravity)
     private var accl: FloatArray = FloatArray(3) // raw acceleration
     private var pres: FloatArray = FloatArray(1) // Atmospheric pressure in hPa (millibar)
+    private var hr: FloatArray = FloatArray(1) // Heart Rate
+    private var hrRaw: FloatArray = FloatArray(16) // Samsung's Raw HR data
     private var gyro: FloatArray = FloatArray(3) // gyroscope
     private var magn: FloatArray = FloatArray(3) // magnetic
     private var grav: FloatArray = FloatArray(3) // gravity
@@ -61,29 +63,16 @@ class SensorViewModel : ViewModel() {
         if (_currentState.value == STATE.recording) {
             // write to data
             data.add(
-                floatArrayOf(
-                    secTime.toFloat(),
-                    rotVec[0], // rotation vector  is a quaternion x
-                    rotVec[1], // y
-                    rotVec[2], // z
-                    rotVec[3], // w
-                    lacc[0], // linear acceleration x
-                    lacc[1], // y
-                    lacc[2], // z
-                    accl[0], // unfiltered acceleration x
-                    accl[1], // y
-                    accl[2], // z
-                    pres[0], // atmospheric pressure
-                    gyro[0], // Angular speed around the x-axis
-                    gyro[1], // y
-                    gyro[2], // z
-                    magn[0], // the ambient magnetic field in the x-axis
-                    magn[1], // y
-                    magn[2], // z
-                    grav[0], // vector indicating the direction and magnitude of gravity X
-                    grav[1], // y
-                    grav[2]  // z
-                )
+                floatArrayOf(secTime.toFloat())
+                        + rotVec  // rotation vector[5]  is a quaternion x,y,z,w, + confidence
+                        + lacc // [3] linear acceleration x,y,z
+                        + accl // [3] unfiltered acceleration x,y,z
+                        + pres  // [1] atmospheric pressure
+                        + gyro // [3] Angular speed around the x,y,z -axis
+                        + magn // [3] the ambient magnetic field in the x,y,z -axis
+                        + grav // [3] vector indicating the direction and magnitude of gravity x,y,z
+                        + hr // [1] heart rate in bpm
+                        + hrRaw // [16] PPG etc from Samsung's Hr raw sensor
             )
         }
     }
@@ -115,6 +104,14 @@ class SensorViewModel : ViewModel() {
 
     fun onMagnReadout(newReadout: FloatArray) {
         magn = newReadout
+    }
+
+    fun onHrReadout(newReadout: FloatArray) {
+        hr = newReadout
+    }
+
+    fun onHrRawReadout(newReadout: FloatArray) {
+        hrRaw = newReadout
     }
 
     // changes with the ClipToggle
@@ -164,22 +161,25 @@ fun saveToDatedCSV(start: LocalDateTime, data: java.util.ArrayList<FloatArray>):
         // write header
         fOut.write(
             "millisec," +
-                    "qrot_x,qrot_y,qrot_z,qrot_w," +
+                    "qrot_x,qrot_y,qrot_z,qrot_w,qrot_conf," +
                     "lacc_x,lacc_y,lacc_z," +
                     "accl_x,accl_y,accl_z," +
                     "pres," +
                     "gyro_x,gyro_y,gyro_z," +
                     "magn_x,magn_y,magn_z," +
-                    "grav_x,grav_y,grav_z\n"
+                    "grav_x,grav_y,grav_z," +
+                    "hr," +
+                    "hrRaw_0,hrRaw_1,hrRaw_2,hrRaw_3,hrRaw_4,hrRaw_5,hrRaw_6,hrRaw_7,hrRaw_8," +
+                    "hrRaw_9,hrRaw_10,hrRaw_11,hrRaw_12,hrRaw_13,hrRaw_14,hrRaw_15\n"
         )
         // write row-by-row
         for (arr in data) {
             fOut.write("%d,".format(arr[0].toInt())) // milliseconds as integer
-            // round all floats to .4 precision
+
             for (entry in arr.slice(1 until arr.size - 1)) {
-                fOut.write("%.4f,".format(entry))
+                fOut.write("%e,".format(entry))
             }
-            fOut.write("%.4f\n".format(arr[arr.size - 1])) // new line at the end
+            fOut.write("%e\n".format(arr[arr.size - 1])) // new line at the end
         }
         fOut.flush()
         fOut.close()

@@ -26,21 +26,9 @@ class MainActivity : ComponentActivity() {
     private lateinit var sensorManager: SensorManager
     private val sensorViewModel: SensorViewModel = SensorViewModel()
     private var _listenersSetup = listOf(
-
-
-        // 21 Samsung HR Batch Sensor/Samsung HR None Wakeup Sensor / TYPE_HEART_RATE
-        // TODO: test these
-        // 69658 Samsung Altitude Sensor
-        // 69666 Samsung HR Sensor
-        // 69667 Samsung DailyHR Sensor
-        // 69668 Samsung PPGBatch Sensor
-        // 69669 AFE4500S ECG
-        // 69670 Samsung HrmBP Sensor
-        // 69679 Samsung PPG IHRN Sensor
-        // 69682 Samsung HR Raw Sensor
-        // 69683 Samsung HR Raw Fac Sensor
-        // 69684 Samsung HR Raw Fac2 Sensor
-
+        SensorListener(
+            Sensor.TYPE_PRESSURE
+        ) { sensorViewModel.onPressureReadout(it) },
         SensorListener(
             Sensor.TYPE_LINEAR_ACCELERATION
         ) { sensorViewModel.onLaccReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), excluding the force of gravity.
@@ -60,8 +48,11 @@ class MainActivity : ComponentActivity() {
             Sensor.TYPE_GYROSCOPE
         ) { sensorViewModel.onGyroReadout(it) },
         SensorListener(
-            Sensor.TYPE_PRESSURE
-        ) { sensorViewModel.onPressureReadout(it) }
+            Sensor.TYPE_HEART_RATE
+        ) { sensorViewModel.onHrReadout(it) },
+        SensorListener(
+            69682 // Samsung HR Raw Sensor this is the only Galaxy5 raw sensor that worked
+        ) { sensorViewModel.onHrRawReadout(it) }
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -73,11 +64,11 @@ class MainActivity : ComponentActivity() {
                 sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
 
-                //getSensorList(Sensor.TYPE_ALL) lists all the sensors present in the device
-                val deviceSensors: List<Sensor> = sensorManager.getSensorList(Sensor.TYPE_ALL)
-                for (device in deviceSensors) {
-                    println(device.toString())
-                }
+//                //getSensorList(Sensor.TYPE_ALL) lists all the sensors present in the device
+//                val deviceSensors: List<Sensor> = sensorManager.getSensorList(Sensor.TYPE_ALL)
+//                for (device in deviceSensors) {
+//                    println(device.toString())
+//                }
 
                 registerSensorListeners()
 
@@ -88,15 +79,6 @@ class MainActivity : ComponentActivity() {
 
                 // keep screen on
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                // keep CPU on
-//                //TODO: It seems, the above flag is enough - if shutdowns still happen, handle wake Lock properly with a release()
-//                val wakeLock: PowerManager.WakeLock =
-//                    (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
-//                        newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyApp::MyWakelockTag").apply {
-//                            acquire()
-//                        }
-//                    }
-
             }
         }
     }
@@ -110,7 +92,7 @@ class MainActivity : ComponentActivity() {
                 SensorManager.SENSOR_DELAY_FASTEST
             )
             if (check) {
-                println("device has %s".format(l.code));
+                println("device has %s".format(l.code))
             }
         }
     }
@@ -149,7 +131,7 @@ fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
     val state by viewModel.currentState.collectAsState()
     val startTimeStamp by viewModel.startTimeStamp.collectAsState()
     // The interval in milliseconds between every sensor readout (1000/interval = Hz)
-    val measureInterval = 1L // a setting of 1 means basically as fast as possible
+    val measureInterval = 10L // a setting of 1 means basically as fast as possible
 
 
     // scaling lazy column allows to scroll through items with fancy scaling when

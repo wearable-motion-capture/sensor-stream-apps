@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace 'com.example.sensorrecord'
-    compileSdk 32
+    compileSdk 33
 
     defaultConfig {
         applicationId "com.example.sensorrecord"
-        minSdk 29
-        targetSdk 32
+        minSdk 30
+        targetSdk 33
         versionCode 1
         versionName "1.0"
         vectorDrawables {
@@ -50,6 +50,8 @@ dependencies {
     implementation "androidx.compose.ui:ui-tooling-preview:$compose_version"
     implementation "androidx.compose.foundation:foundation:$compose_version"
     implementation "androidx.compose.material:material-icons-extended:$compose_version"
+    implementation "androidx.health:health-services-client:1.0.0-beta01"
+
 
     // Compose for Wear OS Dependencies
     implementation "androidx.wear.compose:compose-material:$wear_compose_version"
