@@ -1,9 +1,12 @@
 package com.example.sensorrecord.presentation
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.os.Bundle
+import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -16,6 +19,9 @@ import com.example.sensorrecord.presentation.theme.SensorRecordTheme
 import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.LocalDateTime
+
+// for logging
+private const val TAG = "MainActivity"
 
 /**
  * The MainActivity is where the app starts. It creates the ViewModel, registers sensor listeners
@@ -63,8 +69,15 @@ class MainActivity : ComponentActivity() {
                 // access and observe sensors
                 sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
+                // check whether permissions for body sensors (HR) are granted
+                if (checkSelfPermission(Manifest.permission.BODY_SENSORS) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(arrayOf(Manifest.permission.BODY_SENSORS), 1);
+                } else {
+                    Log.d(TAG, "ALREADY GRANTED");
+                }
 
-//                //getSensorList(Sensor.TYPE_ALL) lists all the sensors present in the device
+                // list all available sensors
+                //getSensorList(Sensor.TYPE_ALL) lists all the sensors present in the device
 //                val deviceSensors: List<Sensor> = sensorManager.getSensorList(Sensor.TYPE_ALL)
 //                for (device in deviceSensors) {
 //                    println(device.toString())

@@ -47,6 +47,7 @@ class SensorViewModel : ViewModel() {
     private var gyro: FloatArray = FloatArray(3) // gyroscope
     private var magn: FloatArray = FloatArray(3) // magnetic
     private var grav: FloatArray = FloatArray(3) // gravity
+    private var ppg: FloatArray = FloatArray(1) // gravity
 
 
     private var data: ArrayList<FloatArray> = ArrayList() // all recorded data
@@ -72,7 +73,7 @@ class SensorViewModel : ViewModel() {
                         + magn // [3] the ambient magnetic field in the x,y,z -axis
                         + grav // [3] vector indicating the direction and magnitude of gravity x,y,z
                         + hr // [1] heart rate in bpm
-                        + hrRaw // [16] PPG etc from Samsung's Hr raw sensor
+                        + hrRaw // [16] undocumented data from Samsung's Hr raw sensor
             )
         }
     }
