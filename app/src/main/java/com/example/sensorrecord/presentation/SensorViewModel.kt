@@ -11,7 +11,9 @@ import java.io.IOException
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.concurrent.thread
-
+import java.net.Socket
+import java.util.concurrent.TimeUnit
+import java.net.*
 // for logging
 private const val TAG = "SensorViewModel"
 
@@ -19,7 +21,8 @@ enum class STATE {
     ready, // app waits for user to trigger the recording
     recording, // recording sensor data into memory
     processing, // processing sensor data from memory into CSV. When finished, back to WAITING
-    error // error state. Stop using the app
+    error, // error state. Stop using the app,
+    stream
 }
 
 /**
@@ -33,10 +36,11 @@ class SensorViewModel : ViewModel() {
     // A change in MutableStateFlow values triggers a redraw of elements that use it
     private val _startTimeStamp = MutableStateFlow<LocalDateTime>(LocalDateTime.now())
     val startTimeStamp = _startTimeStamp.asStateFlow()
+    var tcp_client: Socket=  Socket()
 
+    private var th = thread {  }
     private val _currentState = MutableStateFlow(STATE.ready)
     val currentState = _currentState.asStateFlow()
-
     // Internal sensor reads that get updated as fast as possible
     private var rotVec: FloatArray = FloatArray(5) // Rotation Vector sensor or estimation
     private var lacc: FloatArray = FloatArray(3) // linear acceleration (without gravity)
@@ -48,18 +52,69 @@ class SensorViewModel : ViewModel() {
     private var magn: FloatArray = FloatArray(3) // magnetic
     private var grav: FloatArray = FloatArray(3) // gravity
     private var ppg: FloatArray = FloatArray(1) // gravity
-
-
+    private var socket_start: Boolean = false
+    private var start_stream: Boolean = false
     private var data: ArrayList<FloatArray> = ArrayList() // all recorded data
-
-
     // Events
     /**
      * Sensors are triggered in different frequencies and might have varying delays.
      * To fetch all data at the same time, this function is called in fixed timed intervals
      * by Timer in MainActivity.kt
      */
+
+    fun startSocketAndStream(checked: Boolean){
+        if (_currentState.value == STATE.ready){
+            _currentState.value = STATE.stream
+            }
+        else{
+            _currentState.value = STATE.ready
+            }
+        /* After changing state to stream now check if toggle is true (checked)
+        and proceed with creating socket and streaming data
+         */
+        if (checked){
+            println("Created tcp socket and streaming data")
+            thread {
+            streamData()
+                }
+            }
+        else {
+            println("Stopped streaming data!")
+            }
+        }
+
+    fun streamData(){
+        try {
+            tcp_client =  Socket("192.168.1.148", 2020)
+            while (_currentState.value == STATE.stream) {
+
+                var streamingData = listOf<Float>(1.0F,4.0F)
+//                        [rotVec  // rotation vector[5]  is a quaternion x,y,z,w, + confidence
+//                        + lacc // [3] linear acceleration x,y,z
+//                        + accl // [3] unfiltered acceleration x,y,z
+//                        + pres  // [1] atmospheric pressure
+//                        + gyro // [3] Angular speed around the x,y,z -axis
+//                        + magn // [3] the ambient magnetic field in the x,y,z -axis
+//                        + grav // [3] vector indicating the direction and magnitude of gravity x,y,z
+//                        + hr // [1] heart rate in bpm
+//                        + hrRaw] // [16] undocumented data from Samsung's Hr raw sensor
+                tcp_client.getOutputStream().write(10)
+                TimeUnit.MILLISECONDS.sleep(10L)
+                }
+            tcp_client.shutdownOutput()
+            tcp_client.close()
+            return
+        }
+        catch (e: Exception){
+            println("Got error $e")
+            tcp_client.shutdownOutput()
+            tcp_client.close()
+            return
+        }
+    }
+
     fun recordSensorValues(secTime: Long) {
+
         // only record observations if the switch was turned on
         if (_currentState.value == STATE.recording) {
             // write to data
@@ -115,6 +170,7 @@ class SensorViewModel : ViewModel() {
         hrRaw = newReadout
     }
 
+
     // changes with the ClipToggle
     fun recordTrigger(checked: Boolean) {
         // no actions allowed if not in ready or recording state
@@ -122,7 +178,6 @@ class SensorViewModel : ViewModel() {
             Log.v(TAG, "still processing previous recording - cannot record yet")
             return
         }
-
         if (checked) {
             //if turned on, record exact start time
             _currentState.value = STATE.recording
@@ -133,7 +188,7 @@ class SensorViewModel : ViewModel() {
             // data processing in separate thread to not jack the UI
             thread {
                 // next state determined by whether data processing was successful 
-                _currentState.value = saveToDatedCSV(_startTimeStamp.value, data)
+//                _currentState.value = saveToDatedCSV(_startTimeStamp.value, data)
                 data.clear()
             }
         }
