@@ -8,12 +8,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 import java.io.FileWriter
 import java.io.IOException
+import java.io.OutputStream
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.concurrent.thread
 import java.net.Socket
 import java.util.concurrent.TimeUnit
 import java.net.*
+import java.nio.charset.Charset
+
 // for logging
 private const val TAG = "SensorViewModel"
 
@@ -37,6 +40,7 @@ class SensorViewModel : ViewModel() {
     private val _startTimeStamp = MutableStateFlow<LocalDateTime>(LocalDateTime.now())
     val startTimeStamp = _startTimeStamp.asStateFlow()
     var tcp_client: Socket=  Socket()
+//    var writer: OutputStream = tcp_client.getOutputStream()
 
     private var th = thread {  }
     private val _currentState = MutableStateFlow(STATE.ready)
@@ -103,17 +107,15 @@ class SensorViewModel : ViewModel() {
                         sensorDataList += d_.toString()
                     }
                 }
-//                println(rotVec[0..1])
-                tcp_client.getOutputStream().write(sensorDataList.toString().toByteArray())
-                TimeUnit.MILLISECONDS.sleep(10L)
+                var byteArray_ =  sensorDataList.toString().toByteArray(Charset.defaultCharset())
+                tcp_client.getOutputStream().write(byteArray_)
+                TimeUnit.MILLISECONDS.sleep(5L)
                 }
-            tcp_client.shutdownOutput()
             tcp_client.close()
             return
         }
         catch (e: Exception){
             println("Got error $e")
-            tcp_client.shutdownOutput()
             tcp_client.close()
             return
         }
