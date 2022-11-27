@@ -87,8 +87,6 @@ class SensorViewModel : ViewModel() {
         try {
             tcp_client =  Socket("192.168.1.148", 2020)
             while (_currentState.value == STATE.stream) {
-
-                var streamingData = listOf<Float>(1.0F,4.0F)
 //                        [rotVec  // rotation vector[5]  is a quaternion x,y,z,w, + confidence
 //                        + lacc // [3] linear acceleration x,y,z
 //                        + accl // [3] unfiltered acceleration x,y,z
@@ -98,7 +96,15 @@ class SensorViewModel : ViewModel() {
 //                        + grav // [3] vector indicating the direction and magnitude of gravity x,y,z
 //                        + hr // [1] heart rate in bpm
 //                        + hrRaw] // [16] undocumented data from Samsung's Hr raw sensor
-                tcp_client.getOutputStream().write(10)
+                var sensors = listOf<FloatArray>(rotVec, lacc, accl, pres, gyro, magn, grav, hr, hrRaw)
+                var sensorDataList = listOf<String>()
+                for (sensor in sensors){
+                    for (d_ in sensor){
+                        sensorDataList += d_.toString()
+                    }
+                }
+//                println(rotVec[0..1])
+                tcp_client.getOutputStream().write(sensorDataList.toString().toByteArray())
                 TimeUnit.MILLISECONDS.sleep(10L)
                 }
             tcp_client.shutdownOutput()
@@ -188,7 +194,7 @@ class SensorViewModel : ViewModel() {
             // data processing in separate thread to not jack the UI
             thread {
                 // next state determined by whether data processing was successful 
-//                _currentState.value = saveToDatedCSV(_startTimeStamp.value, data)
+                _currentState.value = saveToDatedCSV(_startTimeStamp.value, data)
                 data.clear()
             }
         }
