@@ -107,9 +107,22 @@ class SensorViewModel : ViewModel() {
                         sensorDataList += d_.toString()
                     }
                 }
-                var byteArray_ =  sensorDataList.toString().toByteArray(Charset.defaultCharset())
-                tcp_client.getOutputStream().write(byteArray_)
-                TimeUnit.MILLISECONDS.sleep(5L)
+                var data_packet = "START," +  sensorDataList.toString() + ",END,"
+                if (data_packet.length < 512){
+                    var remaining_bytes = 512 - data_packet.length
+                    var tmp = 0
+                    while (tmp < remaining_bytes){
+                        data_packet += 'N'
+                        tmp += 1
+                    }
+                }
+
+                var data_packet_byte = data_packet.toByteArray(Charset.defaultCharset())
+                println("data pacaket len; ${data_packet_byte.size}")
+
+                tcp_client.getOutputStream().write(data_packet_byte)
+
+                TimeUnit.MILLISECONDS.sleep( 10L)
                 }
             tcp_client.close()
             return
