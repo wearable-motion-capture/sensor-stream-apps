@@ -77,17 +77,17 @@ class MainActivity : ComponentActivity() {
 
                 // check whether permissions for body sensors (HR) are granted
                 if (checkSelfPermission(Manifest.permission.BODY_SENSORS) != PackageManager.PERMISSION_GRANTED) {
-                    requestPermissions(arrayOf(Manifest.permission.BODY_SENSORS), 1);
+                    requestPermissions(arrayOf(Manifest.permission.BODY_SENSORS), 1)
                 } else {
-                    Log.d(TAG, "ALREADY GRANTED");
+                    Log.d(TAG, "ALREADY GRANTED")
                 }
 
-                // list all available sensors
-                //getSensorList(Sensor.TYPE_ALL) lists all the sensors present in the device
-                val deviceSensors: List<Sensor> = sensorManager.getSensorList(Sensor.TYPE_ALL)
-                for (device in deviceSensors) {
-                    println(device.toString())
-                }
+//                // list all available sensors
+//                //getSensorList(Sensor.TYPE_ALL) lists all the sensors present in the device
+//                val deviceSensors: List<Sensor> = sensorManager.getSensorList(Sensor.TYPE_ALL)
+//                for (device in deviceSensors) {
+//                    println(device.toString())
+//                }
 
                 registerSensorListeners()
 
@@ -160,10 +160,13 @@ fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
         autoCentering = AutoCenteringParams(itemIndex = 0)
     ) {
         item {
+            Text("version 0.0.1")
+        }
+        item {
             SensorToggleChip(
                 text = "Record Sensors",
                 checked = (state == STATE.recording),
-                onChecked = {viewModel.recordTrigger(it) },
+                onChecked = { viewModel.recordTrigger(it) },
                 modifier = modifier
             )
         }
@@ -178,10 +181,10 @@ fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
         }
         item {
             SensorToggleChip(
-                    text = "Streaming Data",
-                    checked = (state == STATE.stream),
-                    onChecked = {viewModel.startSocketAndStream(it)},
-                    modifier = modifier
+                text = "Streaming Data",
+                checked = (state == STATE.stream),
+                onChecked = { viewModel.startSocketAndStream(it) },
+                modifier = modifier
             )
         }
         item {
