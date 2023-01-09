@@ -16,9 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.wear.compose.material.*
 import com.example.sensorrecord.presentation.theme.SensorRecordTheme
-import kotlinx.coroutines.delay
-import java.time.Duration
-import java.time.LocalDateTime
 
 // for logging
 private const val TAG = "MainActivity"
@@ -31,6 +28,7 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var sensorManager: SensorManager
     private val sensorViewModel: SensorViewModel = SensorViewModel()
+
     private var _listenersSetup = listOf(
         SensorListener(
             Sensor.TYPE_PRESSURE
@@ -71,9 +69,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
+            // for colours
             SensorRecordTheme {
-                // access and observe sensors
-                sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
                 // check whether permissions for body sensors (HR) are granted
                 if (checkSelfPermission(Manifest.permission.BODY_SENSORS) != PackageManager.PERMISSION_GRANTED) {
@@ -81,6 +78,9 @@ class MainActivity : ComponentActivity() {
                 } else {
                     Log.d(TAG, "ALREADY GRANTED")
                 }
+
+                // access and observe sensors
+                sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
 //                // list all available sensors
 //                //getSensorList(Sensor.TYPE_ALL) lists all the sensors present in the device
@@ -92,8 +92,9 @@ class MainActivity : ComponentActivity() {
                 registerSensorListeners()
 
                 // create view and UI
-                // Modifiers used by our Wear composables.
+                // Modifiers used by our Wear Composables.
                 val contentModifier = Modifier.fillMaxWidth()
+
                 MainUI(sensorViewModel, contentModifier)
 
                 // keep screen on
@@ -102,6 +103,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Called on app startup and whenever app resumes
+     */
     private fun registerSensorListeners() {
         // register all listeners with their assigned codes
         for (l in _listenersSetup) {
@@ -148,10 +152,6 @@ class MainActivity : ComponentActivity() {
 fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
 
     val state by viewModel.currentState.collectAsState()
-    val startTimeStamp by viewModel.startTimeStamp.collectAsState()
-    // The interval in milliseconds between every sensor readout (1000/interval = Hz)
-    val measureInterval = 10L // a setting of 1 means basically as fast as possible
-
 
     // scaling lazy column allows to scroll through items with fancy scaling when
     // they leave the screen top or bottom
@@ -160,78 +160,34 @@ fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
         autoCentering = AutoCenteringParams(itemIndex = 0)
     ) {
         item {
-            Text("version 0.0.1")
+            Text("version 0.0.2")
+        }
+        item {
+            StateTextDisplay(state = state, modifier = modifier)
         }
         item {
             SensorToggleChip(
-                text = "Record Sensors",
-                checked = (state == STATE.recording),
+                text = "Record Locally",
+                checked = (state == STATE.Recording),
                 onChecked = { viewModel.recordTrigger(it) },
                 modifier = modifier
             )
         }
         item {
-            SensorTimer(
-                start = startTimeStamp,
-                interval = measureInterval,
-                state = state,
-                onTick = { viewModel.recordSensorValues(it) },
-                modifier = modifier
-            )
-        }
-        item {
             SensorToggleChip(
-                text = "Streaming Data",
-                checked = (state == STATE.stream),
-                onChecked = { viewModel.startSocketAndStream(it) },
+                text = "Stream to IP",
+                checked = (state == STATE.Streaming),
+                onChecked = { viewModel.streamTrigger(it) },
                 modifier = modifier
             )
         }
         item {
-            StateTextDisplay(state = state, modifier = modifier)
+            Text(
+                text = viewModel.socketIP,
+                modifier = modifier,
+                textAlign = TextAlign.Center
+            )
         }
     }
-}
-
-
-@Composable
-        /**
-         * Some sensors observe in distinct frequencies (Hz). This timer collects measurements from all sensors
-         * in a fixed given interval to sync data collection.
-         */
-fun SensorTimer(
-    start: LocalDateTime,
-    interval: Long = 100L,
-    state: STATE = STATE.ready,
-    onTick: (Long) -> Unit,
-    modifier: Modifier
-) {
-
-    // A count for measurements taken. The delay function is not accurate because estimation time
-    // must be added. Therefore, we keep track of passed time in a separate calculation
-    var steps by remember { mutableStateOf(0L) }
-
-    // A while loop that doesn't block the co-routine
-    LaunchedEffect(key1 = steps, key2 = state) {
-        // only do something if we want to record
-        if (state == STATE.recording) {
-            // estimate time difference to given start point as our time stamp
-            val diff = Duration.between(start, LocalDateTime.now()).toMillis()
-            // delay by a given amount of milliseconds
-            delay(interval)
-            // increase step count to trigger LaunchedEffect again
-            steps += 1
-            // call the event with estimated time stamp
-            onTick(diff)
-        }
-    }
-    // display elapsed time in seconds
-    Text(
-        modifier = modifier,
-        textAlign = TextAlign.Center,
-        text = "%.4f ".format(
-            Duration.between(start, LocalDateTime.now()).toMillis() * 0.001
-        )
-    )
 }
 
