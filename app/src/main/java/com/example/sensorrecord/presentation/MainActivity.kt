@@ -61,6 +61,12 @@ class MainActivity : ComponentActivity() {
         ) { sensorViewModel.onHrRawReadout(it) }
     )
 
+//    private var _listenersSetup = listOf(
+//        DebugSensorListener(
+//            34 // Samsung HR Raw Sensor this is the only Galaxy5 raw sensor that worked
+//        )
+//    )
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -71,13 +77,13 @@ class MainActivity : ComponentActivity() {
 
                 // check whether permissions for body sensors (HR) are granted
                 if (checkSelfPermission(Manifest.permission.BODY_SENSORS) != PackageManager.PERMISSION_GRANTED) {
-                    requestPermissions(arrayOf(Manifest.permission.BODY_SENSORS), 1);
+                    requestPermissions(arrayOf(Manifest.permission.BODY_SENSORS), 1)
                 } else {
-                    Log.d(TAG, "ALREADY GRANTED");
+                    Log.d(TAG, "ALREADY GRANTED")
                 }
 
-                // list all available sensors
-                //getSensorList(Sensor.TYPE_ALL) lists all the sensors present in the device
+//                // list all available sensors
+//                //getSensorList(Sensor.TYPE_ALL) lists all the sensors present in the device
 //                val deviceSensors: List<Sensor> = sensorManager.getSensorList(Sensor.TYPE_ALL)
 //                for (device in deviceSensors) {
 //                    println(device.toString())
@@ -154,6 +160,9 @@ fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
         autoCentering = AutoCenteringParams(itemIndex = 0)
     ) {
         item {
+            Text("version 0.0.1")
+        }
+        item {
             SensorToggleChip(
                 text = "Record Sensors",
                 checked = (state == STATE.recording),
@@ -167,6 +176,14 @@ fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
                 interval = measureInterval,
                 state = state,
                 onTick = { viewModel.recordSensorValues(it) },
+                modifier = modifier
+            )
+        }
+        item {
+            SensorToggleChip(
+                text = "Streaming Data",
+                checked = (state == STATE.stream),
+                onChecked = { viewModel.startSocketAndStream(it) },
                 modifier = modifier
             )
         }
