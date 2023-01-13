@@ -35,12 +35,32 @@ fun SensorToggleChip(
 }
 
 @Composable
-fun StateTextDisplay(state: STATE, modifier: Modifier = Modifier) {
+fun DataStateDisplay(state: AppState, modifier: Modifier = Modifier) {
     var color = Color.Red
-    if (state == STATE.Ready) {
+    if (state == AppState.Ready) {
         color = Color.Green
-    } else if (state == STATE.Processing) {
+    } else if (state == AppState.Processing) {
         color = Color.Yellow
+    }
+    Text(
+        modifier = modifier,
+        textAlign = TextAlign.Center,
+        text = state.name,
+        style = MaterialTheme.typography.body1.copy(
+            color = color
+        )
+    )
+}
+
+@Composable
+fun CalibrationStateDisplay(state: CalibrationState, modifier: Modifier = Modifier) {
+    var color = Color.Red
+    if (state == CalibrationState.Up) {
+        color = Color.Magenta
+    } else if (state == CalibrationState.Down) {
+        color = Color.Blue
+    } else if (state == CalibrationState.Forward) {
+        color = Color.Cyan
     }
     Text(
         modifier = modifier,

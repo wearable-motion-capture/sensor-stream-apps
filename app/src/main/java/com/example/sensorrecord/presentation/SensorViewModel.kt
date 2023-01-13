@@ -1,6 +1,8 @@
 package com.example.sensorrecord.presentation
 
 import android.os.Environment
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,12 +20,22 @@ import java.time.Duration
 // for logging
 private const val TAG = "SensorViewModel"
 
-enum class STATE {
+enum class CalibrationState {
+    Start,
+    Hold,
+    Forward,
+    Up,
+    Down
+}
+
+
+enum class AppState {
+    Calibrating, // the app needs calibration
     Ready, // app waits for user to trigger the recording
     Recording, // recording sensor data into memory
-    Processing, // processing sensor data from memory into CSV. When finished, back to WAITING
+    Processing, // processing sensor data from memory to CSV
     Error, // error state. Stop using the app,
-    Streaming
+    Streaming // streaming to IP and Port set in SensorViewModel
 }
 
 /**
@@ -40,12 +52,21 @@ class SensorViewModel : ViewModel() {
     // used by the recording function to zero out time stamps when writing to file
     private var _startRecordTimeStamp = LocalDateTime.now()
 
-    // the default IP to stream data to
+    // the default remote IP and Port to stream data
     var socketIP = "192.168.1.162"
+    var socketPort = 50000
+    var version = "0.0.3"
 
     // A change in MutableStateFlow values triggers a redraw of elements that use it
-    private val _currentState = MutableStateFlow(STATE.Ready)
-    val currentState = _currentState.asStateFlow()
+    private val _appState = MutableStateFlow(AppState.Calibrating)
+    val appState = _appState.asStateFlow()
+
+    // calibration parameters
+    private val _calibState = MutableStateFlow(CalibrationState.Start)
+    val calibState = _calibState.asStateFlow()
+    private var _initPressure = 0.0 // the initial pressure for relative pressure estimations
+    private var _forwardNorthDegree =
+        0.0 // magnetic north pole direction in relation to body orientation
 
     // Internal sensor reads that get updated as fast as possible
     private var rotVec: FloatArray = FloatArray(5) // Rotation Vector sensor or estimation
@@ -66,7 +87,7 @@ class SensorViewModel : ViewModel() {
     }
 
     fun onRotVecReadout(newReadout: FloatArray) {
-        rotVec = newReadout
+        rotVec = newReadout // [x,y,z,w]
     }
 
     fun onAcclReadout(newReadout: FloatArray) {
@@ -98,55 +119,199 @@ class SensorViewModel : ViewModel() {
     }
 
     /**
+     * Triggered by the calibration button. It goes through all 4 calibration stages
+     * to set required normalization parameters
+     */
+    fun calibrationTrigger(vibrator: Vibrator) {
+
+        // verify that app is in a state that allows to start the calibration
+        if (_calibState.value != CalibrationState.Start) {
+            Log.v(TAG, "Calibration already in progress")
+            return
+        }
+
+        fun forwardStep() {
+            // the second step is the pressure when the arm is raised
+            _calibState.value = CalibrationState.Forward
+            thread {
+                var lastBelow = LocalDateTime.now()
+                var diff = 0L
+
+                val northDegrees = mutableListOf(pres[0])
+                while (diff < 2000) {
+                    // the watch held horizontally if gravity in z direction is positive
+                    if (grav[2] < 9.7) {
+                        lastBelow = LocalDateTime.now()
+                        northDegrees.clear()
+                    }
+
+                    northDegrees.add(getNorthDegree())
+                    diff = Duration.between(lastBelow, LocalDateTime.now()).toMillis()
+                }
+
+                // last calibration step done
+                _forwardNorthDegree =
+                    northDegrees.average() + 90 // add 90 degress for forward orientation of arm and hip
+                vibrator.vibrate(
+                    VibrationEffect.createOneShot(
+                        500L, VibrationEffect.DEFAULT_AMPLITUDE
+                    )
+                )
+                // set app state to ready to begin recording
+                _appState.value = AppState.Ready
+            }
+        }
+
+        fun holdStep() {
+            // begin with initial pressure in hold position
+            _calibState.value = CalibrationState.Hold
+            thread {
+                val start = LocalDateTime.now()
+                var diff = 0L
+
+                val pressures = mutableListOf(pres[0])
+                while (diff < 2000) {
+                    pressures.add(pres[0])
+                    diff = Duration.between(start, LocalDateTime.now()).toMillis()
+                }
+                // first calibration step done
+                _initPressure = pressures.average()
+                vibrator.vibrate(
+                    VibrationEffect.createOneShot(
+                        500L, VibrationEffect.DEFAULT_AMPLITUDE
+                    )
+                )
+                // continue with second step
+                forwardStep()
+            }
+        }
+
+        // this is the start of the calibration that calls all above functions iteratively
+        holdStep()
+
+// TODO: investigate how normalized pressure with UP and DOWN calibration performs
+// var _minPressure = 0.0 // the minimal atmospheric pressure when the arm is raised up high
+// var _maxPressure = 0.0 // the maximal atmospheric pressure when the arm is dangling down
+//        fun downStep() {
+//            // the second step is the pressure when the arm is raised
+//            _calibState.value = CalibrationState.Down
+//            thread {
+//                var lastBelow = LocalDateTime.now()
+//                var diff = 0L
+//
+//                val pressures = mutableListOf(pres[0])
+//                while (diff < 2000) {
+//                    // the watch is raised up high if gravity in x-direction is positive
+//                    if (grav[0] > -9.6) {
+//                        lastBelow = LocalDateTime.now()
+//                        pressures.clear()
+//                    }
+//                    pressures.add(pres[0])
+//                    diff = Duration.between(lastBelow, LocalDateTime.now()).toMillis()
+//                }
+//                // third calibration step done
+//                _maxPressure = pressures.average()
+//                vibrator.vibrate(
+//                    VibrationEffect.createOneShot(
+//                        500L, VibrationEffect.DEFAULT_AMPLITUDE
+//                    )
+//                )
+//                // continue with last step
+//                //forwardStep()
+//            }
+//        }
+//
+//        fun upStep() {
+//            // the second step is the pressure when the arm is raised
+//            _calibState.value = CalibrationState.Up
+//            thread {
+//                var lastBelow = LocalDateTime.now()
+//                var diff = 0L
+//
+//                val pressures = mutableListOf(pres[0])
+//                while (diff < 2000) {
+//                    // the watch is raised up high if gravity in x-direction is positive
+//                    if (grav[0] < 9.6) {
+//                        lastBelow = LocalDateTime.now()
+//                        pressures.clear()
+//                    }
+//                    pressures.add(pres[0])
+//                    diff = Duration.between(lastBelow, LocalDateTime.now()).toMillis()
+//                }
+//                // second calibration step done
+//                _minPressure = pressures.average()
+//                vibrator.vibrate(
+//                    VibrationEffect.createOneShot(
+//                        500L, VibrationEffect.DEFAULT_AMPLITUDE
+//                    )
+//                )
+//                // continue with third step
+//                downStep()
+//            }
+//        }
+    }
+
+    /**
      * Triggered by the streaming ClipToggle onChecked event
      * opens a TCP socket and streams sensor data to set IP as long as the current stat is STATE.Streaming.
      */
     fun streamTrigger(checked: Boolean) {
 
         // verify that app is in a state that allows to start or stop streaming
-        if (_currentState.value != STATE.Ready && _currentState.value != STATE.Streaming) {
+        if (_appState.value != AppState.Ready && _appState.value != AppState.Streaming) {
             Log.v(TAG, "not ready to start or stop streaming")
             return
         }
 
         // if toggle is true (checked), proceed with creating a socket and begin to stream data
         if (checked) {
-            _currentState.value = STATE.Streaming
+            _appState.value = AppState.Streaming
 
             // run the streaming in a thread
             thread {
                 // Create the tcpClient with set socket IP
                 try {
-                    val tcpClient = Socket(socketIP, 2020)
+                    val tcpClient = Socket(socketIP, socketPort)
+                    val streamStartTimeStamp = LocalDateTime.now()
 
-                    while (_currentState.value == STATE.Streaming) {
-                        val sensorData =
-                            listOf(rotVec, lacc, accl, pres, gyro, magn, grav, hr, hrRaw)
-                        var dataPacket = "START," + sensorData.joinToString() + ",END,"
-                        if (dataPacket.length < 512) {
-                            val remainingBytes = 512 - dataPacket.length
-                            var tmp = 0
-                            while (tmp < remainingBytes) {
-                                dataPacket += 'N'
-                                tmp += 1
-                            }
+                    while (_appState.value == AppState.Streaming) {
+                        val diff =
+                            Duration.between(streamStartTimeStamp, LocalDateTime.now()).toMillis()
+                        // write to data
+                        val sensorData = floatArrayOf(diff.toFloat()) +
+                                rotVec +  // rotation vector[5]  is a quaternion x,y,z,w, + confidence
+                                lacc + // [3] linear acceleration x,y,z
+                                pres +  // [1] atmospheric pressure
+                                grav + // [3] vector indicating the direction and magnitude of gravity x,y,z
+                                floatArrayOf(_initPressure.toFloat()) + // initial atmospheric pressure collected during calibration
+                                floatArrayOf(_forwardNorthDegree.toFloat()) // body orientation in relation to magnetic north pole collected during calibration
+
+
+                        // write sensor data as string
+                        var dataString = "#START,"
+                        for (ety in sensorData) {
+                            dataString += "%e,".format(ety)
                         }
+                        dataString += "#END"
 
-                        val dataPacketByte = dataPacket.toByteArray(Charset.defaultCharset())
-                        Log.v(TAG, "data pacaket len; ${dataPacketByte.size}")
+                        // transform into byte array
+                        val dataPacketByte = dataString.toByteArray(Charset.defaultCharset())
+
+                        // finally, send the byte stream
                         tcpClient.getOutputStream().write(dataPacketByte)
                         Thread.sleep(_interval)
                     }
 
                     tcpClient.close()
                 } catch (e: Exception) {
-                    Log.v(TAG, "Streaming error ${e}")
-                    _currentState.value = STATE.Error
+                    Log.v(TAG, "Streaming error $e")
+                    _appState.value = AppState.Ready
+                    Log.v(TAG, "stopped streaming")
                 }
             }
 
         } else {
-            _currentState.value = STATE.Ready
+            _appState.value = AppState.Ready
             Log.v(TAG, "stopped streaming")
         }
     }
@@ -157,13 +322,13 @@ class SensorViewModel : ViewModel() {
      */
     fun recordTrigger(checked: Boolean) {
         // no actions allowed if not in ready or recording state
-        if (_currentState.value != STATE.Ready && _currentState.value != STATE.Recording) {
+        if (_appState.value != AppState.Ready && _appState.value != AppState.Recording) {
             Log.v(TAG, "not ready to record or stop recording")
             return
         }
         if (checked) {
             //if turned on, record exact start time
-            _currentState.value = STATE.Recording
+            _appState.value = AppState.Recording
             _startRecordTimeStamp = LocalDateTime.now()
 
             // Such that the while loop that doesn't block the co-routine
@@ -172,7 +337,7 @@ class SensorViewModel : ViewModel() {
                 // must be added. Therefore, we keep track of passed time in a separate calculation
                 var steps = 0
 
-                while (_currentState.value == STATE.Recording) {
+                while (_appState.value == AppState.Recording) {
                     // estimate time difference to given start point as our time stamp
                     val diff =
                         Duration.between(_startRecordTimeStamp, LocalDateTime.now()).toMillis()
@@ -188,6 +353,8 @@ class SensorViewModel : ViewModel() {
                                 + grav // [3] vector indicating the direction and magnitude of gravity x,y,z
                                 + hr // [1] heart rate in bpm
                                 + hrRaw // [16] undocumented data from Samsung's Hr raw sensor
+                                + floatArrayOf(_initPressure.toFloat()) // initial atmospheric pressure collected during calibration
+                                + floatArrayOf(_forwardNorthDegree.toFloat()) // body orientation in relation to magnetic north pole collected during calibration
                     )
                     // delay by a given amount of milliseconds
                     Thread.sleep(_interval)
@@ -197,11 +364,11 @@ class SensorViewModel : ViewModel() {
             }
         } else {
             // if turned off, safe data an clear
-            _currentState.value = STATE.Processing
+            _appState.value = AppState.Processing
             // data processing in separate thread to not jack the UI
             thread {
                 // next state determined by whether data processing was successful 
-                _currentState.value = saveToDatedCSV(_startRecordTimeStamp, data)
+                _appState.value = saveToDatedCSV(_startRecordTimeStamp, data)
                 data.clear()
             }
         }
@@ -212,7 +379,10 @@ class SensorViewModel : ViewModel() {
      * Documents folder of the Android device that runs this app. The file name uses the input LocalDateTime
      * for a unique name.
      */
-    private fun saveToDatedCSV(start: LocalDateTime, data: java.util.ArrayList<FloatArray>): STATE {
+    private fun saveToDatedCSV(
+        start: LocalDateTime,
+        data: java.util.ArrayList<FloatArray>
+    ): AppState {
 
         // create unique filename from current date and time
         val currentDate = (DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss-SSS")).format(start)
@@ -238,7 +408,9 @@ class SensorViewModel : ViewModel() {
                         "grav_x,grav_y,grav_z," +
                         "hr," +
                         "hrRaw_0,hrRaw_1,hrRaw_2,hrRaw_3,hrRaw_4,hrRaw_5,hrRaw_6,hrRaw_7,hrRaw_8," +
-                        "hrRaw_9,hrRaw_10,hrRaw_11,hrRaw_12,hrRaw_13,hrRaw_14,hrRaw_15\n"
+                        "hrRaw_9,hrRaw_10,hrRaw_11,hrRaw_12,hrRaw_13,hrRaw_14,hrRaw_15," +
+                        "init_pres," +
+                        "forward_north_degree\n"
             )
             // write row-by-row
             for (arr in data) {
@@ -254,11 +426,43 @@ class SensorViewModel : ViewModel() {
         } catch (e: IOException) {
             e.printStackTrace()
             Log.v(TAG, "Log file creation failed.")
-            return STATE.Error
+            return AppState.Error
         }
 
         // Parse the file and path to uri
         Log.v(TAG, "Text file created at ${textFile.absolutePath}.")
-        return STATE.Ready
+        return AppState.Ready
+    }
+
+    /**
+     * Estimates rotation around global y-axis (Up) from watch orientation.
+     * This corresponds to the azimuth in polar coordinates. It the angle from the z-axis (forward)
+     * in between +pi and -pi.
+     */
+    private fun getNorthDegree(): Float {
+        // smartwatch rotation to [-w,x,z,y]
+        val r = floatArrayOf(-rotVec[3], rotVec[0], rotVec[2], rotVec[1])
+        val p = floatArrayOf(0f, 0f, 0f, 1f) // forward vector with [0,x,y,z]
+
+        // this is the result of H(R,P)
+        val hrp = floatArrayOf(
+            r[0] * p[0] - r[1] * p[1] - r[2] * p[2] - r[3] * p[3],
+            r[0] * p[1] + r[1] * p[0] + r[2] * p[3] - r[3] * p[2],
+            r[0] * p[2] - r[1] * p[3] + r[2] * p[0] + r[3] * p[1],
+            r[0] * p[3] + r[1] * p[2] - r[2] * p[1] + r[3] * p[0]
+        )
+
+        val r_p = floatArrayOf(r[0], -r[1], -r[2], -r[3]) // this ir R'
+        // the final H(H(R,P),R')
+        val p_p = floatArrayOf(
+            hrp[0] * r_p[0] - hrp[1] * r_p[1] - hrp[2] * r_p[2] - hrp[3] * r_p[3],
+            hrp[0] * r_p[1] + hrp[1] * r_p[0] + hrp[2] * r_p[3] - hrp[3] * r_p[2],
+            hrp[0] * r_p[2] - hrp[1] * r_p[3] + hrp[2] * r_p[0] + hrp[3] * r_p[1],
+            hrp[0] * r_p[3] + hrp[1] * r_p[2] - hrp[2] * r_p[1] + hrp[3] * r_p[0]
+        )
+        // get angle with atan2
+        val yRot = kotlin.math.atan2(p_p[1], p_p[3])
+
+        return yRot * 57.29578f
     }
 }
