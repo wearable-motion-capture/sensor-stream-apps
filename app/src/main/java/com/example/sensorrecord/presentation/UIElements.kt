@@ -35,11 +35,11 @@ fun SensorToggleChip(
 }
 
 @Composable
-fun DataStateDisplay(state: AppState, modifier: Modifier = Modifier) {
+fun DataStateDisplay(state: SensorHandlerState, modifier: Modifier = Modifier) {
     var color = Color.Red
-    if (state == AppState.Ready) {
+    if (state == SensorHandlerState.Ready) {
         color = Color.Green
-    } else if (state == AppState.Processing) {
+    } else if (state == SensorHandlerState.Processing) {
         color = Color.Yellow
     }
     Text(

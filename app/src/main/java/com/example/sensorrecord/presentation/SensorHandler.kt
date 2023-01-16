@@ -4,7 +4,6 @@ import android.os.Environment
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
-import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
@@ -17,9 +16,6 @@ import java.net.Socket
 import java.nio.charset.Charset
 import java.time.Duration
 
-// for logging
-private const val TAG = "SensorViewModel"
-
 enum class CalibrationState {
     Start,
     Hold,
@@ -29,7 +25,7 @@ enum class CalibrationState {
 }
 
 
-enum class AppState {
+enum class SensorHandlerState {
     Calibrating, // the app needs calibration
     Ready, // app waits for user to trigger the recording
     Recording, // recording sensor data into memory
@@ -44,7 +40,12 @@ enum class AppState {
  * It exposes the state as FlowData, which the view "observes" and reacts to.
  * The state is altered via callbacks (Events).
  */
-class SensorViewModel : ViewModel() {
+class SensorHandler {
+    
+    companion object {
+        private const val TAG = "SensorViewModel"  // for logging
+    }
+
     // State
     // The interval in milliseconds between every sensor readout (1000/interval = Hz)
     private val _interval = 10L // a setting of 1 means basically as fast as possible
@@ -55,10 +56,9 @@ class SensorViewModel : ViewModel() {
     // the default remote IP and Port to stream data
     var socketIP = "192.168.1.162"
     var socketPort = 50000
-    var version = "0.0.3"
 
     // A change in MutableStateFlow values triggers a redraw of elements that use it
-    private val _appState = MutableStateFlow(AppState.Calibrating)
+    private val _appState = MutableStateFlow(SensorHandlerState.Calibrating)
     val appState = _appState.asStateFlow()
 
     // calibration parameters
@@ -158,7 +158,7 @@ class SensorViewModel : ViewModel() {
                     )
                 )
                 // set app state to ready to begin recording
-                _appState.value = AppState.Ready
+                _appState.value = SensorHandlerState.Ready
             }
         }
 
@@ -258,14 +258,14 @@ class SensorViewModel : ViewModel() {
     fun streamTrigger(checked: Boolean) {
 
         // verify that app is in a state that allows to start or stop streaming
-        if (_appState.value != AppState.Ready && _appState.value != AppState.Streaming) {
+        if (_appState.value != SensorHandlerState.Ready && _appState.value != SensorHandlerState.Streaming) {
             Log.v(TAG, "not ready to start or stop streaming")
             return
         }
 
         // if toggle is true (checked), proceed with creating a socket and begin to stream data
         if (checked) {
-            _appState.value = AppState.Streaming
+            _appState.value = SensorHandlerState.Streaming
 
             // run the streaming in a thread
             thread {
@@ -274,7 +274,7 @@ class SensorViewModel : ViewModel() {
                     val tcpClient = Socket(socketIP, socketPort)
                     val streamStartTimeStamp = LocalDateTime.now()
 
-                    while (_appState.value == AppState.Streaming) {
+                    while (_appState.value == SensorHandlerState.Streaming) {
                         val diff =
                             Duration.between(streamStartTimeStamp, LocalDateTime.now()).toMillis()
                         // write to data
@@ -305,13 +305,13 @@ class SensorViewModel : ViewModel() {
                     tcpClient.close()
                 } catch (e: Exception) {
                     Log.v(TAG, "Streaming error $e")
-                    _appState.value = AppState.Ready
+                    _appState.value = SensorHandlerState.Ready
                     Log.v(TAG, "stopped streaming")
                 }
             }
 
         } else {
-            _appState.value = AppState.Ready
+            _appState.value = SensorHandlerState.Ready
             Log.v(TAG, "stopped streaming")
         }
     }
@@ -322,13 +322,13 @@ class SensorViewModel : ViewModel() {
      */
     fun recordTrigger(checked: Boolean) {
         // no actions allowed if not in ready or recording state
-        if (_appState.value != AppState.Ready && _appState.value != AppState.Recording) {
+        if (_appState.value != SensorHandlerState.Ready && _appState.value != SensorHandlerState.Recording) {
             Log.v(TAG, "not ready to record or stop recording")
             return
         }
         if (checked) {
             //if turned on, record exact start time
-            _appState.value = AppState.Recording
+            _appState.value = SensorHandlerState.Recording
             _startRecordTimeStamp = LocalDateTime.now()
 
             // Such that the while loop that doesn't block the co-routine
@@ -337,7 +337,7 @@ class SensorViewModel : ViewModel() {
                 // must be added. Therefore, we keep track of passed time in a separate calculation
                 var steps = 0
 
-                while (_appState.value == AppState.Recording) {
+                while (_appState.value == SensorHandlerState.Recording) {
                     // estimate time difference to given start point as our time stamp
                     val diff =
                         Duration.between(_startRecordTimeStamp, LocalDateTime.now()).toMillis()
@@ -364,7 +364,7 @@ class SensorViewModel : ViewModel() {
             }
         } else {
             // if turned off, safe data an clear
-            _appState.value = AppState.Processing
+            _appState.value = SensorHandlerState.Processing
             // data processing in separate thread to not jack the UI
             thread {
                 // next state determined by whether data processing was successful 
@@ -382,7 +382,7 @@ class SensorViewModel : ViewModel() {
     private fun saveToDatedCSV(
         start: LocalDateTime,
         data: java.util.ArrayList<FloatArray>
-    ): AppState {
+    ): SensorHandlerState {
 
         // create unique filename from current date and time
         val currentDate = (DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss-SSS")).format(start)
@@ -426,12 +426,12 @@ class SensorViewModel : ViewModel() {
         } catch (e: IOException) {
             e.printStackTrace()
             Log.v(TAG, "Log file creation failed.")
-            return AppState.Error
+            return SensorHandlerState.Error
         }
 
         // Parse the file and path to uri
         Log.v(TAG, "Text file created at ${textFile.absolutePath}.")
-        return AppState.Ready
+        return SensorHandlerState.Ready
     }
 
     /**

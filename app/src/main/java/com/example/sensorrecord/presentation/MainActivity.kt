@@ -10,6 +10,7 @@ import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -18,18 +19,21 @@ import androidx.wear.compose.material.*
 import com.example.sensorrecord.presentation.theme.SensorRecordTheme
 
 
-// for logging
-private const val TAG = "MainActivity"
-
 /**
  * The MainActivity is where the app starts. It creates the ViewModel, registers sensor listeners
  * and handles the UI.
  */
 class MainActivity : ComponentActivity() {
 
+    companion object {
+        private const val TAG = "MainActivity" // for logging
+        private const val VERSION = "0.0.4" // a version number to confirm updates on watch screen
+    }
+
     private lateinit var sensorManager: SensorManager
     private lateinit var vibratorManager: VibratorManager
-    private val sensorViewModel: SensorViewModel = SensorViewModel()
+    private val sensorViewModel: SensorHandler = SensorHandler()
+    private val soundViewModel: SoundRecorder = SoundRecorder()
 
     private var _listenersSetup = listOf(
         SensorListener(
@@ -66,6 +70,7 @@ class MainActivity : ComponentActivity() {
 //            34 // Samsung HR Raw Sensor this is the only Galaxy5 raw sensor that worked
 //        )
 //    )
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -77,11 +82,20 @@ class MainActivity : ComponentActivity() {
                 if (checkSelfPermission(Manifest.permission.BODY_SENSORS) != PackageManager.PERMISSION_GRANTED) {
                     requestPermissions(arrayOf(Manifest.permission.BODY_SENSORS), 1)
                 } else {
-                    Log.d(TAG, "ALREADY GRANTED")
+                    Log.d(TAG, "body sensor permission already granted")
+                }
+
+                // check whether permissions for recording audio are granted
+                if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 1)
+                } else {
+                    Log.d(TAG, "record audio permission already granted")
                 }
 
                 // access and observe sensors
                 sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+                registerSensorListeners()
+
 
                 // get the vibrator service.
                 lateinit var vibrator: Vibrator
@@ -103,13 +117,14 @@ class MainActivity : ComponentActivity() {
 //                  println(device.toString())
 //              }
 
-                registerSensorListeners()
-
                 // create view and UI
                 // Modifiers used by our Wear Composables.
                 val contentModifier = Modifier.fillMaxWidth()
 
-                MainUI(sensorViewModel, contentModifier, vibrator)
+                MainUI(
+                    contentModifier,
+                    vibrator
+                )
 
                 // keep screen on
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -160,79 +175,96 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-}
 
-@Composable
-fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier, vibrator: Vibrator) {
+    @Composable
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+    fun MainUI(modifier: Modifier = Modifier, vibrator: Vibrator) {
 
-    val appState by viewModel.appState.collectAsState()
+        val sensorAppState by sensorViewModel.appState.collectAsState()
+        val soundRecordingState by soundViewModel.state.collectAsState()
 
-    if (appState == AppState.Calibrating) {
-        // The calibration view
-        val calibrationState by viewModel.calibState.collectAsState()
+        if (sensorAppState == SensorHandlerState.Calibrating) {
+            // The calibration view
+            val calibrationState by sensorViewModel.calibState.collectAsState()
 
-        ScalingLazyColumn(
-            modifier = modifier,
-            autoCentering = AutoCenteringParams(itemIndex = 2)
-        ) {
-            item {
-                Text(viewModel.version)
-            }
-            item {
-                Text(
-                    text = "Needs Calibration",
-                    modifier = modifier,
-                    textAlign = TextAlign.Center
-                )
-            }
-            item {
-                Button(
-                    onClick = {
-                        viewModel.calibrationTrigger(vibrator)
+            ScalingLazyColumn(
+                modifier = modifier,
+                autoCentering = AutoCenteringParams(itemIndex = 2)
+            ) {
+                item {
+                    Text(VERSION)
+                }
+                item {
+                    Text(
+                        text = "Needs Calibration",
+                        modifier = modifier,
+                        textAlign = TextAlign.Center
+                    )
+                }
+                item {
+                    Button(
+                        onClick = {
+                            sensorViewModel.calibrationTrigger(vibrator)
+                        }
+                    ) {
+                        Text(text = "Start")
                     }
-                ) {
-                    Text(text = "Start")
+                }
+                item {
+                    CalibrationStateDisplay(
+                        state = calibrationState,
+                        modifier = modifier
+                    )
                 }
             }
-            item {
-                CalibrationStateDisplay(
-                    state = calibrationState,
-                    modifier = modifier
-                )
-            }
-        }
-    } else {
-        // all other views
-        ScalingLazyColumn(
-            modifier = modifier
-        ) {
-            item {
-                DataStateDisplay(state = appState, modifier = modifier)
-            }
-            item {
-                SensorToggleChip(
-                    text = "Record Locally",
-                    checked = (appState == AppState.Recording),
-                    onChecked = { viewModel.recordTrigger(it) },
-                    modifier = modifier
-                )
-            }
-            item {
-                SensorToggleChip(
-                    text = "Stream to IP",
-                    checked = (appState == AppState.Streaming),
-                    onChecked = { viewModel.streamTrigger(it) },
-                    modifier = modifier
-                )
-            }
-            item {
-                Text(
-                    text = viewModel.socketIP + ":" + viewModel.socketPort,
-                    modifier = modifier,
-                    textAlign = TextAlign.Center
-                )
+        } else {
+            // all other views
+            ScalingLazyColumn(
+                modifier = modifier
+            ) {
+                item {
+                    DataStateDisplay(state = sensorAppState, modifier = modifier)
+                }
+                item {
+                    SensorToggleChip(
+                        text = "Record Locally",
+                        checked = (sensorAppState == SensorHandlerState.Recording),
+                        onChecked = { sensorViewModel.recordTrigger(it) },
+                        modifier = modifier
+                    )
+                }
+                item {
+                    SensorToggleChip(
+                        text = "Stream to IP",
+                        checked = (sensorAppState == SensorHandlerState.Streaming),
+                        onChecked = { sensorViewModel.streamTrigger(it) },
+                        modifier = modifier
+                    )
+                }
+                item {
+                    Text(
+                        text = sensorViewModel.socketIP + ":" + sensorViewModel.socketPort,
+                        modifier = modifier,
+                        textAlign = TextAlign.Center
+                    )
+                }
+                item {
+                    SensorToggleChip(
+                        text = "Stream MIC",
+                        checked = (soundRecordingState == SoundRecorderState.Recording),
+                        onChecked = { soundViewModel.triggerMicStream() },
+                        modifier = modifier
+                    )
+                }
+                item {
+                    Text(
+                        text = soundViewModel.socketIP + ":" + soundViewModel.socketPort,
+                        modifier = modifier,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
             }
         }
     }
 }
-
