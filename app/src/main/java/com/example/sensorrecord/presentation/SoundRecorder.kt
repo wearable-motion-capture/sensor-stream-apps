@@ -35,9 +35,10 @@ class SoundRecorder {
 
     companion object {
         private const val TAG = "SoundRecorder"
-        private const val RECORDING_RATE = 8000 // can go up to 44K, if needed
+        private const val RECORDING_RATE = 16000 // can go up to 44K, if needed
         private const val CHANNEL_IN = AudioFormat.CHANNEL_IN_MONO
         private const val FORMAT = AudioFormat.ENCODING_PCM_16BIT
+        private const val BUFFER_SIZE = 1600
     }
 
     /**
@@ -49,7 +50,7 @@ class SoundRecorder {
             _state.value = SoundRecorderState.Idle
         } else if (_state.value == SoundRecorderState.Idle) {
             // Create an AudioRecord object for the streaming
-            val intSize = 480 //AudioRecord.getMinBufferSize(RECORDING_RATE, CHANNEL_IN, FORMAT)
+            // val intSize = AudioRecord.getMinBufferSize(RECORDING_RATE, CHANNEL_IN, FORMAT)
             val audioRecord = AudioRecord.Builder()
                 .setAudioSource(MediaRecorder.AudioSource.MIC)
                 .setAudioFormat(
@@ -59,7 +60,7 @@ class SoundRecorder {
                         .setEncoding(FORMAT)
                         .build()
                 )
-                .setBufferSizeInBytes(intSize)
+                .setBufferSizeInBytes(BUFFER_SIZE)
                 .build()
 
             // add noise suppression and echo cancellation
@@ -84,7 +85,7 @@ class SoundRecorder {
                     Log.v(TAG, "Beginning to broadcast UDP mesage to $socketIP:$socketPort")
 
                     // read from audioRecord stream and send through to TCP output stream
-                    val buffer = ByteArray(intSize)
+                    val buffer = ByteArray(BUFFER_SIZE)
                     while (_state.value == SoundRecorderState.Recording) {
                         audioRecord.read(buffer, 0, buffer.size)
                         val dp = DatagramPacket(
