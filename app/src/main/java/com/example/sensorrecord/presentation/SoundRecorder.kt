@@ -25,20 +25,25 @@ enum class SoundRecorderState {
  */
 class SoundRecorder {
 
-    private val _state = MutableStateFlow(SoundRecorderState.Idle)
-    val state = _state.asStateFlow()
-
-    // the default remote IP and Port to stream data
-    var socketIP = "192.168.1.162"
-    var socketInetAddress = InetAddress.getByName(socketIP)
-    var socketPort = 50001
-
+    /** setup-specific parameters */
     companion object {
         private const val TAG = "SoundRecorder"
         private const val RECORDING_RATE = 16000 // can go up to 44K, if needed
         private const val CHANNEL_IN = AudioFormat.CHANNEL_IN_MONO
         private const val FORMAT = AudioFormat.ENCODING_PCM_16BIT
         private const val BUFFER_SIZE = 1600
+        private const val IP = "192.168.1.162"
+        private const val PORT = 50001
+    }
+
+    private val _state = MutableStateFlow(SoundRecorderState.Idle)
+    val state = _state.asStateFlow()
+
+    /**
+     * concatenates IP and PORT as a string for UI print fields
+     */
+    fun getIpPortString(): String {
+        return "$IP:$PORT"
     }
 
     /**
@@ -80,19 +85,20 @@ class SoundRecorder {
                 try {
 
                     // connect to the server
-                    val udpSocket = DatagramSocket(socketPort)
+                    val udpSocket = DatagramSocket(PORT)
                     udpSocket.broadcast = true
-                    Log.v(TAG, "Beginning to broadcast UDP mesage to $socketIP:$socketPort")
+                    Log.v(TAG, "Beginning to broadcast UDP mesage to $IP:$PORT")
 
                     // read from audioRecord stream and send through to TCP output stream
                     val buffer = ByteArray(BUFFER_SIZE)
+                    val socketInetAddress = InetAddress.getByName(IP)
                     while (_state.value == SoundRecorderState.Recording) {
                         audioRecord.read(buffer, 0, buffer.size)
                         val dp = DatagramPacket(
                             buffer,
                             buffer.size,
                             socketInetAddress,
-                            socketPort
+                            PORT
                         )
                         udpSocket.send(dp)
                     }

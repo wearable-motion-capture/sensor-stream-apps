@@ -27,42 +27,42 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "MainActivity" // for logging
-        private const val VERSION = "0.0.4" // a version number to confirm updates on watch screen
+        private const val VERSION = "0.0.5" // a version number to confirm updates on watch screen
     }
 
     private lateinit var sensorManager: SensorManager
     private lateinit var vibratorManager: VibratorManager
-    private val sensorViewModel: SensorHandler = SensorHandler()
-    private val soundViewModel: SoundRecorder = SoundRecorder()
+    private val sensorRecorder: SensorRecorder = SensorRecorder()
+    private val soundRecorder: SoundRecorder = SoundRecorder()
 
     private var _listenersSetup = listOf(
         SensorListener(
             Sensor.TYPE_PRESSURE
-        ) { sensorViewModel.onPressureReadout(it) },
+        ) { sensorRecorder.onPressureReadout(it) },
         SensorListener(
             Sensor.TYPE_LINEAR_ACCELERATION
-        ) { sensorViewModel.onLaccReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), excluding the force of gravity.
+        ) { sensorRecorder.onLaccReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), excluding the force of gravity.
         SensorListener(
             Sensor.TYPE_ACCELEROMETER
-        ) { sensorViewModel.onAcclReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), including the force of gravity.
+        ) { sensorRecorder.onAcclReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), including the force of gravity.
         SensorListener(
             Sensor.TYPE_ROTATION_VECTOR
-        ) { sensorViewModel.onRotVecReadout(it) },
+        ) { sensorRecorder.onRotVecReadout(it) },
         SensorListener(
             Sensor.TYPE_MAGNETIC_FIELD // All values are in micro-Tesla (uT) and measure the ambient magnetic field in the X, Y and Z axis.
-        ) { sensorViewModel.onMagnReadout(it) },
+        ) { sensorRecorder.onMagnReadout(it) },
         SensorListener(
             Sensor.TYPE_GRAVITY
-        ) { sensorViewModel.onGravReadout(it) },
+        ) { sensorRecorder.onGravReadout(it) },
         SensorListener(
             Sensor.TYPE_GYROSCOPE
-        ) { sensorViewModel.onGyroReadout(it) },
+        ) { sensorRecorder.onGyroReadout(it) },
         SensorListener(
             Sensor.TYPE_HEART_RATE
-        ) { sensorViewModel.onHrReadout(it) },
+        ) { sensorRecorder.onHrReadout(it) },
         SensorListener(
             69682 // Samsung HR Raw Sensor this is the only Galaxy5 raw sensor that worked
-        ) { sensorViewModel.onHrRawReadout(it) }
+        ) { sensorRecorder.onHrRawReadout(it) }
     )
 
     //    private var _listenersSetup = listOf(
@@ -180,12 +180,12 @@ class MainActivity : ComponentActivity() {
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun MainUI(modifier: Modifier = Modifier, vibrator: Vibrator) {
 
-        val sensorAppState by sensorViewModel.appState.collectAsState()
-        val soundRecordingState by soundViewModel.state.collectAsState()
+        val sensorAppState by sensorRecorder.appState.collectAsState()
+        val soundRecordingState by soundRecorder.state.collectAsState()
 
-        if (sensorAppState == SensorHandlerState.Calibrating) {
+        if (sensorAppState == SensorRecorderState.Calibrating) {
             // The calibration view
-            val calibrationState by sensorViewModel.calibState.collectAsState()
+            val calibrationState by sensorRecorder.calibState.collectAsState()
 
             ScalingLazyColumn(
                 modifier = modifier,
@@ -204,7 +204,7 @@ class MainActivity : ComponentActivity() {
                 item {
                     Button(
                         onClick = {
-                            sensorViewModel.calibrationTrigger(vibrator)
+                            sensorRecorder.calibrationTrigger(vibrator)
                         }
                     ) {
                         Text(text = "Start")
@@ -228,22 +228,22 @@ class MainActivity : ComponentActivity() {
                 item {
                     SensorToggleChip(
                         text = "Record Locally",
-                        checked = (sensorAppState == SensorHandlerState.Recording),
-                        onChecked = { sensorViewModel.recordTrigger(it) },
+                        checked = (sensorAppState == SensorRecorderState.Recording),
+                        onChecked = { sensorRecorder.recordTrigger(it) },
                         modifier = modifier
                     )
                 }
                 item {
                     SensorToggleChip(
                         text = "Stream to IP",
-                        checked = (sensorAppState == SensorHandlerState.Streaming),
-                        onChecked = { sensorViewModel.streamTrigger(it) },
+                        checked = (sensorAppState == SensorRecorderState.Streaming),
+                        onChecked = { sensorRecorder.streamTrigger(it) },
                         modifier = modifier
                     )
                 }
                 item {
                     Text(
-                        text = sensorViewModel.socketIP + ":" + sensorViewModel.socketPort,
+                        text = sensorRecorder.getIpPortString(),
                         modifier = modifier,
                         textAlign = TextAlign.Center
                     )
@@ -252,13 +252,13 @@ class MainActivity : ComponentActivity() {
                     SensorToggleChip(
                         text = "Stream MIC",
                         checked = (soundRecordingState == SoundRecorderState.Recording),
-                        onChecked = { soundViewModel.triggerMicStream() },
+                        onChecked = { soundRecorder.triggerMicStream() },
                         modifier = modifier
                     )
                 }
                 item {
                     Text(
-                        text = soundViewModel.socketIP + ":" + soundViewModel.socketPort,
+                        text = soundRecorder.getIpPortString(),
                         modifier = modifier,
                         textAlign = TextAlign.Center
                     )

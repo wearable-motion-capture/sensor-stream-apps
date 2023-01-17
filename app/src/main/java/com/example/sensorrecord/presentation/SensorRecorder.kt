@@ -15,6 +15,7 @@ import kotlin.concurrent.thread
 import java.net.Socket
 import java.nio.charset.Charset
 import java.time.Duration
+import kotlin.math.abs
 
 enum class CalibrationState {
     Start,
@@ -25,7 +26,7 @@ enum class CalibrationState {
 }
 
 
-enum class SensorHandlerState {
+enum class SensorRecorderState {
     Calibrating, // the app needs calibration
     Ready, // app waits for user to trigger the recording
     Recording, // recording sensor data into memory
@@ -40,25 +41,21 @@ enum class SensorHandlerState {
  * It exposes the state as FlowData, which the view "observes" and reacts to.
  * The state is altered via callbacks (Events).
  */
-class SensorHandler {
-    
-    companion object {
-        private const val TAG = "SensorViewModel"  // for logging
-    }
+class SensorRecorder {
 
-    // State
-    // The interval in milliseconds between every sensor readout (1000/interval = Hz)
-    private val _interval = 10L // a setting of 1 means basically as fast as possible
+    /** setup-specific parameters */
+    companion object {
+        private const val TAG = "SensorRecorder"  // for logging
+        private const val INTERVAL = 10L // a setting of 1 means basically as fast as possible
+        private const val IP = "192.168.1.162"
+        private const val PORT = 50000
+    }
 
     // used by the recording function to zero out time stamps when writing to file
     private var _startRecordTimeStamp = LocalDateTime.now()
 
-    // the default remote IP and Port to stream data
-    var socketIP = "192.168.1.162"
-    var socketPort = 50000
-
     // A change in MutableStateFlow values triggers a redraw of elements that use it
-    private val _appState = MutableStateFlow(SensorHandlerState.Calibrating)
+    private val _appState = MutableStateFlow(SensorRecorderState.Calibrating)
     val appState = _appState.asStateFlow()
 
     // calibration parameters
@@ -119,6 +116,13 @@ class SensorHandler {
     }
 
     /**
+     * concatenates IP and PORT as a string for UI print fields
+     */
+    fun getIpPortString(): String {
+        return "$IP:$PORT"
+    }
+
+    /**
      * Triggered by the calibration button. It goes through all 4 calibration stages
      * to set required normalization parameters
      */
@@ -130,35 +134,46 @@ class SensorHandler {
             return
         }
 
-        fun forwardStep() {
-            // the second step is the pressure when the arm is raised
+        fun forwardStep(holdYRot: Float) {
+            // Get body orientation from when the participant extends the watch-arm forward
+            // perpendicular to the hip
             _calibState.value = CalibrationState.Forward
             thread {
-                var lastBelow = LocalDateTime.now()
+                var startTime = LocalDateTime.now()
                 var diff = 0L
 
                 val northDegrees = mutableListOf(pres[0])
                 while (diff < 2000) {
                     // the watch held horizontally if gravity in z direction is positive
                     if (grav[2] < 9.7) {
-                        lastBelow = LocalDateTime.now()
+                        startTime = LocalDateTime.now()
                         northDegrees.clear()
                     }
 
-                    northDegrees.add(getNorthDegree())
-                    diff = Duration.between(lastBelow, LocalDateTime.now()).toMillis()
+                    // only start considering these values if the y-rotation from
+                    // the "Hold" calibration position is greater than 45 deg
+                    val curYRot = getGlobalYRotation()
+                    if (abs(holdYRot - curYRot) < 45f) {
+                        startTime = LocalDateTime.now()
+                        northDegrees.clear()
+                    }
+
+                    // if all is good, store to list of vales
+                    northDegrees.add(curYRot)
+                    diff = Duration.between(startTime, LocalDateTime.now()).toMillis()
                 }
 
                 // last calibration step done
                 _forwardNorthDegree =
-                    northDegrees.average() + 90 // add 90 degress for forward orientation of arm and hip
+                    northDegrees.average() + 90 // add 90 degrees for forward orientation of arm and hip
+                // confirm with a vibration
                 vibrator.vibrate(
                     VibrationEffect.createOneShot(
                         500L, VibrationEffect.DEFAULT_AMPLITUDE
                     )
                 )
                 // set app state to ready to begin recording
-                _appState.value = SensorHandlerState.Ready
+                _appState.value = SensorRecorderState.Ready
             }
         }
 
@@ -181,8 +196,8 @@ class SensorHandler {
                         500L, VibrationEffect.DEFAULT_AMPLITUDE
                     )
                 )
-                // continue with second step
-                forwardStep()
+                // continue with second step and pass current y-rotation
+                forwardStep(holdYRot = getGlobalYRotation())
             }
         }
 
@@ -258,23 +273,23 @@ class SensorHandler {
     fun streamTrigger(checked: Boolean) {
 
         // verify that app is in a state that allows to start or stop streaming
-        if (_appState.value != SensorHandlerState.Ready && _appState.value != SensorHandlerState.Streaming) {
+        if (_appState.value != SensorRecorderState.Ready && _appState.value != SensorRecorderState.Streaming) {
             Log.v(TAG, "not ready to start or stop streaming")
             return
         }
 
         // if toggle is true (checked), proceed with creating a socket and begin to stream data
         if (checked) {
-            _appState.value = SensorHandlerState.Streaming
+            _appState.value = SensorRecorderState.Streaming
 
             // run the streaming in a thread
             thread {
                 // Create the tcpClient with set socket IP
                 try {
-                    val tcpClient = Socket(socketIP, socketPort)
+                    val tcpClient = Socket(IP, PORT)
                     val streamStartTimeStamp = LocalDateTime.now()
 
-                    while (_appState.value == SensorHandlerState.Streaming) {
+                    while (_appState.value == SensorRecorderState.Streaming) {
                         val diff =
                             Duration.between(streamStartTimeStamp, LocalDateTime.now()).toMillis()
                         // write to data
@@ -299,19 +314,19 @@ class SensorHandler {
 
                         // finally, send the byte stream
                         tcpClient.getOutputStream().write(dataPacketByte)
-                        Thread.sleep(_interval)
+                        Thread.sleep(INTERVAL)
                     }
 
                     tcpClient.close()
                 } catch (e: Exception) {
                     Log.v(TAG, "Streaming error $e")
-                    _appState.value = SensorHandlerState.Ready
+                    _appState.value = SensorRecorderState.Ready
                     Log.v(TAG, "stopped streaming")
                 }
             }
 
         } else {
-            _appState.value = SensorHandlerState.Ready
+            _appState.value = SensorRecorderState.Ready
             Log.v(TAG, "stopped streaming")
         }
     }
@@ -322,13 +337,13 @@ class SensorHandler {
      */
     fun recordTrigger(checked: Boolean) {
         // no actions allowed if not in ready or recording state
-        if (_appState.value != SensorHandlerState.Ready && _appState.value != SensorHandlerState.Recording) {
+        if (_appState.value != SensorRecorderState.Ready && _appState.value != SensorRecorderState.Recording) {
             Log.v(TAG, "not ready to record or stop recording")
             return
         }
         if (checked) {
             //if turned on, record exact start time
-            _appState.value = SensorHandlerState.Recording
+            _appState.value = SensorRecorderState.Recording
             _startRecordTimeStamp = LocalDateTime.now()
 
             // Such that the while loop that doesn't block the co-routine
@@ -337,7 +352,7 @@ class SensorHandler {
                 // must be added. Therefore, we keep track of passed time in a separate calculation
                 var steps = 0
 
-                while (_appState.value == SensorHandlerState.Recording) {
+                while (_appState.value == SensorRecorderState.Recording) {
                     // estimate time difference to given start point as our time stamp
                     val diff =
                         Duration.between(_startRecordTimeStamp, LocalDateTime.now()).toMillis()
@@ -357,14 +372,14 @@ class SensorHandler {
                                 + floatArrayOf(_forwardNorthDegree.toFloat()) // body orientation in relation to magnetic north pole collected during calibration
                     )
                     // delay by a given amount of milliseconds
-                    Thread.sleep(_interval)
+                    Thread.sleep(INTERVAL)
                     // increase step count to trigger LaunchedEffect again
                     steps += 1
                 }
             }
         } else {
             // if turned off, safe data an clear
-            _appState.value = SensorHandlerState.Processing
+            _appState.value = SensorRecorderState.Processing
             // data processing in separate thread to not jack the UI
             thread {
                 // next state determined by whether data processing was successful 
@@ -382,7 +397,7 @@ class SensorHandler {
     private fun saveToDatedCSV(
         start: LocalDateTime,
         data: java.util.ArrayList<FloatArray>
-    ): SensorHandlerState {
+    ): SensorRecorderState {
 
         // create unique filename from current date and time
         val currentDate = (DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss-SSS")).format(start)
@@ -426,12 +441,12 @@ class SensorHandler {
         } catch (e: IOException) {
             e.printStackTrace()
             Log.v(TAG, "Log file creation failed.")
-            return SensorHandlerState.Error
+            return SensorRecorderState.Error
         }
 
         // Parse the file and path to uri
         Log.v(TAG, "Text file created at ${textFile.absolutePath}.")
-        return SensorHandlerState.Ready
+        return SensorRecorderState.Ready
     }
 
     /**
@@ -439,7 +454,7 @@ class SensorHandler {
      * This corresponds to the azimuth in polar coordinates. It the angle from the z-axis (forward)
      * in between +pi and -pi.
      */
-    private fun getNorthDegree(): Float {
+    private fun getGlobalYRotation(): Float {
         // smartwatch rotation to [-w,x,z,y]
         val r = floatArrayOf(-rotVec[3], rotVec[0], rotVec[2], rotVec[1])
         val p = floatArrayOf(0f, 0f, 0f, 1f) // forward vector with [0,x,y,z]
