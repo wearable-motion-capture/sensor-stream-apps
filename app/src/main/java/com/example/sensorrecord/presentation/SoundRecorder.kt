@@ -4,8 +4,6 @@ import android.Manifest
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
-import android.media.audiofx.AcousticEchoCanceler
-import android.media.audiofx.NoiseSuppressor
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -68,13 +66,13 @@ class SoundRecorder {
                 .setBufferSizeInBytes(BUFFER_SIZE)
                 .build()
 
-            // add noise suppression and echo cancellation
-            if (NoiseSuppressor.isAvailable()) {
-                NoiseSuppressor.create(audioRecord.getAudioSessionId()).setEnabled(true)
-            }
-            if (AcousticEchoCanceler.isAvailable()) {
-                AcousticEchoCanceler.create(audioRecord.getAudioSessionId()).setEnabled(true)
-            }
+//            // add noise suppression and echo cancellation
+//            if (NoiseSuppressor.isAvailable()) {
+//                NoiseSuppressor.create(audioRecord.getAudioSessionId()).setEnabled(true)
+//            }
+//            if (AcousticEchoCanceler.isAvailable()) {
+//                AcousticEchoCanceler.create(audioRecord.getAudioSessionId()).setEnabled(true)
+//            }
 
             // begin streaming the microphone
             audioRecord.startRecording()
