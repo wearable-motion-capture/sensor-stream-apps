@@ -5,23 +5,19 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorManager
-import android.os.Bundle
+import android.os.*
 import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.wear.compose.material.*
 import com.example.sensorrecord.presentation.theme.SensorRecordTheme
-import kotlinx.coroutines.delay
-import java.time.Duration
-import java.time.LocalDateTime
 
-// for logging
-private const val TAG = "MainActivity"
 
 /**
  * The MainActivity is where the app starts. It creates the ViewModel, registers sensor listeners
@@ -29,72 +25,106 @@ private const val TAG = "MainActivity"
  */
 class MainActivity : ComponentActivity() {
 
+    companion object {
+        private const val TAG = "MainActivity" // for logging
+        private const val VERSION = "0.0.5" // a version number to confirm updates on watch screen
+    }
+
     private lateinit var sensorManager: SensorManager
-    private val sensorViewModel: SensorViewModel = SensorViewModel()
+    private lateinit var vibratorManager: VibratorManager
+    private val sensorRecorder: SensorRecorder = SensorRecorder()
+    private val soundRecorder: SoundRecorder = SoundRecorder()
+
     private var _listenersSetup = listOf(
         SensorListener(
             Sensor.TYPE_PRESSURE
-        ) { sensorViewModel.onPressureReadout(it) },
+        ) { sensorRecorder.onPressureReadout(it) },
         SensorListener(
             Sensor.TYPE_LINEAR_ACCELERATION
-        ) { sensorViewModel.onLaccReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), excluding the force of gravity.
+        ) { sensorRecorder.onLaccReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), excluding the force of gravity.
         SensorListener(
             Sensor.TYPE_ACCELEROMETER
-        ) { sensorViewModel.onAcclReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), including the force of gravity.
+        ) { sensorRecorder.onAcclReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), including the force of gravity.
         SensorListener(
             Sensor.TYPE_ROTATION_VECTOR
-        ) { sensorViewModel.onRotVecReadout(it) },
+        ) { sensorRecorder.onRotVecReadout(it) },
         SensorListener(
             Sensor.TYPE_MAGNETIC_FIELD // All values are in micro-Tesla (uT) and measure the ambient magnetic field in the X, Y and Z axis.
-        ) { sensorViewModel.onMagnReadout(it) },
+        ) { sensorRecorder.onMagnReadout(it) },
         SensorListener(
             Sensor.TYPE_GRAVITY
-        ) { sensorViewModel.onGravReadout(it) },
+        ) { sensorRecorder.onGravReadout(it) },
         SensorListener(
             Sensor.TYPE_GYROSCOPE
-        ) { sensorViewModel.onGyroReadout(it) },
+        ) { sensorRecorder.onGyroReadout(it) },
         SensorListener(
             Sensor.TYPE_HEART_RATE
-        ) { sensorViewModel.onHrReadout(it) },
+        ) { sensorRecorder.onHrReadout(it) },
         SensorListener(
             69682 // Samsung HR Raw Sensor this is the only Galaxy5 raw sensor that worked
-        ) { sensorViewModel.onHrRawReadout(it) }
+        ) { sensorRecorder.onHrRawReadout(it) }
     )
 
-//    private var _listenersSetup = listOf(
+    //    private var _listenersSetup = listOf(
 //        DebugSensorListener(
 //            34 // Samsung HR Raw Sensor this is the only Galaxy5 raw sensor that worked
 //        )
 //    )
-
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
+            // for colours
             SensorRecordTheme {
-                // access and observe sensors
-                sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
                 // check whether permissions for body sensors (HR) are granted
                 if (checkSelfPermission(Manifest.permission.BODY_SENSORS) != PackageManager.PERMISSION_GRANTED) {
                     requestPermissions(arrayOf(Manifest.permission.BODY_SENSORS), 1)
                 } else {
-                    Log.d(TAG, "ALREADY GRANTED")
+                    Log.d(TAG, "body sensor permission already granted")
                 }
 
-//                // list all available sensors
-//                //getSensorList(Sensor.TYPE_ALL) lists all the sensors present in the device
-//                val deviceSensors: List<Sensor> = sensorManager.getSensorList(Sensor.TYPE_ALL)
-//                for (device in deviceSensors) {
-//                    println(device.toString())
-//                }
+                // check whether permissions for recording audio are granted
+                if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 1)
+                } else {
+                    Log.d(TAG, "record audio permission already granted")
+                }
 
+                // access and observe sensors
+                sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
                 registerSensorListeners()
 
+
+                // get the vibrator service.
+                lateinit var vibrator: Vibrator
+                //  This has been updated in SDK 31..
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    vibratorManager =
+                        getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                    vibrator = vibratorManager.defaultVibrator
+                } else {
+                    // ... make sure we can work with SDK 30 as well
+                    vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                }
+
+
+//              list all available sensors
+//              //getSensorList(Sensor.TYPE_ALL) lists all the sensors present in the device
+//              val deviceSensors: List<Sensor> = sensorManager.getSensorList(Sensor.TYPE_ALL)
+//              for (device in deviceSensors) {
+//                  println(device.toString())
+//              }
+
                 // create view and UI
-                // Modifiers used by our Wear composables.
+                // Modifiers used by our Wear Composables.
                 val contentModifier = Modifier.fillMaxWidth()
-                MainUI(sensorViewModel, contentModifier)
+
+                MainUI(
+                    contentModifier,
+                    vibrator
+                )
 
                 // keep screen on
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -102,6 +132,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Called on app startup and whenever app resumes
+     */
     private fun registerSensorListeners() {
         // register all listeners with their assigned codes
         for (l in _listenersSetup) {
@@ -142,96 +175,96 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-}
 
-@Composable
-fun MainUI(viewModel: SensorViewModel, modifier: Modifier = Modifier) {
+    @Composable
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+    fun MainUI(modifier: Modifier = Modifier, vibrator: Vibrator) {
 
-    val state by viewModel.currentState.collectAsState()
-    val startTimeStamp by viewModel.startTimeStamp.collectAsState()
-    // The interval in milliseconds between every sensor readout (1000/interval = Hz)
-    val measureInterval = 10L // a setting of 1 means basically as fast as possible
+        val sensorAppState by sensorRecorder.appState.collectAsState()
+        val soundRecordingState by soundRecorder.state.collectAsState()
 
+        if (sensorAppState == SensorRecorderState.Calibrating) {
+            // The calibration view
+            val calibrationState by sensorRecorder.calibState.collectAsState()
 
-    // scaling lazy column allows to scroll through items with fancy scaling when
-    // they leave the screen top or bottom
-    ScalingLazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        autoCentering = AutoCenteringParams(itemIndex = 0)
-    ) {
-        item {
-            Text("version 0.0.1")
-        }
-        item {
-            SensorToggleChip(
-                text = "Record Sensors",
-                checked = (state == STATE.recording),
-                onChecked = { viewModel.recordTrigger(it) },
+            ScalingLazyColumn(
+                modifier = modifier,
+                autoCentering = AutoCenteringParams(itemIndex = 2)
+            ) {
+                item {
+                    Text(VERSION)
+                }
+                item {
+                    Text(
+                        text = "Needs Calibration",
+                        modifier = modifier,
+                        textAlign = TextAlign.Center
+                    )
+                }
+                item {
+                    Button(
+                        onClick = {
+                            sensorRecorder.calibrationTrigger(vibrator)
+                        }
+                    ) {
+                        Text(text = "Start")
+                    }
+                }
+                item {
+                    CalibrationStateDisplay(
+                        state = calibrationState,
+                        modifier = modifier
+                    )
+                }
+            }
+        } else {
+            // all other views
+            ScalingLazyColumn(
                 modifier = modifier
-            )
-        }
-        item {
-            SensorTimer(
-                start = startTimeStamp,
-                interval = measureInterval,
-                state = state,
-                onTick = { viewModel.recordSensorValues(it) },
-                modifier = modifier
-            )
-        }
-        item {
-            SensorToggleChip(
-                text = "Streaming Data",
-                checked = (state == STATE.stream),
-                onChecked = { viewModel.startSocketAndStream(it) },
-                modifier = modifier
-            )
-        }
-        item {
-            StateTextDisplay(state = state, modifier = modifier)
+            ) {
+                item {
+                    DataStateDisplay(state = sensorAppState, modifier = modifier)
+                }
+                item {
+                    SensorToggleChip(
+                        text = "Record Locally",
+                        checked = (sensorAppState == SensorRecorderState.Recording),
+                        onChecked = { sensorRecorder.recordTrigger(it) },
+                        modifier = modifier
+                    )
+                }
+                item {
+                    SensorToggleChip(
+                        text = "Stream to IP",
+                        checked = (sensorAppState == SensorRecorderState.Streaming),
+                        onChecked = { sensorRecorder.streamTrigger(it) },
+                        modifier = modifier
+                    )
+                }
+                item {
+                    Text(
+                        text = sensorRecorder.getIpPortString(),
+                        modifier = modifier,
+                        textAlign = TextAlign.Center
+                    )
+                }
+                item {
+                    SensorToggleChip(
+                        text = "Stream MIC",
+                        checked = (soundRecordingState == SoundRecorderState.Recording),
+                        onChecked = { soundRecorder.triggerMicStream() },
+                        modifier = modifier
+                    )
+                }
+                item {
+                    Text(
+                        text = soundRecorder.getIpPortString(),
+                        modifier = modifier,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+            }
         }
     }
 }
-
-
-@Composable
-        /**
-         * Some sensors observe in distinct frequencies (Hz). This timer collects measurements from all sensors
-         * in a fixed given interval to sync data collection.
-         */
-fun SensorTimer(
-    start: LocalDateTime,
-    interval: Long = 100L,
-    state: STATE = STATE.ready,
-    onTick: (Long) -> Unit,
-    modifier: Modifier
-) {
-
-    // A count for measurements taken. The delay function is not accurate because estimation time
-    // must be added. Therefore, we keep track of passed time in a separate calculation
-    var steps by remember { mutableStateOf(0L) }
-
-    // A while loop that doesn't block the co-routine
-    LaunchedEffect(key1 = steps, key2 = state) {
-        // only do something if we want to record
-        if (state == STATE.recording) {
-            // estimate time difference to given start point as our time stamp
-            val diff = Duration.between(start, LocalDateTime.now()).toMillis()
-            // delay by a given amount of milliseconds
-            delay(interval)
-            // increase step count to trigger LaunchedEffect again
-            steps += 1
-            // call the event with estimated time stamp
-            onTick(diff)
-        }
-    }
-    // display elapsed time in seconds
-    Text(
-        modifier = modifier,
-        textAlign = TextAlign.Center,
-        text = "%.4f ".format(
-            Duration.between(start, LocalDateTime.now()).toMillis() * 0.001
-        )
-    )
-}
-

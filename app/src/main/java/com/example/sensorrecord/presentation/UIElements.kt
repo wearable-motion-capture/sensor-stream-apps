@@ -1,6 +1,6 @@
 package com.example.sensorrecord.presentation
 
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
@@ -35,12 +35,32 @@ fun SensorToggleChip(
 }
 
 @Composable
-fun StateTextDisplay(state: STATE, modifier: Modifier = Modifier) {
+fun DataStateDisplay(state: SensorRecorderState, modifier: Modifier = Modifier) {
     var color = Color.Red
-    if (state == STATE.ready) {
+    if (state == SensorRecorderState.Ready) {
         color = Color.Green
-    } else if (state == STATE.processing) {
+    } else if (state == SensorRecorderState.Processing) {
         color = Color.Yellow
+    }
+    Text(
+        modifier = modifier,
+        textAlign = TextAlign.Center,
+        text = state.name,
+        style = MaterialTheme.typography.body1.copy(
+            color = color
+        )
+    )
+}
+
+@Composable
+fun CalibrationStateDisplay(state: CalibrationState, modifier: Modifier = Modifier) {
+    var color = Color.Red
+    if (state == CalibrationState.Up) {
+        color = Color.Magenta
+    } else if (state == CalibrationState.Down) {
+        color = Color.Blue
+    } else if (state == CalibrationState.Forward) {
+        color = Color.Cyan
     }
     Text(
         modifier = modifier,
