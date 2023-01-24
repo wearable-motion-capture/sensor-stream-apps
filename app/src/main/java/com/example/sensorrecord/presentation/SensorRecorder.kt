@@ -49,6 +49,7 @@ class SensorRecorder {
         private const val INTERVAL = 10L // a setting of 1 means basically as fast as possible
         private const val IP = "192.168.1.162"
         private const val PORT = 50000
+        private const val CALIBRATION_WAIT = 3000 // wait time in one calibration position
     }
 
     // used by the recording function to zero out time stamps when writing to file
@@ -123,6 +124,19 @@ class SensorRecorder {
     }
 
     /**
+     * reset the app to calibration state
+     */
+    fun recalibrate() {
+        if (_appState.value != SensorRecorderState.Ready) {
+            Log.v(TAG, "Can't recalibrate if app is not in READY state")
+            return
+        }
+        _appState.value = SensorRecorderState.Calibrating
+        _calibState.value = CalibrationState.Start
+
+    }
+
+    /**
      * Triggered by the calibration button. It goes through all 4 calibration stages
      * to set required normalization parameters
      */
@@ -143,7 +157,7 @@ class SensorRecorder {
                 var diff = 0L
 
                 val northDegrees = mutableListOf(pres[0])
-                while (diff < 2000) {
+                while (diff < CALIBRATION_WAIT) {
                     // the watch held horizontally if gravity in z direction is positive
                     if (grav[2] < 9.7) {
                         startTime = LocalDateTime.now()
@@ -178,14 +192,14 @@ class SensorRecorder {
         }
 
         fun holdStep() {
-            // begin with initial pressure in hold position
+            // begin with atmospheric pressure in initial hold position after pressing "start"
             _calibState.value = CalibrationState.Hold
             thread {
                 val start = LocalDateTime.now()
                 var diff = 0L
 
                 val pressures = mutableListOf(pres[0])
-                while (diff < 2000) {
+                while (diff < CALIBRATION_WAIT) {
                     pressures.add(pres[0])
                     diff = Duration.between(start, LocalDateTime.now()).toMillis()
                 }
