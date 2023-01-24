@@ -124,6 +124,19 @@ class SensorRecorder {
     }
 
     /**
+     * reset the app to calibration state
+     */
+    fun recalibrate() {
+        if (_appState.value != SensorRecorderState.Ready) {
+            Log.v(TAG, "Can't recalibrate if app is not in READY state")
+            return
+        }
+        _appState.value = SensorRecorderState.Calibrating
+        _calibState.value = CalibrationState.Start
+
+    }
+
+    /**
      * Triggered by the calibration button. It goes through all 4 calibration stages
      * to set required normalization parameters
      */
