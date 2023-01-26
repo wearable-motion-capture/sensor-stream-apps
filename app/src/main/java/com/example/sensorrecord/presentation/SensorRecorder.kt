@@ -299,8 +299,8 @@ class SensorRecorder {
                                 pres +  // [1] atmospheric pressure
                                 grav + // [3] vector indicating the direction and magnitude of gravity x,y,z
                                 floatArrayOf(_initPressure.toFloat()) + // initial atmospheric pressure collected during calibration
-                                floatArrayOf(_forwardNorthDegree.toFloat()) // body orientation in relation to magnetic north pole collected during calibration
-
+                                floatArrayOf(_forwardNorthDegree.toFloat()) + // body orientation in relation to magnetic north pole collected during calibration
+                                gyro // [3] gyro data for time series prediction
 
                         // write sensor data as string
                         var dataString = "#START,"
