@@ -263,6 +263,15 @@ class MainActivity : ComponentActivity() {
                         textAlign = TextAlign.Center
                     )
                 }
+                item {
+                    Button(
+                        onClick = {
+                            sensorRecorder.recalibrate()
+                        }
+                    ) {
+                        Text(text = "Recalibrate")
+                    }
+                }
 
             }
         }
