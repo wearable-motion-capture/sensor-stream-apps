@@ -25,12 +25,12 @@ class SoundRecorder {
 
     /** setup-specific parameters */
     companion object {
-        private const val TAG = "SoundRecorder"
+        private const val TAG = "SoundRecorder" // for logging
         private const val RECORDING_RATE = 16000 // can go up to 44K, if needed
         private const val CHANNEL_IN = AudioFormat.CHANNEL_IN_MONO
         private const val FORMAT = AudioFormat.ENCODING_PCM_16BIT
         private const val BUFFER_SIZE = 1600
-        private const val IP = "192.168.1.162"
+        private const val IP = "192.168.1.138"
         private const val PORT = 50001
     }
 

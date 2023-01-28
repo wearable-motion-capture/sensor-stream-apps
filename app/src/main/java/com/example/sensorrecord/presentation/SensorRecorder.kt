@@ -47,7 +47,7 @@ class SensorRecorder {
     companion object {
         private const val TAG = "SensorRecorder"  // for logging
         private const val INTERVAL = 10L // a setting of 1 means basically as fast as possible
-        private const val IP = "192.168.1.162"
+        private const val IP = "192.168.1.138"
         private const val PORT = 50000
         private const val CALIBRATION_WAIT = 3000 // wait time in one calibration position
     }
