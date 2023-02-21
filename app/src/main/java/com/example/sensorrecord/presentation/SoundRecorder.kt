@@ -82,7 +82,6 @@ class SoundRecorder {
             thread {
                 try {
 
-                    // connect to the server
                     val udpSocket = DatagramSocket(PORT)
                     udpSocket.broadcast = true
                     Log.v(TAG, "Beginning to broadcast UDP mesage to $IP:$PORT")

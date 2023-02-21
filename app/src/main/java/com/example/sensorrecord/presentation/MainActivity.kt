@@ -237,7 +237,7 @@ class MainActivity : ComponentActivity() {
                     SensorToggleChip(
                         text = "Stream to IP",
                         checked = (sensorAppState == SensorRecorderState.Streaming),
-                        onChecked = { sensorRecorder.streamTrigger(it) },
+                        onChecked = { sensorRecorder.triggerImuStreamUdp(it) },
                         modifier = modifier
                     )
                 }

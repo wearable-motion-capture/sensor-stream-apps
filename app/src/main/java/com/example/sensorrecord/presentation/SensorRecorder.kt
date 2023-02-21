@@ -9,10 +9,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 import java.io.FileWriter
 import java.io.IOException
+import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.concurrent.thread
-import java.net.Socket
 import java.nio.charset.Charset
 import java.time.Duration
 import kotlin.math.abs
@@ -284,7 +286,7 @@ class SensorRecorder {
      * Triggered by the streaming ClipToggle onChecked event
      * opens a TCP socket and streams sensor data to set IP as long as the current stat is STATE.Streaming.
      */
-    fun streamTrigger(checked: Boolean) {
+    fun triggerImuStreamUdp(checked: Boolean) {
 
         // verify that app is in a state that allows to start or stop streaming
         if (_appState.value != SensorRecorderState.Ready && _appState.value != SensorRecorderState.Streaming) {
@@ -300,7 +302,9 @@ class SensorRecorder {
             thread {
                 // Create the tcpClient with set socket IP
                 try {
-                    val tcpClient = Socket(IP, PORT)
+                    val udpSocket = DatagramSocket(PORT)
+                    udpSocket.broadcast = true
+                    val socketInetAddress = InetAddress.getByName(IP)
                     val streamStartTimeStamp = LocalDateTime.now()
 
                     while (_appState.value == SensorRecorderState.Streaming) {
@@ -322,16 +326,20 @@ class SensorRecorder {
                             dataString += "%e,".format(ety)
                         }
                         dataString += "#END"
-
-                        // transform into byte array
+                        
                         val dataPacketByte = dataString.toByteArray(Charset.defaultCharset())
+                        val dp = DatagramPacket(
+                            dataPacketByte,
+                            dataPacketByte.size,
+                            socketInetAddress,
+                            PORT
+                        )
 
                         // finally, send the byte stream
-                        tcpClient.getOutputStream().write(dataPacketByte)
+                        udpSocket.send(dp)
                         Thread.sleep(INTERVAL)
                     }
-
-                    tcpClient.close()
+                    udpSocket.close()
                 } catch (e: Exception) {
                     Log.v(TAG, "Streaming error $e")
                     _appState.value = SensorRecorderState.Ready
