@@ -30,7 +30,7 @@ class SoundRecorder {
         private const val CHANNEL_IN = AudioFormat.CHANNEL_IN_MONO
         private const val FORMAT = AudioFormat.ENCODING_PCM_16BIT
         private const val BUFFER_SIZE = 1600
-        private const val IP = "192.168.1.138"
+        private const val IP = "192.168.1.148"
         private const val PORT = 50001
     }
 

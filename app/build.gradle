@@ -31,12 +31,15 @@ android {
     }
     kotlinOptions {
         jvmTarget = '1.8'
+        // Allow for widescale experimental APIs in Alpha libraries we build upon
+        freeCompilerArgs += "-opt-in=androidx.wear.compose.material.ExperimentalWearMaterialApi"
+        freeCompilerArgs += "-opt-in=androidx.compose.animation.ExperimentalAnimationApi"
     }
     buildFeatures {
         compose true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion '1.1.1'
+        kotlinCompilerExtensionVersion '1.4.4'
     }
     packagingOptions {
         resources {
@@ -47,27 +50,21 @@ android {
 
 dependencies {
     implementation "androidx.activity:activity-compose:$activity_compose_version"
-    implementation "androidx.compose.ui:ui-tooling-preview:$compose_version"
-    implementation "androidx.compose.foundation:foundation:$compose_version"
+    //implementation "androidx.compose.ui:ui-tooling-preview:$compose_version"
+    implementation "androidx.compose.ui:ui:$compose_version"
     implementation "androidx.compose.material:material-icons-extended:$compose_version"
     implementation "androidx.health:health-services-client:1.0.0-beta01"
 
-
     // Compose for Wear OS Dependencies
+    // implementation 'androidx.wear:wear-input:1.1.0'
     implementation "androidx.wear.compose:compose-material:$wear_compose_version"
-
     // Foundation is additive, so you can use the mobile version in your Wear OS app.
     implementation "androidx.wear.compose:compose-foundation:$wear_compose_version"
 
-    implementation 'androidx.core:core-ktx:1.7.0'
-    implementation 'com.google.android.gms:play-services-wearable:18.0.0'
-    implementation 'androidx.percentlayout:percentlayout:1.0.0'
-    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'androidx.recyclerview:recyclerview:1.2.1'
-    implementation "androidx.compose.ui:ui:$compose_version"
-    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.3.1'
-    implementation 'androidx.activity:activity-compose:1.3.1'
-    androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"
-    debugImplementation "androidx.compose.ui:ui-tooling:$compose_version"
-    debugImplementation "androidx.compose.ui:ui-test-manifest:$compose_version"
+    //implementation 'androidx.core:core-ktx:1.7.0'
+    //implementation 'com.google.android.gms:play-services-wearable:18.0.0'
+    //implementation 'androidx.percentlayout:percentlayout:1.0.0'
+    //implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    //implementation 'androidx.recyclerview:recyclerview:1.2.1'
+    //implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.3.1'
 }

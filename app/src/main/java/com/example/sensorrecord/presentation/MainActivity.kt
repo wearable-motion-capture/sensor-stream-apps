@@ -27,7 +27,7 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "MainActivity" // for logging
-        private const val VERSION = "0.0.5" // a version number to confirm updates on watch screen
+        private const val VERSION = "0.0.6" // a version number to confirm updates on watch screen
     }
 
     private lateinit var sensorManager: SensorManager
@@ -117,14 +117,7 @@ class MainActivity : ComponentActivity() {
 //                  println(device.toString())
 //              }
 
-                // create view and UI
-                // Modifiers used by our Wear Composables.
-                val contentModifier = Modifier.fillMaxWidth()
-
-                MainUI(
-                    contentModifier,
-                    vibrator
-                )
+                MainUI(vibrator)
 
                 // keep screen on
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -178,7 +171,7 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    fun MainUI(modifier: Modifier = Modifier, vibrator: Vibrator) {
+    fun MainUI(vibrator: Vibrator) {
 
         val sensorAppState by sensorRecorder.appState.collectAsState()
         val soundRecordingState by soundRecorder.state.collectAsState()
@@ -188,7 +181,7 @@ class MainActivity : ComponentActivity() {
             val calibrationState by sensorRecorder.calibState.collectAsState()
 
             ScalingLazyColumn(
-                modifier = modifier,
+                modifier = Modifier.fillMaxWidth(),
                 autoCentering = AutoCenteringParams(itemIndex = 2)
             ) {
                 item {
@@ -197,7 +190,7 @@ class MainActivity : ComponentActivity() {
                 item {
                     Text(
                         text = "Needs Calibration",
-                        modifier = modifier,
+                        modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center
                     )
                 }
@@ -213,24 +206,24 @@ class MainActivity : ComponentActivity() {
                 item {
                     CalibrationStateDisplay(
                         state = calibrationState,
-                        modifier = modifier
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
         } else {
             // all other views
             ScalingLazyColumn(
-                modifier = modifier
+                modifier = Modifier.fillMaxWidth()
             ) {
                 item {
-                    DataStateDisplay(state = sensorAppState, modifier = modifier)
+                    DataStateDisplay(state = sensorAppState, modifier = Modifier.fillMaxWidth())
                 }
                 item {
                     SensorToggleChip(
                         text = "Record Locally",
                         checked = (sensorAppState == SensorRecorderState.Recording),
                         onChecked = { sensorRecorder.recordTrigger(it) },
-                        modifier = modifier
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
                 item {
@@ -238,28 +231,32 @@ class MainActivity : ComponentActivity() {
                         text = "Stream to IP",
                         checked = (sensorAppState == SensorRecorderState.Streaming),
                         onChecked = { sensorRecorder.triggerImuStreamUdp(it) },
-                        modifier = modifier
+                        modifier = Modifier.fillMaxWidth()
                     )
+                }
+                item {
+                    PickerTest()
                 }
                 item {
                     Text(
                         text = sensorRecorder.getIpPortString(),
-                        modifier = modifier,
+                        modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center
                     )
                 }
+
                 item {
                     SensorToggleChip(
                         text = "Stream MIC",
                         checked = (soundRecordingState == SoundRecorderState.Recording),
                         onChecked = { soundRecorder.triggerMicStream() },
-                        modifier = modifier
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
                 item {
                     Text(
                         text = soundRecorder.getIpPortString(),
-                        modifier = modifier,
+                        modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center
                     )
                 }
