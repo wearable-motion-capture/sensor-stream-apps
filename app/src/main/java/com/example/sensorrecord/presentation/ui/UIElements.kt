@@ -1,12 +1,13 @@
-package com.example.sensorrecord.presentation
+package com.example.sensorrecord.presentation.ui
+
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.material.*
-
-
+import com.example.sensorrecord.presentation.modules.CalibrationState
+import com.example.sensorrecord.presentation.modules.SensorDataHandlerState
 
 
 /**
@@ -14,12 +15,14 @@ import androidx.wear.compose.material.*
  */
 @Composable
 fun SensorToggleChip(
+    enabled: Boolean,
     text: String,
     checked: Boolean,
     onChecked: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     ToggleChip(
+        enabled = enabled,
         modifier = modifier,
         checked = checked,
         toggleControl = {
@@ -44,11 +47,11 @@ fun SensorToggleChip(
  * ready, recording/streaming, processing
  */
 @Composable
-fun DataStateDisplay(state: SensorRecorderState, modifier: Modifier = Modifier) {
+fun DataStateDisplay(state: SensorDataHandlerState, modifier: Modifier = Modifier) {
     var color = Color.Red
-    if (state == SensorRecorderState.Ready) {
+    if (state == SensorDataHandlerState.Idle) {
         color = Color.Green
-    } else if (state == SensorRecorderState.Processing) {
+    } else if (state == SensorDataHandlerState.Processing) {
         color = Color.Yellow
     }
     Text(
@@ -70,11 +73,7 @@ fun DataStateDisplay(state: SensorRecorderState, modifier: Modifier = Modifier) 
 @Composable
 fun CalibrationStateDisplay(state: CalibrationState, modifier: Modifier = Modifier) {
     var color = Color.Red
-    if (state == CalibrationState.Up) {
-        color = Color.Magenta
-    } else if (state == CalibrationState.Down) {
-        color = Color.Blue
-    } else if (state == CalibrationState.Forward) {
+    if (state == CalibrationState.Forward) {
         color = Color.Cyan
     }
     Text(
