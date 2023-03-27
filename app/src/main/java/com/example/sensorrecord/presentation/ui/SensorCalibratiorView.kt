@@ -29,7 +29,7 @@ fun SensorCalibrationView(
     ) {
         item {
             Text(
-                text = "Move to chest height, then press:",
+                text = "Hold at chest height,\nthen press:",
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center
             )
