@@ -33,7 +33,7 @@ enum class SoundStreamState {
 }
 
 
-class GlobalState {
+class GlobalState{
     private val _version = "0.0.8"
     private var _ip = ""
 

@@ -15,9 +15,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import com.example.sensorrecord.presentation.modules.*
 import com.example.sensorrecord.presentation.theme.SensorRecordTheme
-import com.example.sensorrecord.presentation.ui.SensorCalibrationView
 import com.example.sensorrecord.presentation.ui.HomeView
 import com.example.sensorrecord.presentation.ui.IpSettingUi
+import com.example.sensorrecord.presentation.ui.SensorCalibrationView
 
 
 /**
@@ -34,6 +34,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var vibratorManager: VibratorManager
 
     private val globalState: GlobalState = GlobalState()
+
     private val sensorCalibrator: SensorCalibrator = SensorCalibrator(
         globalState = globalState
     )
@@ -80,6 +81,7 @@ class MainActivity : ComponentActivity() {
 //            34 // Samsung HR Raw Sensor this is the only Galaxy5 raw sensor that worked
 //        )
 //    )
+
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -105,6 +107,7 @@ class MainActivity : ComponentActivity() {
                 // access and observe sensors
                 sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
                 registerSensorListeners()
+
 
 
                 // get the vibrator service.
