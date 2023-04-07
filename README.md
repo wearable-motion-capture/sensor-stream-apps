@@ -10,8 +10,7 @@ storage/emulated/0/Documents/{date-time}.csv
 
 ## Install and Use
 
-Please find [step-by-step instructions]
-(https://docs.google.com/document/d/1ayMBF9kDCB9rlcrqR0sPumJhIVJgOF-SENTdoE4a6DI/edit?usp=sharing)
+Please read the [step-by-step instructions](https://docs.google.com/document/d/1ayMBF9kDCB9rlcrqR0sPumJhIVJgOF-SENTdoE4a6DI/edit?usp=sharing)
 
 
 
