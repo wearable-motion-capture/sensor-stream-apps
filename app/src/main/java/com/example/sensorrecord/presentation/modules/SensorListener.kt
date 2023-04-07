@@ -1,4 +1,4 @@
-package com.example.sensorrecord.presentation
+package com.example.sensorrecord.presentation.modules
 
 import android.hardware.Sensor
 import android.hardware.SensorEvent

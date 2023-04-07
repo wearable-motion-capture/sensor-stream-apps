@@ -13,10 +13,11 @@ import androidx.activity.compose.setContent
 import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
-import androidx.wear.compose.material.*
+import com.example.sensorrecord.presentation.modules.*
 import com.example.sensorrecord.presentation.theme.SensorRecordTheme
+import com.example.sensorrecord.presentation.ui.HomeView
+import com.example.sensorrecord.presentation.ui.IpSettingUi
+import com.example.sensorrecord.presentation.ui.SensorCalibrationView
 
 
 /**
@@ -26,43 +27,53 @@ import com.example.sensorrecord.presentation.theme.SensorRecordTheme
 class MainActivity : ComponentActivity() {
 
     companion object {
-        private const val TAG = "MainActivity" // for logging
-        private const val VERSION = "0.0.5" // a version number to confirm updates on watch screen
+        private const val TAG = "MainActivity"  // for logging
     }
 
     private lateinit var sensorManager: SensorManager
     private lateinit var vibratorManager: VibratorManager
-    private val sensorRecorder: SensorRecorder = SensorRecorder()
-    private val soundRecorder: SoundRecorder = SoundRecorder()
+
+    private val globalState: GlobalState = GlobalState()
+
+    private val sensorCalibrator: SensorCalibrator = SensorCalibrator(
+        globalState = globalState
+    )
+    private val sensorDataHandler: SensorDataHandler = SensorDataHandler(
+        globalState = globalState,
+        calibrator = sensorCalibrator
+    )
+    private val soundStreamer: SoundStreamer = SoundStreamer(
+        globalState = globalState
+    )
 
     private var _listenersSetup = listOf(
         SensorListener(
             Sensor.TYPE_PRESSURE
-        ) { sensorRecorder.onPressureReadout(it) },
+        ) { globalState.onPressureReadout(it) },
         SensorListener(
             Sensor.TYPE_LINEAR_ACCELERATION
-        ) { sensorRecorder.onLaccReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), excluding the force of gravity.
+        ) { globalState.onLaccReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), excluding the force of gravity.
         SensorListener(
             Sensor.TYPE_ACCELEROMETER
-        ) { sensorRecorder.onAcclReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), including the force of gravity.
+        ) { globalState.onAcclReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), including the force of gravity.
         SensorListener(
             Sensor.TYPE_ROTATION_VECTOR
-        ) { sensorRecorder.onRotVecReadout(it) },
+        ) { globalState.onRotVecReadout(it) },
         SensorListener(
             Sensor.TYPE_MAGNETIC_FIELD // All values are in micro-Tesla (uT) and measure the ambient magnetic field in the X, Y and Z axis.
-        ) { sensorRecorder.onMagnReadout(it) },
+        ) { globalState.onMagnReadout(it) },
         SensorListener(
             Sensor.TYPE_GRAVITY
-        ) { sensorRecorder.onGravReadout(it) },
+        ) { globalState.onGravReadout(it) },
         SensorListener(
             Sensor.TYPE_GYROSCOPE
-        ) { sensorRecorder.onGyroReadout(it) },
-        SensorListener(
-            Sensor.TYPE_HEART_RATE
-        ) { sensorRecorder.onHrReadout(it) },
-        SensorListener(
-            69682 // Samsung HR Raw Sensor this is the only Galaxy5 raw sensor that worked
-        ) { sensorRecorder.onHrRawReadout(it) }
+        ) { globalState.onGyroReadout(it) },
+//        SensorListener(
+//            Sensor.TYPE_HEART_RATE
+//        ) { globalState.onHrReadout(it) },
+//        SensorListener(
+//            69682 // Samsung HR Raw Sensor this is the only Galaxy5 raw sensor that worked
+//        ) { globalState.onHrRawReadout(it) }
     )
 
     //    private var _listenersSetup = listOf(
@@ -70,6 +81,7 @@ class MainActivity : ComponentActivity() {
 //            34 // Samsung HR Raw Sensor this is the only Galaxy5 raw sensor that worked
 //        )
 //    )
+
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -97,6 +109,7 @@ class MainActivity : ComponentActivity() {
                 registerSensorListeners()
 
 
+
                 // get the vibrator service.
                 lateinit var vibrator: Vibrator
                 //  This has been updated in SDK 31..
@@ -117,14 +130,7 @@ class MainActivity : ComponentActivity() {
 //                  println(device.toString())
 //              }
 
-                // create view and UI
-                // Modifiers used by our Wear Composables.
-                val contentModifier = Modifier.fillMaxWidth()
-
-                MainUI(
-                    contentModifier,
-                    vibrator
-                )
+                DrawUI(vibrator)
 
                 // keep screen on
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -178,102 +184,27 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    fun MainUI(modifier: Modifier = Modifier, vibrator: Vibrator) {
+    fun DrawUI(vibrator: Vibrator) {
 
-        val sensorAppState by sensorRecorder.appState.collectAsState()
-        val soundRecordingState by soundRecorder.state.collectAsState()
+        val currentView by globalState.viewState.collectAsState()
 
-        if (sensorAppState == SensorRecorderState.Calibrating) {
-            // The calibration view
-            val calibrationState by sensorRecorder.calibState.collectAsState()
-
-            ScalingLazyColumn(
-                modifier = modifier,
-                autoCentering = AutoCenteringParams(itemIndex = 2)
-            ) {
-                item {
-                    Text(VERSION)
-                }
-                item {
-                    Text(
-                        text = "Needs Calibration",
-                        modifier = modifier,
-                        textAlign = TextAlign.Center
-                    )
-                }
-                item {
-                    Button(
-                        onClick = {
-                            sensorRecorder.calibrationTrigger(vibrator)
-                        }
-                    ) {
-                        Text(text = "Start")
-                    }
-                }
-                item {
-                    CalibrationStateDisplay(
-                        state = calibrationState,
-                        modifier = modifier
-                    )
-                }
-            }
-        } else {
-            // all other views
-            ScalingLazyColumn(
-                modifier = modifier
-            ) {
-                item {
-                    DataStateDisplay(state = sensorAppState, modifier = modifier)
-                }
-                item {
-                    SensorToggleChip(
-                        text = "Record Locally",
-                        checked = (sensorAppState == SensorRecorderState.Recording),
-                        onChecked = { sensorRecorder.recordTrigger(it) },
-                        modifier = modifier
-                    )
-                }
-                item {
-                    SensorToggleChip(
-                        text = "Stream to IP",
-                        checked = (sensorAppState == SensorRecorderState.Streaming),
-                        onChecked = { sensorRecorder.streamTrigger(it) },
-                        modifier = modifier
-                    )
-                }
-                item {
-                    Text(
-                        text = sensorRecorder.getIpPortString(),
-                        modifier = modifier,
-                        textAlign = TextAlign.Center
-                    )
-                }
-                item {
-                    SensorToggleChip(
-                        text = "Stream MIC",
-                        checked = (soundRecordingState == SoundRecorderState.Recording),
-                        onChecked = { soundRecorder.triggerMicStream() },
-                        modifier = modifier
-                    )
-                }
-                item {
-                    Text(
-                        text = soundRecorder.getIpPortString(),
-                        modifier = modifier,
-                        textAlign = TextAlign.Center
-                    )
-                }
-                item {
-                    Button(
-                        onClick = {
-                            sensorRecorder.recalibrate()
-                        }
-                    ) {
-                        Text(text = "Recalibrate")
-                    }
-                }
-
-            }
+        if (currentView == Views.Calibration) {
+            SensorCalibrationView(
+                globalState = globalState,
+                calibrator = sensorCalibrator,
+                vibrator = vibrator
+            )
+        } else if (currentView == Views.Home) {
+            HomeView(
+                globalState = globalState,
+                sensorDataHandler = sensorDataHandler,
+                soundStreamer = soundStreamer,
+                calibrator = sensorCalibrator
+            )
+        } else if (currentView == Views.IPsetting) {
+            IpSettingUi(
+                globalState = globalState
+            )
         }
     }
 }

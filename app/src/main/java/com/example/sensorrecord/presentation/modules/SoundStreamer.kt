@@ -1,4 +1,4 @@
-package com.example.sensorrecord.presentation
+package com.example.sensorrecord.presentation.modules
 
 import android.Manifest
 import android.media.AudioFormat
@@ -6,22 +6,16 @@ import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.util.Log
 import androidx.annotation.RequiresPermission
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 import kotlin.concurrent.thread
 
 
-enum class SoundRecorderState {
-    Idle, Recording
-}
-
 /**
  * A helper class to provide methods to record audio input from the MIC
  */
-class SoundRecorder {
+class SoundStreamer(globalState: GlobalState) {
 
     /** setup-specific parameters */
     companion object {
@@ -30,28 +24,19 @@ class SoundRecorder {
         private const val CHANNEL_IN = AudioFormat.CHANNEL_IN_MONO
         private const val FORMAT = AudioFormat.ENCODING_PCM_16BIT
         private const val BUFFER_SIZE = 1600
-        private const val IP = "192.168.1.138"
         private const val PORT = 50001
     }
 
-    private val _state = MutableStateFlow(SoundRecorderState.Idle)
-    val state = _state.asStateFlow()
-
-    /**
-     * concatenates IP and PORT as a string for UI print fields
-     */
-    fun getIpPortString(): String {
-        return "$IP:$PORT"
-    }
+    val _gs = globalState
 
     /**
      * Records from the microphone.
      */
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    fun triggerMicStream() {
-        if (_state.value == SoundRecorderState.Recording) {
-            _state.value = SoundRecorderState.Idle
-        } else if (_state.value == SoundRecorderState.Idle) {
+    fun triggerMicStream(checked : Boolean) {
+        if (!checked) {
+            _gs.setSoundState(SoundStreamState.Idle)
+        } else {
             // Create an AudioRecord object for the streaming
             // val intSize = AudioRecord.getMinBufferSize(RECORDING_RATE, CHANNEL_IN, FORMAT)
             val audioRecord = AudioRecord.Builder()
@@ -77,20 +62,19 @@ class SoundRecorder {
             // begin streaming the microphone
             audioRecord.startRecording()
             Log.w(TAG, "Started Recording")
-            _state.value = SoundRecorderState.Recording
+            _gs.setSoundState(SoundStreamState.Streaming)
             // start while loop in a thread
             thread {
                 try {
 
-                    // connect to the server
                     val udpSocket = DatagramSocket(PORT)
                     udpSocket.broadcast = true
-                    Log.v(TAG, "Beginning to broadcast UDP mesage to $IP:$PORT")
+                    Log.v(TAG, "Beginning to broadcast UDP mesage to ${_gs.getIP()}:$PORT")
 
                     // read from audioRecord stream and send through to TCP output stream
                     val buffer = ByteArray(BUFFER_SIZE)
-                    val socketInetAddress = InetAddress.getByName(IP)
-                    while (_state.value == SoundRecorderState.Recording) {
+                    val socketInetAddress = InetAddress.getByName(_gs.getIP())
+                    while (_gs.getSoundState() == SoundStreamState.Streaming) {
                         audioRecord.read(buffer, 0, buffer.size)
                         val dp = DatagramPacket(
                             buffer,
@@ -105,7 +89,7 @@ class SoundRecorder {
 
                 } catch (e: Exception) {
                     Log.v(TAG, "Streaming error $e")
-                    _state.value = SoundRecorderState.Idle
+                    _gs.setSoundState(SoundStreamState.Idle)
                     Log.v(TAG, "stopped streaming")
                 } finally {
                     audioRecord.release()
