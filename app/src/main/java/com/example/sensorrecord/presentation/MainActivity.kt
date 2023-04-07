@@ -71,9 +71,9 @@ class MainActivity : ComponentActivity() {
 //        SensorListener(
 //            Sensor.TYPE_HEART_RATE
 //        ) { globalState.onHrReadout(it) },
-//        SensorListener(
-//            69682 // Samsung HR Raw Sensor this is the only Galaxy5 raw sensor that worked
-//        ) { globalState.onHrRawReadout(it) }
+        SensorListener(
+            69682 // Samsung HR Raw Sensor this is the only Galaxy5 raw sensor that worked
+        ) { globalState.onHrRawReadout(it) }
     )
 
     //    private var _listenersSetup = listOf(

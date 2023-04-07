@@ -5,9 +5,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
-import androidx.wear.compose.foundation.lazy.AutoCenteringParams
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.Button
+import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.example.sensorrecord.presentation.modules.CalibrationState
 import com.example.sensorrecord.presentation.modules.SensorCalibrator
@@ -24,15 +24,30 @@ fun SensorCalibrationView(
 
     ScalingLazyColumn(
         modifier = Modifier.fillMaxWidth(),
-        autoCentering = AutoCenteringParams(itemIndex = 1),
-        userScrollEnabled = false
+        //autoCentering = AutoCenteringParams(itemIndex = 0),
+        userScrollEnabled = true
     ) {
         item {
-            Text(
-                text = "Hold at chest height,\nthen press:",
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
-            )
+            when (calibState) {
+                CalibrationState.Idle -> Text(
+                    text = "Hold at 90deg at\nchest height.\nThen, press:",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.body1
+                )
+                CalibrationState.Hold -> Text(
+                    text = "Keep holding at\nchest height",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.body1
+                )
+                CalibrationState.Forward -> Text(
+                    text = "Extend arm\n forward, parallel to ground. When vibrating pulse stops, wait for final vibration.",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.body1
+                )
+            }
         }
         item {
             Button(

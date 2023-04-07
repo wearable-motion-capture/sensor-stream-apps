@@ -46,38 +46,44 @@ class SensorCalibrator(globalState: GlobalState) {
             thread {
                 var startTime = LocalDateTime.now()
                 var diff = 0L
-
+                var vibrating = false
                 val northDegrees = mutableListOf(getGlobalYRotation())
 
                 while (diff < CALIBRATION_WAIT) {
-                    // the watch held horizontally if gravity in z direction is positive
-                    if (_gs.getGravity()[2] < 9.7) {
-                        startTime = LocalDateTime.now()
-                        northDegrees.clear()
-                    }
 
+                    // the watch held horizontally if gravity in z direction is positive
                     // only start considering these values if the y-rotation from
                     // the "Hold" calibration position is greater than 45 deg
                     val curYRot = getGlobalYRotation()
-                    if (abs(holdYRot - curYRot) < 45f) {
+                    if ((abs(holdYRot - curYRot) < 67.5f) || (_gs.getGravity()[2] < 9.75)) {
                         startTime = LocalDateTime.now()
                         northDegrees.clear()
+                        if (!vibrating) {
+                            vibrating = true
+                            vibrator.vibrate(
+                                VibrationEffect.createWaveform(
+                                    longArrayOf(0L, 200L, 100L, 200L, 100L), 1
+                                )
+                            )
+                        }
+                    } else {
+                        // if all is good, store to list of vales
+                        northDegrees.add(curYRot)
+                        diff = Duration.between(startTime, LocalDateTime.now()).toMillis()
+                        vibrating = false
+                        vibrator.cancel()
                     }
-
-                    // if all is good, store to list of vales
-                    northDegrees.add(curYRot)
-                    diff = Duration.between(startTime, LocalDateTime.now()).toMillis()
                 }
 
-                // last calibration step done
-                _forwardNorthDegree.value =
-                    northDegrees.average() + 90 // add 90 degrees for forward orientation of arm and hip
-                // confirm with a vibration
                 vibrator.vibrate(
                     VibrationEffect.createOneShot(
                         500L, VibrationEffect.DEFAULT_AMPLITUDE
                     )
                 )
+
+                // last calibration step done
+                _forwardNorthDegree.value =
+                    northDegrees.average() + 90 // add 90 degrees for forward orientation of arm and hip
 
                 // set app state to ready to begin recording
                 _gs.setCalibState(CalibrationState.Idle)
