@@ -8,7 +8,7 @@ import java.io.IOException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
-import java.nio.charset.Charset
+import java.nio.ByteBuffer
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -18,7 +18,7 @@ class SensorDataHandler(globalState: GlobalState, calibrator: SensorCalibrator) 
     /** setup-specific parameters */
     companion object {
         private const val TAG = "SensorDataHandler"  // for logging
-        private const val INTERVAL = 10L // a setting of 1 means basically as fast as possible
+        private const val STREAM_INTERVAL = 10L
         private const val PORT = 50000
     }
 
@@ -64,27 +64,31 @@ class SensorDataHandler(globalState: GlobalState, calibrator: SensorCalibrator) 
                         // write to data
                         val sensorData = floatArrayOf(diff.toFloat()) +
                                 _gs.getSensorReadingStream() +
-                                floatArrayOf(_calib.initPres.value.toFloat()) + // initial atmospheric pressure collected during calibration
-                                floatArrayOf(_calib.northDeg.value.toFloat()) // body orientation in relation to magnetic north pole collected during calibration
+                                floatArrayOf(
+                                    _calib.initPres.value.toFloat(), // initial atmospheric pressure collected during calibration
+                                    _calib.northDeg.value.toFloat() // body orientation in relation to magnetic north pole collected during calibration
+                                )
 
-                        // write sensor data as string
-                        var dataString = "#START,"
-                        for (ety in sensorData) {
-                            dataString += "%e,".format(ety)
+//                        // write sensor data as string
+//                        var dataString = "#START,"
+//                        for (ety in sensorData) {
+//                            dataString += "%e,".format(ety)
+//                        }
+//                        dataString += "#END"
+
+                        val buffer = ByteBuffer.allocate(4 * sensorData.size)
+                        for (v in sensorData) {
+                            buffer.putFloat(v)
                         }
-                        dataString += "#END"
-
-                        val dataPacketByte = dataString.toByteArray(Charset.defaultCharset())
                         val dp = DatagramPacket(
-                            dataPacketByte,
-                            dataPacketByte.size,
+                            buffer.array(),
+                            buffer.capacity(),
                             socketInetAddress,
                             PORT
                         )
-
                         // finally, send the byte stream
                         udpSocket.send(dp)
-                        Thread.sleep(INTERVAL)
+                        Thread.sleep(STREAM_INTERVAL)
                     }
                     udpSocket.close()
                 } catch (e: Exception) {
@@ -135,7 +139,7 @@ class SensorDataHandler(globalState: GlobalState, calibrator: SensorCalibrator) 
                                 floatArrayOf(_calib.northDeg.value.toFloat()) // body orientation in relation to magnetic north pole collected during calibration
                     )
                     // delay by a given amount of milliseconds
-                    Thread.sleep(INTERVAL)
+                    Thread.sleep(STREAM_INTERVAL)
                     // increase step count to trigger LaunchedEffect again
                     steps += 1
                 }

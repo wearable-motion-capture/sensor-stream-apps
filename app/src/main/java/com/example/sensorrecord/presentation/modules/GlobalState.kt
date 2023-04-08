@@ -34,7 +34,7 @@ enum class SoundStreamState {
 
 
 class GlobalState{
-    private val _version = "0.0.8"
+    private val _version = "0.0.9"
     private var _ip = ""
 
     // Flow variables trigger a re-draw of UI elements
@@ -135,7 +135,8 @@ class GlobalState{
                 lacc + // [3] linear acceleration x,y,z
                 pres +  // [1] atmospheric pressure
                 grav + // [3] vector indicating the direction and magnitude of gravity x,y,z
-                gyro // [3] gyro data for time series prediction
+                gyro + // [3] gyro data for time series prediction
+                hrRaw // [16] undocumented data from Samsung's Hr raw sensor
     }
 
     fun getSensorReadingRecord(): FloatArray {
