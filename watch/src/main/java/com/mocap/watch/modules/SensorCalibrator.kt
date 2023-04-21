@@ -3,12 +3,16 @@ package com.mocap.watch.modules
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
+import com.mocap.watch.CalibrationState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.time.Duration
 import java.time.LocalDateTime
 import kotlin.concurrent.thread
 import kotlin.math.abs
+
+import com.mocap.watch.GlobalState
+import com.mocap.watch.Views
 
 class SensorCalibrator(globalState: GlobalState) {
 

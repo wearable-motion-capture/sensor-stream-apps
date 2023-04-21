@@ -1,4 +1,4 @@
-package com.mocap.mc_smartphone.ui.theme
+package com.mocap.phone.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

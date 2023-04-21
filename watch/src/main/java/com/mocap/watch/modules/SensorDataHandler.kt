@@ -2,6 +2,8 @@ package com.mocap.watch.modules
 
 import android.os.Environment
 import android.util.Log
+import com.mocap.watch.GlobalState
+import com.mocap.watch.SensorDataHandlerState
 import java.io.File
 import java.io.FileWriter
 import java.io.IOException

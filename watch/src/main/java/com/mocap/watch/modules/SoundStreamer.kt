@@ -6,6 +6,8 @@ import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.util.Log
 import androidx.annotation.RequiresPermission
+import com.mocap.watch.GlobalState
+import com.mocap.watch.SoundStreamState
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
@@ -17,7 +19,7 @@ import kotlin.concurrent.thread
  */
 class SoundStreamer(globalState: GlobalState) {
 
-    /** setup-specific parameters */
+    /** class-specific parameters */
     companion object {
         private const val TAG = "SoundRecorder" // for logging
         private const val RECORDING_RATE = 16000 // can go up to 44K, if needed

@@ -25,15 +25,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.wear.compose.foundation.lazy.AutoCenteringParams
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.*
-import com.mocap.watch.modules.GlobalState
+import com.mocap.watch.GlobalState
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun IpSettingUi(globalState: GlobalState) {
+fun RenderIpSetting(globalState: GlobalState) {
 
-
+    // retrieve information to display
     val ipStr = globalState.getIP().split(".")
-
+    // formatting
     var selectedColumn by remember { mutableStateOf(0) }
     val textStyle = MaterialTheme.typography.body1
 

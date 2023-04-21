@@ -6,8 +6,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.material.*
-import com.mocap.watch.modules.CalibrationState
-import com.mocap.watch.modules.SensorDataHandlerState
+import com.mocap.watch.CalibrationState
+import com.mocap.watch.SensorDataHandlerState
 
 
 /**

@@ -9,12 +9,12 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
-import com.mocap.watch.modules.CalibrationState
-import com.mocap.watch.modules.GlobalState
+import com.mocap.watch.CalibrationState
+import com.mocap.watch.GlobalState
 import com.mocap.watch.modules.SensorCalibrator
 
 @Composable
-fun SensorCalibrationView(
+fun RenderSensorCalibration(
     vibrator: Vibrator,
     calibrator: SensorCalibrator,
     globalState: GlobalState
@@ -28,27 +28,20 @@ fun SensorCalibrationView(
         userScrollEnabled = true
     ) {
         item {
-            when (calibState) {
-                CalibrationState.Idle -> Text(
-                    text = "Hold at 90deg at\nchest height.\nThen, press:",
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.body1
-                )
-                CalibrationState.Hold -> Text(
-                    text = "Keep holding at\nchest height",
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.body1
-                )
-                CalibrationState.Forward -> Text(
-                    text = "Extend arm\n forward, parallel to ground. When vibrating pulse stops, wait for final vibration.",
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.body1
-                )
-            }
+            Text(
+                text = when (calibState) {
+                    CalibrationState.Idle -> "Hold at 90deg at\nchest height.\nThen, press:"
+                    CalibrationState.Hold -> "Keep holding at\nchest height"
+                    CalibrationState.Forward -> "Extend arm\n forward, parallel to ground. " +
+                            "When vibrating pulse stops, wait for final vibration."
+                },
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.body1
+            )
+
         }
+
         item {
             Button(
                 enabled = calibState == CalibrationState.Idle,

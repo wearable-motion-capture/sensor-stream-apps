@@ -12,16 +12,16 @@ import androidx.activity.compose.setContent
 import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
-import com.mocap.watch.modules.GlobalState
+
 import com.mocap.watch.modules.SensorCalibrator
 import com.mocap.watch.modules.SensorDataHandler
 import com.mocap.watch.modules.SensorListener
 import com.mocap.watch.modules.SoundStreamer
-import com.mocap.watch.modules.Views
-import com.mocap.watch.ui.HomeView
-import com.mocap.watch.ui.IpSettingUi
-import com.mocap.watch.ui.SensorCalibrationView
+import com.mocap.watch.ui.RenderIpSetting
+import com.mocap.watch.ui.RenderSensorCalibration
+
 import com.mocap.watch.ui.theme.WatchTheme
+import com.mocap.watch.ui.view.RenderHome
 
 
 /**
@@ -133,10 +133,29 @@ class MainActivity : ComponentActivity() {
 //                  println(device.toString())
 //              }
 
-                DrawUI(vibrator)
-
                 // keep screen on
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+                val currentView by globalState.viewState.collectAsState()
+
+                if (currentView == Views.Calibration) {
+                    RenderSensorCalibration(
+                        globalState = globalState,
+                        calibrator = sensorCalibrator,
+                        vibrator = vibrator
+                    )
+                } else if (currentView == Views.Home) {
+                    RenderHome(
+                        globalState = globalState,
+                        sensorDataHandler = sensorDataHandler,
+                        soundStreamer = soundStreamer,
+                        calibrator = sensorCalibrator
+                    )
+                } else if (currentView == Views.IPsetting) {
+                    RenderIpSetting(
+                        globalState = globalState
+                    )
+                }
             }
         }
     }
@@ -182,32 +201,6 @@ class MainActivity : ComponentActivity() {
             for (l in _listenersSetup) {
                 sensorManager.unregisterListener(l)
             }
-        }
-    }
-
-    @Composable
-    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    fun DrawUI(vibrator: Vibrator) {
-
-        val currentView by globalState.viewState.collectAsState()
-
-        if (currentView == Views.Calibration) {
-            SensorCalibrationView(
-                globalState = globalState,
-                calibrator = sensorCalibrator,
-                vibrator = vibrator
-            )
-        } else if (currentView == Views.Home) {
-            HomeView(
-                globalState = globalState,
-                sensorDataHandler = sensorDataHandler,
-                soundStreamer = soundStreamer,
-                calibrator = sensorCalibrator
-            )
-        } else if (currentView == Views.IPsetting) {
-            IpSettingUi(
-                globalState = globalState
-            )
         }
     }
 }

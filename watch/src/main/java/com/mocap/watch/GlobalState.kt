@@ -1,4 +1,4 @@
-package com.mocap.watch.modules
+package com.mocap.watch
 
 import android.os.Environment
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,7 +33,7 @@ enum class SoundStreamState {
 }
 
 
-class GlobalState{
+class GlobalState {
     private val _version = "0.0.9"
     private var _ip = ""
 

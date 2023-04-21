@@ -1,39 +1,47 @@
-package com.mocap.watch.ui
+package com.mocap.watch.ui.view
 
 import android.Manifest
 import androidx.annotation.RequiresPermission
+
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
+
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.Text
-import com.mocap.watch.modules.GlobalState
+
+import com.mocap.watch.modules.SoundStreamer
 import com.mocap.watch.modules.SensorCalibrator
 import com.mocap.watch.modules.SensorDataHandler
-import com.mocap.watch.modules.SensorDataHandlerState
-import com.mocap.watch.modules.SoundStreamState
-import com.mocap.watch.modules.SoundStreamer
-import com.mocap.watch.modules.Views
+
+import com.mocap.watch.GlobalState
+import com.mocap.watch.Views
+import com.mocap.watch.SensorDataHandlerState
+import com.mocap.watch.SoundStreamState
+
+import com.mocap.watch.ui.DataStateDisplay
+import com.mocap.watch.ui.SensorToggleChip
 
 @Composable
 @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-fun HomeView(
+fun RenderHome(
     globalState: GlobalState,
     sensorDataHandler: SensorDataHandler,
     soundStreamer: SoundStreamer,
     calibrator: SensorCalibrator
 ) {
+
+    // get the information to display from the global state
     val soundState by globalState.soundStrState.collectAsState()
     val sensorState by globalState.sensorStrState.collectAsState()
-
     val initPres by calibrator.initPres.collectAsState()
     val northDeg by calibrator.northDeg.collectAsState()
 
-    // all other views
+    // display information in a column
     ScalingLazyColumn(
         modifier = Modifier.fillMaxWidth()
     ) {
