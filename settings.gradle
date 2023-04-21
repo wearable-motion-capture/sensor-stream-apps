@@ -12,5 +12,6 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "SensorRecord"
-include ':app'
+rootProject.name = "wearable-mocap"
+include ':watch'
+include ':phone'
