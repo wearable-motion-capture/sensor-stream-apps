@@ -12,7 +12,7 @@ import androidx.compose.ui.text.style.TextAlign
  * Displays all the main functions
  */
 @Composable
-fun RenderHome() {
+fun renderHome() {
     LazyColumn(
         modifier = Modifier.fillMaxWidth()
     ) {

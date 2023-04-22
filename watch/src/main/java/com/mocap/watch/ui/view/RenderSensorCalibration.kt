@@ -1,4 +1,4 @@
-package com.mocap.watch.ui
+package com.mocap.watch.ui.view
 
 import android.os.Vibrator
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,6 +12,7 @@ import androidx.wear.compose.material.Text
 import com.mocap.watch.CalibrationState
 import com.mocap.watch.GlobalState
 import com.mocap.watch.modules.SensorCalibrator
+import com.mocap.watch.ui.CalibrationStateDisplay
 
 @Composable
 fun RenderSensorCalibration(
@@ -30,10 +31,19 @@ fun RenderSensorCalibration(
         item {
             Text(
                 text = when (calibState) {
-                    CalibrationState.Idle -> "Hold at 90deg at\nchest height.\nThen, press:"
-                    CalibrationState.Hold -> "Keep holding at\nchest height"
-                    CalibrationState.Forward -> "Extend arm\n forward, parallel to ground. " +
-                            "When vibrating pulse stops, wait for final vibration."
+                    CalibrationState.Idle ->
+                        "Hold at 90deg at\n" +
+                                "chest height.\n" +
+                                "Then, press:"
+
+                    CalibrationState.Hold ->
+                        "Keep holding at\n" +
+                                "chest height"
+
+                    CalibrationState.Forward ->
+                        "Extend arm\n" +
+                                "forward, parallel to ground. " +
+                                "When vibrating pulse stops, wait for final vibration."
                 },
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,

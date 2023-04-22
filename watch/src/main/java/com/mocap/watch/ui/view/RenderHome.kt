@@ -1,12 +1,16 @@
 package com.mocap.watch.ui.view
 
 import android.Manifest
+import android.content.Context
 import androidx.annotation.RequiresPermission
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 
@@ -22,6 +26,7 @@ import com.mocap.watch.GlobalState
 import com.mocap.watch.Views
 import com.mocap.watch.SensorDataHandlerState
 import com.mocap.watch.SoundStreamState
+import com.mocap.watch.modules.PhoneMessageSender
 
 import com.mocap.watch.ui.DataStateDisplay
 import com.mocap.watch.ui.SensorToggleChip
@@ -32,7 +37,8 @@ fun RenderHome(
     globalState: GlobalState,
     sensorDataHandler: SensorDataHandler,
     soundStreamer: SoundStreamer,
-    calibrator: SensorCalibrator
+    calibrator: SensorCalibrator,
+    context: Context
 ) {
 
     // get the information to display from the global state
@@ -41,10 +47,27 @@ fun RenderHome(
     val initPres by calibrator.initPres.collectAsState()
     val northDeg by calibrator.northDeg.collectAsState()
 
+    var messageNum by remember { mutableStateOf(0) }
+
     // display information in a column
     ScalingLazyColumn(
         modifier = Modifier.fillMaxWidth()
     ) {
+        item {
+            Button(
+                onClick = {
+                    PhoneMessageSender.sendMessage(
+                        "/mocap",
+                        "Message from Wearable $messageNum",
+                        context
+                    )
+                    messageNum += 1
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = "Send Message")
+            }
+        }
         item {
             Text(
                 text = "pres: ${"%.2f".format(initPres)} deg: ${"%.2f".format(northDeg)}",

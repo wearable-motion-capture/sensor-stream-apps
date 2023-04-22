@@ -17,11 +17,11 @@ import com.mocap.watch.modules.SensorCalibrator
 import com.mocap.watch.modules.SensorDataHandler
 import com.mocap.watch.modules.SensorListener
 import com.mocap.watch.modules.SoundStreamer
-import com.mocap.watch.ui.RenderIpSetting
-import com.mocap.watch.ui.RenderSensorCalibration
 
 import com.mocap.watch.ui.theme.WatchTheme
 import com.mocap.watch.ui.view.RenderHome
+import com.mocap.watch.ui.view.RenderSensorCalibration
+import com.mocap.watch.ui.view.RenderIpSetting
 
 
 /**
@@ -121,7 +121,7 @@ class MainActivity : ComponentActivity() {
                         getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager
                     vibrator = vibratorManager.defaultVibrator
                 } else {
-                    // ... make sure we can work with SDK 30 as well
+                    // we require the compatibility with SDK 20 for our galaxy watch 4
                     vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
                 }
 
@@ -149,7 +149,8 @@ class MainActivity : ComponentActivity() {
                         globalState = globalState,
                         sensorDataHandler = sensorDataHandler,
                         soundStreamer = soundStreamer,
-                        calibrator = sensorCalibrator
+                        calibrator = sensorCalibrator,
+                        context = this
                     )
                 } else if (currentView == Views.IPsetting) {
                     RenderIpSetting(

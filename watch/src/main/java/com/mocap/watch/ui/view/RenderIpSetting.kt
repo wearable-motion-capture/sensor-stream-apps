@@ -1,4 +1,4 @@
-package com.mocap.watch.ui
+package com.mocap.watch.ui.view
 
 import android.view.MotionEvent
 import androidx.compose.foundation.layout.*
