@@ -1,16 +1,12 @@
 package com.mocap.watch.ui.view
 
 import android.Manifest
-import android.content.Context
 import androidx.annotation.RequiresPermission
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 
@@ -26,7 +22,8 @@ import com.mocap.watch.GlobalState
 import com.mocap.watch.Views
 import com.mocap.watch.SensorDataHandlerState
 import com.mocap.watch.SoundStreamState
-import com.mocap.watch.modules.PhoneMessageSender
+import com.mocap.watch.modules.PingRequester
+import com.mocap.watch.modules.PingResponder
 
 import com.mocap.watch.ui.DataStateDisplay
 import com.mocap.watch.ui.SensorToggleChip
@@ -38,7 +35,7 @@ fun RenderHome(
     sensorDataHandler: SensorDataHandler,
     soundStreamer: SoundStreamer,
     calibrator: SensorCalibrator,
-    context: Context
+    pingRequester: PingRequester
 ) {
 
     // get the information to display from the global state
@@ -47,25 +44,16 @@ fun RenderHome(
     val initPres by calibrator.initPres.collectAsState()
     val northDeg by calibrator.northDeg.collectAsState()
 
-    var messageNum by remember { mutableStateOf(0) }
-
     // display information in a column
     ScalingLazyColumn(
         modifier = Modifier.fillMaxWidth()
     ) {
         item {
             Button(
-                onClick = {
-                    PhoneMessageSender.sendMessage(
-                        "/mocap",
-                        "Message from Wearable $messageNum",
-                        context
-                    )
-                    messageNum += 1
-                },
+                onClick = { pingRequester.requestPing() },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = "Send Message")
+                Text(text = "Ping Phone")
             }
         }
         item {

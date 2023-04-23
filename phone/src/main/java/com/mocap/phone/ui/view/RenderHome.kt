@@ -7,12 +7,14 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
+import com.mocap.phone.modules.PingRequester
 
 /**
  * Displays all the main functions
  */
 @Composable
-fun renderHome() {
+fun RenderHome(pingRequester: PingRequester) {
+
     LazyColumn(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -25,10 +27,10 @@ fun renderHome() {
         }
         item {
             Button(
-                onClick = { },
+                onClick = { pingRequester.requestPing() },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = "Check Watch Connection")
+                Text(text = "Ping Watch")
             }
         }
     }

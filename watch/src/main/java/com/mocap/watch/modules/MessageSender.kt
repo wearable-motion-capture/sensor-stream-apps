@@ -10,15 +10,15 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.util.concurrent.ExecutionException
 
-object PhoneMessageSender {
+object MessageSender {
 
-    val tag = "PhoneMessageSender"
+    val tag = "MessageSender"
     private val job = Job()
     private val coroutineScope = CoroutineScope(Dispatchers.IO + job)
 
-    fun sendMessage(path: String, message: String, context: Context) {
+    fun sendPingRequest(context: Context) {
         coroutineScope.launch {
-            sendMessageInBackground(path, message, context)
+            sendMessageInBackground("/mocap", "ping request", context)
         }
     }
 
@@ -35,11 +35,10 @@ object PhoneMessageSender {
             //Now send the message to each device.
             for (node in nodes) {
                 val sendMessageTask = Wearable.getMessageClient(context)
-                    .sendMessage(node.id, path, message.toByteArray())
+                    .sendMessage(node.id, path, message.toByteArray(Charsets.UTF_8))
                 try {
-                    // Block on a task and get the result synchronously (because this is on a background
-                    // thread).
-                    val result = Tasks.await(sendMessageTask)
+                    // Block on a task and get the result synchronously
+                    Tasks.await(sendMessageTask)
                     Log.v(tag, "SendThread: message send to " + node.displayName)
                 } catch (exception: ExecutionException) {
                     Log.e(tag, "Task failed: $exception")
