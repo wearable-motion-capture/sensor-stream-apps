@@ -18,9 +18,11 @@ import com.mocap.watch.modules.SensorListener
 import com.mocap.watch.modules.SoundStreamer
 
 import com.mocap.watch.ui.theme.WatchTheme
-import com.mocap.watch.ui.view.RenderHome
+import com.mocap.watch.ui.view.RenderDualMode
+import com.mocap.watch.ui.view.RenderStandAlone
 import com.mocap.watch.ui.view.RenderSensorCalibration
 import com.mocap.watch.ui.view.RenderIpSetting
+import com.mocap.watch.ui.view.RenderModeSelection
 
 
 /**
@@ -36,42 +38,34 @@ class MainActivity : ComponentActivity() {
     private lateinit var _sensorManager: SensorManager
     private lateinit var _vibratorManager: VibratorManager
 
-    private val _globalState = GlobalState()
-    private val _sensorCalibrator = SensorCalibrator(globalState = _globalState)
-    private val _sensorDataHandler = SensorDataHandler(
-        globalState = _globalState,
-        calibrator = _sensorCalibrator
-    )
-    private val soundStreamer = SoundStreamer(globalState = _globalState)
-
     private var _listenersSetup = listOf(
         SensorListener(
             Sensor.TYPE_PRESSURE
-        ) { _globalState.onPressureReadout(it) },
+        ) { GlobalState.onPressureReadout(it) },
         SensorListener(
             Sensor.TYPE_LINEAR_ACCELERATION
-        ) { _globalState.onLaccReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), excluding the force of gravity.
+        ) { GlobalState.onLaccReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), excluding the force of gravity.
         SensorListener(
             Sensor.TYPE_ACCELEROMETER
-        ) { _globalState.onAcclReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), including the force of gravity.
+        ) { GlobalState.onAcclReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), including the force of gravity.
         SensorListener(
             Sensor.TYPE_ROTATION_VECTOR
-        ) { _globalState.onRotVecReadout(it) },
+        ) { GlobalState.onRotVecReadout(it) },
         SensorListener(
             Sensor.TYPE_MAGNETIC_FIELD // All values are in micro-Tesla (uT) and measure the ambient magnetic field in the X, Y and Z axis.
-        ) { _globalState.onMagnReadout(it) },
+        ) { GlobalState.onMagnReadout(it) },
         SensorListener(
             Sensor.TYPE_GRAVITY
-        ) { _globalState.onGravReadout(it) },
+        ) { GlobalState.onGravReadout(it) },
         SensorListener(
             Sensor.TYPE_GYROSCOPE
-        ) { _globalState.onGyroReadout(it) },
+        ) { GlobalState.onGyroReadout(it) },
 //        SensorListener(
 //            Sensor.TYPE_HEART_RATE
 //        ) { globalState.onHrReadout(it) },
         SensorListener(
             69682 // Samsung HR Raw Sensor this is the only Galaxy5 raw sensor that worked
-        ) { _globalState.onHrRawReadout(it) }
+        ) { GlobalState.onHrRawReadout(it) }
     )
 
     //    private var _listenersSetup = listOf(
@@ -104,10 +98,9 @@ class MainActivity : ComponentActivity() {
                 _sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
                 registerSensorListeners()
 
-                val pingRequester = PingRequester(
-                    globalState = _globalState,
-                    context = applicationContext
-                )
+                val sensorCalibrator = SensorCalibrator()
+                val sensorDataHandler = SensorDataHandler(calibrator = sensorCalibrator)
+                val soundStreamer = SoundStreamer()
 
 
                 // get the vibrator service.
@@ -133,26 +126,33 @@ class MainActivity : ComponentActivity() {
                 // keep screen on
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-                val currentView by _globalState.viewState.collectAsState()
+                val currentView by GlobalState.viewState.collectAsState()
 
-                if (currentView == Views.Calibration) {
-                    RenderSensorCalibration(
-                        globalState = _globalState,
-                        calibrator = _sensorCalibrator,
+                when (currentView) {
+                    Views.ModelSelection -> RenderModeSelection()
+
+                    Views.IPsetting -> RenderIpSetting()
+
+                    Views.Calibration -> RenderSensorCalibration(
+                        calibrator = sensorCalibrator,
                         vibrator = vibrator
                     )
-                } else if (currentView == Views.Home) {
-                    RenderHome(
-                        globalState = _globalState,
-                        sensorDataHandler = _sensorDataHandler,
+
+                    Views.StandAlone -> RenderStandAlone(
+                        sensorDataHandler = sensorDataHandler,
                         soundStreamer = soundStreamer,
-                        calibrator = _sensorCalibrator,
-                        pingRequester = pingRequester
+                        calibrator = sensorCalibrator
                     )
-                } else if (currentView == Views.IPsetting) {
-                    RenderIpSetting(
-                        globalState = _globalState
-                    )
+
+                    Views.DualMode -> {
+                        val pingRequester = PingRequester(context = applicationContext)
+                        RenderDualMode(
+                            sensorDataHandler = sensorDataHandler,
+                            soundStreamer = soundStreamer,
+                            calibrator = sensorCalibrator,
+                            pingRequester = pingRequester
+                        )
+                    }
                 }
             }
         }

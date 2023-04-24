@@ -16,7 +16,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.concurrent.thread
 
-class SensorDataHandler(globalState: GlobalState, calibrator: SensorCalibrator) {
+class SensorDataHandler(calibrator: SensorCalibrator) {
     /** setup-specific parameters */
     companion object {
         private const val TAG = "SensorDataHandler"  // for logging
@@ -24,7 +24,6 @@ class SensorDataHandler(globalState: GlobalState, calibrator: SensorCalibrator) 
         private const val PORT = 50000
     }
 
-    private val _gs = globalState
     private val _calib = calibrator
 
     // used by the recording function to zero out time stamps when writing to file
@@ -40,8 +39,8 @@ class SensorDataHandler(globalState: GlobalState, calibrator: SensorCalibrator) 
     fun triggerImuStreamUdp(checked: Boolean) {
 
         // verify that app is in a state that allows to start or stop streaming
-        if (_gs.getSensorState() != SensorDataHandlerState.Idle &&
-            _gs.getSensorState() != SensorDataHandlerState.Streaming
+        if (GlobalState.getSensorState() != SensorDataHandlerState.Idle &&
+            GlobalState.getSensorState() != SensorDataHandlerState.Streaming
         ) {
             Log.v(TAG, "not ready to start or stop streaming")
             return
@@ -49,7 +48,7 @@ class SensorDataHandler(globalState: GlobalState, calibrator: SensorCalibrator) 
 
         // if toggle is true (checked), proceed with creating a socket and begin to stream data
         if (checked) {
-            _gs.setSensorState(SensorDataHandlerState.Streaming)
+            GlobalState.setSensorState(SensorDataHandlerState.Streaming)
 
             // run the streaming in a thread
             thread {
@@ -57,15 +56,15 @@ class SensorDataHandler(globalState: GlobalState, calibrator: SensorCalibrator) 
                 try {
                     val udpSocket = DatagramSocket(PORT)
                     udpSocket.broadcast = true
-                    val socketInetAddress = InetAddress.getByName(_gs.getIP())
+                    val socketInetAddress = InetAddress.getByName(GlobalState.getIP())
                     val streamStartTimeStamp = LocalDateTime.now()
 
-                    while (_gs.getSensorState() == SensorDataHandlerState.Streaming) {
+                    while (GlobalState.getSensorState() == SensorDataHandlerState.Streaming) {
                         val diff =
                             Duration.between(streamStartTimeStamp, LocalDateTime.now()).toMillis()
                         // write to data
                         val sensorData = floatArrayOf(diff.toFloat()) +
-                                _gs.getSensorReadingStream() +
+                                GlobalState.getSensorReadingStream() +
                                 floatArrayOf(
                                     _calib.initPres.value.toFloat(), // initial atmospheric pressure collected during calibration
                                     _calib.northDeg.value.toFloat() // body orientation in relation to magnetic north pole collected during calibration
@@ -95,13 +94,13 @@ class SensorDataHandler(globalState: GlobalState, calibrator: SensorCalibrator) 
                     udpSocket.close()
                 } catch (e: Exception) {
                     Log.v(TAG, "Streaming error $e")
-                    _gs.setSensorState(SensorDataHandlerState.Idle)
+                    GlobalState.setSensorState(SensorDataHandlerState.Idle)
                     Log.v(TAG, "stopped streaming")
                 }
             }
 
         } else {
-            _gs.setSensorState(SensorDataHandlerState.Idle)
+            GlobalState.setSensorState(SensorDataHandlerState.Idle)
             Log.v(TAG, "stopped streaming")
         }
     }
@@ -112,15 +111,15 @@ class SensorDataHandler(globalState: GlobalState, calibrator: SensorCalibrator) 
      */
     fun recordTrigger(checked: Boolean) {
         // no actions allowed if not in ready or recording state
-        if (_gs.getSensorState() != SensorDataHandlerState.Idle &&
-            _gs.getSensorState() != SensorDataHandlerState.Recording
+        if (GlobalState.getSensorState() != SensorDataHandlerState.Idle &&
+            GlobalState.getSensorState() != SensorDataHandlerState.Recording
         ) {
             Log.v(TAG, "not ready to record or stop recording")
             return
         }
         if (checked) {
             //if turned on, record exact start time
-            _gs.setSensorState(SensorDataHandlerState.Recording)
+            GlobalState.setSensorState(SensorDataHandlerState.Recording)
             _startRecordTimeStamp = LocalDateTime.now()
 
             // Such that the while loop that doesn't block the co-routine
@@ -129,14 +128,14 @@ class SensorDataHandler(globalState: GlobalState, calibrator: SensorCalibrator) 
                 // must be added. Therefore, we keep track of passed time in a separate calculation
                 var steps = 0
 
-                while (_gs.getSensorState() == SensorDataHandlerState.Recording) {
+                while (GlobalState.getSensorState() == SensorDataHandlerState.Recording) {
                     // estimate time difference to given start point as our time stamp
                     val diff =
                         Duration.between(_startRecordTimeStamp, LocalDateTime.now()).toMillis()
                     // write to data
                     data.add(
                         floatArrayOf(diff.toFloat()) +
-                                _gs.getSensorReadingRecord() +
+                                GlobalState.getSensorReadingRecord() +
                                 floatArrayOf(_calib.initPres.value.toFloat()) + // initial atmospheric pressure collected during calibration
                                 floatArrayOf(_calib.northDeg.value.toFloat()) // body orientation in relation to magnetic north pole collected during calibration
                     )
@@ -148,11 +147,11 @@ class SensorDataHandler(globalState: GlobalState, calibrator: SensorCalibrator) 
             }
         } else {
             // if turned off, safe data an clear
-            _gs.setSensorState(SensorDataHandlerState.Processing)
+            GlobalState.setSensorState(SensorDataHandlerState.Processing)
             // data processing in separate thread to not jack the UI
             thread {
                 // next state determined by whether data processing was successful
-                _gs.setSensorState(saveToDatedCSV(_startRecordTimeStamp, data))
+                GlobalState.setSensorState(saveToDatedCSV(_startRecordTimeStamp, data))
                 data.clear()
             }
         }

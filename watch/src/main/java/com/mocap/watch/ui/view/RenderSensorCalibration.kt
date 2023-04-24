@@ -17,11 +17,10 @@ import com.mocap.watch.ui.CalibrationStateDisplay
 @Composable
 fun RenderSensorCalibration(
     vibrator: Vibrator,
-    calibrator: SensorCalibrator,
-    globalState: GlobalState
+    calibrator: SensorCalibrator
 ) {
 
-    val calibState by globalState.calibState.collectAsState()
+    val calibState by GlobalState.calibState.collectAsState()
 
     ScalingLazyColumn(
         modifier = Modifier.fillMaxWidth(),

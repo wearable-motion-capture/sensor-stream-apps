@@ -15,12 +15,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             PhoneTheme {
-                val globalState = GlobalState()
-                val pingRequester = PingRequester(
-                    globalState = globalState,
-                    context = applicationContext
-                )
-                // render the main view
+                val pingRequester = PingRequester(context = applicationContext)
                 RenderHome(pingRequester)
             }
         }

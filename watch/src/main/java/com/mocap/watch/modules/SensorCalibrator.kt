@@ -12,16 +12,13 @@ import kotlin.concurrent.thread
 import kotlin.math.abs
 
 import com.mocap.watch.GlobalState
-import com.mocap.watch.Views
 
-class SensorCalibrator(globalState: GlobalState) {
+class SensorCalibrator {
 
     companion object {
         private const val TAG = "Calibrator"  // for logging
         private const val CALIBRATION_WAIT = 3000 // wait time in one calibration position
     }
-
-    private val _gs = globalState
 
     // the initial pressure for relative pressure estimations
     private val _initPressure = MutableStateFlow(0.0)
@@ -38,7 +35,7 @@ class SensorCalibrator(globalState: GlobalState) {
     fun calibrationTrigger(vibrator: Vibrator) {
 
         // verify that app is in a state that allows to start the calibration
-        if (_gs.getCalibState() != CalibrationState.Idle) {
+        if (GlobalState.getCalibState() != CalibrationState.Idle) {
             Log.v(TAG, "Calibration already in progress")
             return
         }
@@ -46,7 +43,7 @@ class SensorCalibrator(globalState: GlobalState) {
         fun forwardStep(holdYRot: Float) {
             // Get body orientation from when the participant extends the watch-arm forward
             // perpendicular to the hip
-            _gs.setCalibState(CalibrationState.Forward)
+            GlobalState.setCalibState(CalibrationState.Forward)
             thread {
                 var startTime = LocalDateTime.now()
                 var diff = 0L
@@ -59,7 +56,7 @@ class SensorCalibrator(globalState: GlobalState) {
                     // only start considering these values if the y-rotation from
                     // the "Hold" calibration position is greater than 45 deg
                     val curYRot = getGlobalYRotation()
-                    if ((abs(holdYRot - curYRot) < 67.5f) || (_gs.getGravity()[2] < 9.75)) {
+                    if ((abs(holdYRot - curYRot) < 67.5f) || (GlobalState.getGravity()[2] < 9.75)) {
                         startTime = LocalDateTime.now()
                         northDegrees.clear()
                         if (!vibrating) {
@@ -90,22 +87,22 @@ class SensorCalibrator(globalState: GlobalState) {
                     northDegrees.average() + 90 // add 90 degrees for forward orientation of arm and hip
 
                 // set app state to ready to begin recording
-                _gs.setCalibState(CalibrationState.Idle)
+                GlobalState.setCalibState(CalibrationState.Idle)
                 // return to overview
-                _gs.setView(Views.Home)
+                GlobalState.setHomeView()
             }
         }
 
         fun holdStep() {
             // begin with atmospheric pressure in initial hold position after pressing "start"
-            _gs.setCalibState(CalibrationState.Hold)
+            GlobalState.setCalibState(CalibrationState.Hold)
             thread {
                 val start = LocalDateTime.now()
                 var diff = 0L
 
-                val pressures = mutableListOf(_gs.getPressure()[0])
+                val pressures = mutableListOf(GlobalState.getPressure()[0])
                 while (diff < CALIBRATION_WAIT) {
-                    pressures.add(_gs.getPressure()[0])
+                    pressures.add(GlobalState.getPressure()[0])
                     diff = Duration.between(start, LocalDateTime.now()).toMillis()
                 }
                 // first calibration step done
@@ -130,7 +127,7 @@ class SensorCalibrator(globalState: GlobalState) {
      * in between +pi and -pi.
      */
     private fun getGlobalYRotation(): Float {
-        val rotVec = _gs.getRotVec()
+        val rotVec = GlobalState.getRotVec()
         // smartwatch rotation to [-w,x,z,y]
         val r = floatArrayOf(-rotVec[3], rotVec[0], rotVec[2], rotVec[1])
         val p = floatArrayOf(0f, 0f, 0f, 1f) // forward vector with [0,x,y,z]

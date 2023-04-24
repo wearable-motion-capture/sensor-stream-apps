@@ -17,7 +17,7 @@
 
         <!-- Listen for ping messaged from connected devices -->
         <service
-            android:name=".modules.PingResponder"
+            android:name=".modules.PingHandlerService"
             android:enabled="true"
             android:exported="true">
             <intent-filter>

@@ -9,8 +9,10 @@ import java.io.FileWriter
 
 enum class Views {
     Calibration,
-    Home,
-    IPsetting
+    DualMode,
+    StandAlone,
+    IPsetting,
+    ModelSelection
 }
 
 enum class CalibrationState {
@@ -32,13 +34,26 @@ enum class SoundStreamState {
     Streaming
 }
 
+enum class AppModes {
+    Dual, // requires to be connected to a phone
+    Standalone, // data collection from smartwatch only
+    Select // user has to select mode
+}
 
-class GlobalState {
-    private val _version = "0.0.9"
+
+object GlobalState {
+    const val PING_PATH = "/ping"
+    const val VERSION = "0.1.1"
+
     private var _ip = ""
 
+    private var _appMode = AppModes.Select
+
     // Flow variables trigger a re-draw of UI elements
-    private val _viewState = MutableStateFlow(Views.Home)
+    private val _lastPingResponse = MutableStateFlow("never")
+    val lastPingResponse = _lastPingResponse.asStateFlow()
+
+    private val _viewState = MutableStateFlow(Views.ModelSelection)
     val viewState = _viewState.asStateFlow()
 
     private val _calibState = MutableStateFlow(CalibrationState.Idle)
@@ -59,6 +74,25 @@ class GlobalState {
     private var gyro: FloatArray = FloatArray(3) // gyroscope
     private var magn: FloatArray = FloatArray(3) // magnetic
     private var grav: FloatArray = FloatArray(3) // gravity
+
+    fun setAppMode(appMode: AppModes) {
+        // set app mode and render corresponding view
+        _appMode = appMode
+        setHomeView()
+    }
+
+    fun setHomeView() {
+        /** returns to main view of app */
+        _viewState.value = when (_appMode) {
+            AppModes.Standalone -> Views.StandAlone
+            AppModes.Dual -> Views.DualMode
+            AppModes.Select -> Views.ModelSelection
+        }
+    }
+
+    fun setLastPingResponse(dateStr: String) {
+        _lastPingResponse.value = dateStr
+    }
 
     fun setView(view: Views) {
         _viewState.value = view
@@ -104,12 +138,8 @@ class GlobalState {
         fOut.flush()
         fOut.close()
 
-
-        setView(Views.Home)
-    }
-
-    fun getVersion(): String {
-        return _version
+        // return to home view
+        setHomeView()
     }
 
     fun getIP(): String {

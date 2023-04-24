@@ -13,6 +13,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.Text
+import com.mocap.watch.AppModes
 
 import com.mocap.watch.modules.SoundStreamer
 import com.mocap.watch.modules.SensorCalibrator
@@ -23,15 +24,12 @@ import com.mocap.watch.Views
 import com.mocap.watch.SensorDataHandlerState
 import com.mocap.watch.SoundStreamState
 import com.mocap.watch.modules.PingRequester
-import com.mocap.watch.modules.PingResponder
 
-import com.mocap.watch.ui.DataStateDisplay
 import com.mocap.watch.ui.SensorToggleChip
 
 @Composable
 @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-fun RenderHome(
-    globalState: GlobalState,
+fun RenderDualMode(
     sensorDataHandler: SensorDataHandler,
     soundStreamer: SoundStreamer,
     calibrator: SensorCalibrator,
@@ -39,8 +37,9 @@ fun RenderHome(
 ) {
 
     // get the information to display from the global state
-    val soundState by globalState.soundStrState.collectAsState()
-    val sensorState by globalState.sensorStrState.collectAsState()
+    val soundState by GlobalState.soundStrState.collectAsState()
+    val sensorState by GlobalState.sensorStrState.collectAsState()
+    val lastPing by GlobalState.lastPingResponse.collectAsState()
     val initPres by calibrator.initPres.collectAsState()
     val northDeg by calibrator.northDeg.collectAsState()
 
@@ -48,6 +47,14 @@ fun RenderHome(
     ScalingLazyColumn(
         modifier = Modifier.fillMaxWidth()
     ) {
+        // Phone connection
+        item {
+            Text(
+                text = "last Ping: $lastPing",
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
+            )
+        }
         item {
             Button(
                 onClick = { pingRequester.requestPing() },
@@ -56,6 +63,7 @@ fun RenderHome(
                 Text(text = "Ping Phone")
             }
         }
+        // Calibrate
         item {
             Text(
                 text = "pres: ${"%.2f".format(initPres)} deg: ${"%.2f".format(northDeg)}",
@@ -66,25 +74,13 @@ fun RenderHome(
         item {
             Button(
                 enabled = (sensorState == SensorDataHandlerState.Idle),
-                onClick = { globalState.setView(Views.Calibration) },
+                onClick = { GlobalState.setView(Views.Calibration) },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(text = "Recalibrate")
             }
         }
-        item {
-            SensorToggleChip(
-                enabled = (sensorState == SensorDataHandlerState.Idle) or
-                        (sensorState == SensorDataHandlerState.Recording),
-                text = "Record Locally",
-                checked = (sensorState == SensorDataHandlerState.Recording),
-                onChecked = { sensorDataHandler.recordTrigger(it) },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-        item {
-            DataStateDisplay(state = sensorState, modifier = Modifier.fillMaxWidth())
-        }
+        // stream
         item {
             SensorToggleChip(
                 enabled = (sensorState == SensorDataHandlerState.Idle) or
@@ -105,24 +101,14 @@ fun RenderHome(
             )
         }
         item {
-            Text(
-                text = globalState.getIP(),
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
-            )
-        }
-        item {
             Button(
                 enabled = (sensorState == SensorDataHandlerState.Idle) &&
                         (soundState == SoundStreamState.Idle),
-                onClick = { globalState.setView(Views.IPsetting) },
+                onClick = { GlobalState.setAppMode(AppModes.Select) },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = "Set Target IP")
+                Text(text = "Change Mode")
             }
-        }
-        item {
-            Text("app version " + globalState.getVersion())
         }
     }
 }

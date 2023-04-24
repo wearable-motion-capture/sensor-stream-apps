@@ -7,32 +7,39 @@ import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
 import com.google.android.gms.wearable.WearableListenerService
 import com.mocap.watch.GlobalState
+import com.mocap.watch.GlobalState.PING_PATH
 import java.util.Calendar
 import kotlinx.coroutines.*
 
 
-class PingRequester(globalState: GlobalState, context: Context) {
+class PingRequester(context: Context) {
+    companion object {
+        private const val TAG = "PingRequester"
+    }
 
-    private val _tag = "PingRequester" // for logging
-    private val _pingPath = "/ping"
-    private val job = Job()
-    private val coroutineScope = CoroutineScope(Dispatchers.IO + job)
-    private val _context = context
-    private val _globalState = globalState
+    private val _messageClient by lazy { Wearable.getMessageClient(context) }
+    private val _nodeClient by lazy { Wearable.getNodeClient(context) }
+    private val _scope = CoroutineScope(Job() + Dispatchers.IO)
 
     fun requestPing() {
-        /** requests a ping from a connected device */
+        /**
+         * This function assumes that only one device is connected and
+         * requests a ping from that connected device.
+         * If more devices are connected, it will raise an exception
+         */
 
         val message = "request"
 
-        coroutineScope.launch {
+        // sending messages and checking nodes are blocking calls,
+        // so we run them in a coroutine
+        _scope.launch {
             //first get all the connected devices, also called nodes
-            val nodeListTask = Wearable.getNodeClient(_context).connectedNodes
+            val nodeListTask = _nodeClient.connectedNodes
 
-            // check if a single wearable is connected
+            // check if a single device is connected
             val nodes = Tasks.await(nodeListTask)
             if (nodes.isEmpty()) {
-                Log.i(_tag, "No device connected")
+                Log.d(TAG, "No device connected")
                 return@launch // exit coroutine
             } else if (nodes.count() > 1) {
                 throw Exception("too many devices connected")
@@ -40,58 +47,67 @@ class PingRequester(globalState: GlobalState, context: Context) {
 
             // send the ping request
             val node = nodes[0]
-            val client = Wearable.getMessageClient(_context)
-            val sendMessageTask = client.sendMessage(
-                node.id, _pingPath, message.toByteArray(Charsets.UTF_8)
+            val sendMessageTask = _messageClient.sendMessage(
+                node.id, PING_PATH, message.toByteArray(Charsets.UTF_8)
             )
             Tasks.await(sendMessageTask)
-            Log.v(_tag, "Ping requested send to ${node.displayName} (${node.id})")
+            Log.v(TAG, "Ping requested send to ${node.displayName} (${node.id})")
         }
     }
 }
 
-class PingResponder : WearableListenerService() {
 
-    private val _tag = "PingResponder" // for logging
-    private val _pingPath = "/ping"
-    private val job = Job()
-    private val coroutineScope = CoroutineScope(Dispatchers.IO + job)
+class PingHandlerService : WearableListenerService() {
 
+    companion object {
+        private const val TAG = "PingHandlerService"
+    }
+
+    private val _messageClient by lazy { Wearable.getMessageClient(this) }
+    private val _scope = CoroutineScope(Job() + Dispatchers.IO)
 
     override fun onMessageReceived(messageEvent: MessageEvent) {
         /** Checks received messages for _pingPath messages */
         super.onMessageReceived(messageEvent)
 
         val sourceId = messageEvent.sourceNodeId
-        Log.i(_tag, "Message received from: $sourceId with path ${messageEvent.path}")
+        Log.d(TAG, "Message received from: $sourceId with path ${messageEvent.path}")
 
-        if (messageEvent.path == _pingPath) {
-            when (messageEvent.data.toString(Charsets.UTF_8)) {
-                // if the message is a ping request, send the reply.
-                "request" -> answerPing(messageEvent.sourceNodeId)
-                // if the message is a ping reply, the ping was successful
-                "response" -> logPingResponse()
-            }
+        when (messageEvent.path) {
+            PING_PATH ->
+                when (messageEvent.data.toString(Charsets.UTF_8)) {
+                    // if the message is a ping request, send the reply.
+                    "request" -> answerPing(messageEvent.sourceNodeId)
+                    // if the message is a ping reply, the ping was successful
+                    "response" -> logPing()
+                }
         }
     }
 
-    private fun logPingResponse() {
+    override fun onDestroy() {
+        super.onDestroy()
+        _scope.cancel()
+    }
+
+    private fun logPing() {
         val date = Calendar.getInstance().time
         val dateInString = date.toString()
-        Log.v(_tag, "Ping response received $dateInString")
+        GlobalState.setLastPingResponse(dateInString)
+        Log.d(TAG, "Ping received $dateInString")
     }
 
     private fun answerPing(nodeId: String) {
         /** responds to a "ping request" message from the given node ID */
 
         val message = "response"
-        coroutineScope.launch {
-            val client = Wearable.getMessageClient(applicationContext)
-            val sendMessageTask = client.sendMessage(
-                nodeId, _pingPath, message.toByteArray(Charsets.UTF_8)
+
+        _scope.launch {
+            val sendMessageTask = _messageClient.sendMessage(
+                nodeId, PING_PATH, message.toByteArray(Charsets.UTF_8)
             )
             Tasks.await(sendMessageTask)
-            Log.v(_tag, "Ping response sent to $nodeId")
+            Log.d(TAG, "Ping response sent to $nodeId")
+            logPing()
         }
     }
 }

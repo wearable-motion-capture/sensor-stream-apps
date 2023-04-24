@@ -29,10 +29,10 @@ import com.mocap.watch.GlobalState
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun RenderIpSetting(globalState: GlobalState) {
+fun RenderIpSetting() {
 
     // retrieve information to display
-    val ipStr = globalState.getIP().split(".")
+    val ipStr = GlobalState.getIP().split(".")
     // formatting
     var selectedColumn by remember { mutableStateOf(0) }
     val textStyle = MaterialTheme.typography.body1
@@ -146,7 +146,7 @@ fun RenderIpSetting(globalState: GlobalState) {
         item {
             Button(
                 onClick = {
-                    globalState.setIP(
+                    GlobalState.setIP(
                         "${firstState.selectedOption}." +
                                 "${secondState.selectedOption}." +
                                 "${thirdState.selectedOption}." +

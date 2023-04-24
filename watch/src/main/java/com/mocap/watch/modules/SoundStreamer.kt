@@ -17,7 +17,7 @@ import kotlin.concurrent.thread
 /**
  * A helper class to provide methods to record audio input from the MIC
  */
-class SoundStreamer(globalState: GlobalState) {
+class SoundStreamer() {
 
     /** class-specific parameters */
     companion object {
@@ -29,15 +29,13 @@ class SoundStreamer(globalState: GlobalState) {
         private const val PORT = 50001
     }
 
-    val _gs = globalState
-
     /**
      * Records from the microphone.
      */
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    fun triggerMicStream(checked : Boolean) {
+    fun triggerMicStream(checked: Boolean) {
         if (!checked) {
-            _gs.setSoundState(SoundStreamState.Idle)
+            GlobalState.setSoundState(SoundStreamState.Idle)
         } else {
             // Create an AudioRecord object for the streaming
             // val intSize = AudioRecord.getMinBufferSize(RECORDING_RATE, CHANNEL_IN, FORMAT)
@@ -64,19 +62,22 @@ class SoundStreamer(globalState: GlobalState) {
             // begin streaming the microphone
             audioRecord.startRecording()
             Log.w(TAG, "Started Recording")
-            _gs.setSoundState(SoundStreamState.Streaming)
+            GlobalState.setSoundState(SoundStreamState.Streaming)
             // start while loop in a thread
             thread {
                 try {
 
                     val udpSocket = DatagramSocket(PORT)
                     udpSocket.broadcast = true
-                    Log.v(TAG, "Beginning to broadcast UDP mesage to ${_gs.getIP()}:$PORT")
+                    Log.v(
+                        TAG, "Beginning to broadcast " +
+                                "UDP mesage to ${GlobalState.getIP()}:$PORT"
+                    )
 
                     // read from audioRecord stream and send through to TCP output stream
                     val buffer = ByteArray(BUFFER_SIZE)
-                    val socketInetAddress = InetAddress.getByName(_gs.getIP())
-                    while (_gs.getSoundState() == SoundStreamState.Streaming) {
+                    val socketInetAddress = InetAddress.getByName(GlobalState.getIP())
+                    while (GlobalState.getSoundState() == SoundStreamState.Streaming) {
                         audioRecord.read(buffer, 0, buffer.size)
                         val dp = DatagramPacket(
                             buffer,
@@ -91,7 +92,7 @@ class SoundStreamer(globalState: GlobalState) {
 
                 } catch (e: Exception) {
                     Log.v(TAG, "Streaming error $e")
-                    _gs.setSoundState(SoundStreamState.Idle)
+                    GlobalState.setSoundState(SoundStreamState.Idle)
                     Log.v(TAG, "stopped streaming")
                 } finally {
                     audioRecord.release()
