@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
-import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.Text
 
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +15,9 @@ import kotlinx.coroutines.flow.StateFlow
 import com.mocap.watch.DataSingleton
 import com.mocap.watch.stateModules.SensorDataHandlerState
 import com.mocap.watch.stateModules.AudioModuleState
+import com.mocap.watch.ui.DefaultButton
 import com.mocap.watch.ui.DefaultText
+import com.mocap.watch.ui.RedButton
 import com.mocap.watch.ui.SensorToggleChip
 
 @Composable
@@ -27,7 +28,8 @@ fun RenderStandAlone(
     recordCallback: (Boolean) -> Unit,
     imuStreamCallback: (Boolean) -> Unit,
     micStreamCallback: (Boolean) -> Unit,
-    ipSetCallback: () -> Unit
+    ipSetCallback: () -> Unit,
+    finishCallback: () -> Unit
 ) {
 
     val audioState by soundStateFlow.collectAsState()
@@ -48,13 +50,11 @@ fun RenderStandAlone(
             )
         }
         item {
-            Button(
+            DefaultButton(
                 enabled = (sensorState == SensorDataHandlerState.Idle),
                 onClick = { calibCallback() },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = "Recalibrate")
-            }
+                text = "Recalibrate"
+            )
         }
         // Sensor data handler
         item {
@@ -90,30 +90,22 @@ fun RenderStandAlone(
             )
         }
         item {
-            DefaultText(
-                text = ip
-            )
+            DefaultText(text = ip)
         }
         item {
-            Button(
+            DefaultButton(
                 enabled = (sensorState == SensorDataHandlerState.Idle) &&
                         (audioState == AudioModuleState.Idle),
                 onClick = { ipSetCallback() },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = "Set Target IP")
-            }
+                text = "Set Target IP"
+            )
         }
-//        item {
-//            Button(
-//                enabled = (sensorState == SensorDataHandlerState.Idle) &&
-//                        (soundState == SoundStreamState.Idle),
-//                onClick = { GlobalState.setAppMode(AppModes.Select) },
-//                modifier = Modifier.fillMaxWidth()
-//            ) {
-//                Text(text = "Change Mode")
-//            }
-//        }
+        item {
+            RedButton(
+                onClick = { finishCallback() },
+                text = "Change Mode"
+            )
+        }
     }
 }
 

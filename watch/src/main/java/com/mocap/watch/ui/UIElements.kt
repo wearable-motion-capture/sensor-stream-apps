@@ -1,16 +1,12 @@
 package com.mocap.watch.ui
 
-import android.content.Intent
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.material.*
-
-import androidx.core.content.ContextCompat.startActivity
-
-
 
 
 /**
@@ -46,7 +42,7 @@ fun SensorToggleChip(
 }
 
 @Composable
-fun DefaultText(text : String) {
+fun DefaultText(text: String) {
     Text(
         text = text,
         modifier = Modifier.fillMaxWidth(),
@@ -54,4 +50,26 @@ fun DefaultText(text : String) {
     )
 }
 
+@Composable
+fun DefaultButton(enabled: Boolean = true, onClick: () -> Unit, text: String) {
+    Button(
+        enabled = enabled,
+        onClick = { onClick() },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(text = text)
+    }
 
+}
+
+@Composable
+fun RedButton(onClick: () -> Unit, text: String) {
+    Button(
+        onClick = { onClick() },
+        modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red)
+    ) {
+        Text(text = text)
+    }
+
+}

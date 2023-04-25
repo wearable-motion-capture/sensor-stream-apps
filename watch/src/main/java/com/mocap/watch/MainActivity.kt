@@ -5,16 +5,12 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.*
 import android.util.Log
-import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.ui.Modifier
 import androidx.preference.PreferenceManager
-import androidx.wear.compose.material.Button
-import androidx.wear.compose.material.Text
 
 import com.mocap.watch.ui.theme.WatchTheme
+import com.mocap.watch.ui.view.RenderModeSelection
 
 
 /**
@@ -53,17 +49,15 @@ class MainActivity : ComponentActivity() {
             }
             DataSingleton.setIp(storedIp)
 
-
-            // keep screen on
-            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-
             WatchTheme {
-                Button(
-                    onClick = { startActivity(Intent("com.mocap.watch.activity.Standalone")) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = "Standalone")
-                }
+                RenderModeSelection(
+                    standaloneCallback = {
+                        startActivity(Intent("com.mocap.watch.activity.Standalone"))
+                    },
+                    dualCallback = {
+                        startActivity(Intent("com.mocap.watch.activity.Dual"))
+                    }
+                )
             }
         }
     }

@@ -67,6 +67,15 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".activity.DualActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.DeviceDefault">
+            <intent-filter>
+                <action android:name="com.mocap.watch.activity.Dual" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
 
         <!-- Listen for ping messaged from connected devices -->
         <service

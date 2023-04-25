@@ -5,6 +5,7 @@ import android.Manifest
 import android.content.Intent
 import android.hardware.Sensor
 import android.os.*
+import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresPermission
 import com.mocap.watch.stateModules.AudioModule
@@ -33,14 +34,22 @@ open class StandaloneActivity : SensorActivity() {
                 // make use of the SensorActivity management
                 createListeners(_sensorStateModule)
 
+                // keep screen on
+                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
                 RenderStandAlone(
                     soundStateFlow = _audioStateModule.soundStrState,
                     sensorStateFlow = _sensorStateModule.sensorStrState,
-                    calibCallback = { startActivity(Intent("com.mocap.watch.activity.Calibration")) },
-                    ipSetCallback = { startActivity(Intent("com.mocap.watch.activity.SetIP")) },
+                    calibCallback = {
+                        startActivity(Intent("com.mocap.watch.activity.Calibration"))
+                    },
+                    ipSetCallback = {
+                        startActivity(Intent("com.mocap.watch.activity.SetIP"))
+                    },
                     recordCallback = { _sensorStateModule.recordTrigger(it) },
                     imuStreamCallback = { _sensorStateModule.triggerImuStreamUdp(it) },
-                    micStreamCallback = { _audioStateModule.triggerMicStream(it) }
+                    micStreamCallback = { _audioStateModule.triggerMicStream(it) },
+                    finishCallback = { this.finish() }
                 )
 
             }

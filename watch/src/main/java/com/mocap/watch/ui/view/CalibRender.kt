@@ -6,10 +6,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
-import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.mocap.watch.stateModules.CalibrationState
+import com.mocap.watch.ui.DefaultButton
+import com.mocap.watch.ui.RedButton
 import kotlinx.coroutines.flow.StateFlow
 
 @Composable
@@ -30,18 +31,19 @@ fun CalibRender(
             Text(
                 text = when (calibState) {
                     CalibrationState.Idle ->
-                        "Hold at 90deg at\n" +
-                                "chest height.\n" +
+                        "Hold at 90deg at \n" +
+                                "chest height. \n" +
                                 "Then, press:"
 
                     CalibrationState.Hold ->
-                        "Keep holding at\n" +
+                        "Keep holding at \n" +
                                 "chest height"
 
                     CalibrationState.Forward ->
-                        "Extend arm\n" +
-                                "forward, parallel to ground. " +
-                                "When vibrating pulse stops, wait for final vibration."
+                        "Extend arm \n" +
+                                "forward, parallel \n" +
+                                "to ground. When vibrating \n" +
+                                "pulse stops, wait for final vibration."
                 },
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
@@ -50,12 +52,11 @@ fun CalibRender(
 
         }
         item {
-            Button(
+            DefaultButton(
                 enabled = calibState == CalibrationState.Idle,
-                onClick = { calibTrigger() }
-            ) {
-                Text(text = "Start")
-            }
+                onClick = { calibTrigger() },
+                text = "Start"
+            )
         }
         item {
             CalibrationStateDisplay(
@@ -64,11 +65,10 @@ fun CalibRender(
             )
         }
         item {
-            Button(
-                onClick = { calibDone() }
-            ) {
-                Text(text = "Exit")
-            }
+            RedButton(
+                onClick = { calibDone() },
+                text = "Exit"
+            )
         }
     }
 }
