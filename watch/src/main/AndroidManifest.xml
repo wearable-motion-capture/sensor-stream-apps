@@ -40,10 +40,19 @@
                 android:name="android.app.lib_name"
                 android:value="" />
         </activity>
+        <activity
+            android:name=".activity.CalibActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.DeviceDefault">
+            <intent-filter>
+                <action android:name="com.mocap.watch.activity.Calibration" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
 
         <!-- Listen for ping messaged from connected devices -->
         <service
-            android:name=".modules.PingHandlerService"
+            android:name=".stateModules.PingHandlerService"
             android:enabled="true"
             android:exported="true">
             <intent-filter>

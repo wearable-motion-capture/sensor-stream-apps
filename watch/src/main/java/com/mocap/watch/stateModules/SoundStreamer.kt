@@ -1,4 +1,4 @@
-package com.mocap.watch.modules
+package com.mocap.watch.stateModules
 
 import android.Manifest
 import android.media.AudioFormat

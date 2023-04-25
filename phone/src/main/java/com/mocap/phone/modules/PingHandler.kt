@@ -56,8 +56,10 @@ class PingRequester(context: Context) {
     }
 }
 
-
 class PingHandlerService : WearableListenerService() {
+    /**
+     * This service is initialized through the AndroidManifest
+     */
 
     companion object {
         private const val TAG = "PingHandlerService"
@@ -67,7 +69,7 @@ class PingHandlerService : WearableListenerService() {
     private val _scope = CoroutineScope(Job() + Dispatchers.IO)
 
     override fun onMessageReceived(messageEvent: MessageEvent) {
-        /** Checks received messages for _pingPath messages */
+        /** Checks received messages for PingPath messages */
         super.onMessageReceived(messageEvent)
 
         val sourceId = messageEvent.sourceNodeId
@@ -90,6 +92,7 @@ class PingHandlerService : WearableListenerService() {
     }
 
     private fun logPing() {
+        /** Update the global state Ping timestamp */
         val date = Calendar.getInstance().time
         val dateInString = date.toString()
         GlobalState.setLastPingResponse(dateInString)
@@ -98,7 +101,6 @@ class PingHandlerService : WearableListenerService() {
 
     private fun answerPing(nodeId: String) {
         /** responds to a "ping request" message from the given node ID */
-
         val message = "response"
 
         _scope.launch {

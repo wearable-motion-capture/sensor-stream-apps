@@ -1,26 +1,25 @@
 package com.mocap.watch.ui.view
 
-import android.os.Vibrator
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
-import com.mocap.watch.CalibrationState
-import com.mocap.watch.GlobalState
-import com.mocap.watch.modules.SensorCalibrator
-import com.mocap.watch.ui.CalibrationStateDisplay
+import com.mocap.watch.stateModules.CalibrationState
+import kotlinx.coroutines.flow.StateFlow
 
 @Composable
-fun RenderSensorCalibration(
-    vibrator: Vibrator,
-    calibrator: SensorCalibrator
+fun CalibRender(
+    calibStateFlow: StateFlow<CalibrationState>,
+    calibTrigger: () -> Unit,
+    calibDone: () -> Unit
 ) {
 
-    val calibState by GlobalState.calibState.collectAsState()
+    val calibState by calibStateFlow.collectAsState()
 
     ScalingLazyColumn(
         modifier = Modifier.fillMaxWidth(),
@@ -50,13 +49,10 @@ fun RenderSensorCalibration(
             )
 
         }
-
         item {
             Button(
                 enabled = calibState == CalibrationState.Idle,
-                onClick = {
-                    calibrator.calibrationTrigger(vibrator)
-                }
+                onClick = { calibTrigger() }
             ) {
                 Text(text = "Start")
             }
@@ -67,5 +63,34 @@ fun RenderSensorCalibration(
                 modifier = Modifier.fillMaxWidth()
             )
         }
+        item {
+            Button(
+                onClick = { calibDone() }
+            ) {
+                Text(text = "Exit")
+            }
+        }
     }
+}
+
+/**
+ * The simple state display during the calibration procedure of the watch.
+ * Switches between:
+ * Hold, Forward
+ * Up and down are also options, which are not part of the current routine
+ */
+@Composable
+fun CalibrationStateDisplay(state: CalibrationState, modifier: Modifier = Modifier) {
+    var color = Color.Red
+    if (state == CalibrationState.Forward) {
+        color = Color.Cyan
+    }
+    Text(
+        modifier = modifier,
+        textAlign = TextAlign.Center,
+        text = state.name,
+        style = MaterialTheme.typography.body1.copy(
+            color = color
+        )
+    )
 }

@@ -1,9 +1,12 @@
-package com.mocap.watch.modules
+package com.mocap.watch.stateModules
 
 import android.os.Environment
 import android.util.Log
+import com.mocap.watch.Constants
 import com.mocap.watch.GlobalState
-import com.mocap.watch.SensorDataHandlerState
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
 import java.io.File
 import java.io.FileWriter
 import java.io.IOException
@@ -16,21 +19,41 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.concurrent.thread
 
-class SensorDataHandler(calibrator: SensorCalibrator) {
+enum class SensorDataHandlerState {
+    Idle, // app waits for user to trigger the recording
+    Recording, // recording sensor data into memory
+    Processing, // processing sensor data from memory to CSV
+    Error, // error state. Stop using the app,
+    Streaming // streaming to IP and Port set in SensorViewModel
+}
+
+class StandaloneModule() {
     /** setup-specific parameters */
     companion object {
-        private const val TAG = "SensorDataHandler"  // for logging
+        private const val TAG = "StandaloneModule"  // for logging
         private const val STREAM_INTERVAL = 10L
         private const val PORT = 50000
     }
 
-    private val _calib = calibrator
+    private val _sensorStrState = MutableStateFlow(SensorDataHandlerState.Idle)
+    val sensorStrState = _sensorStrState.asStateFlow()
 
     // used by the recording function to zero out time stamps when writing to file
     private var _startRecordTimeStamp = LocalDateTime.now()
 
     // Internal sensor reads that get updated as fast as possible
     private var data: ArrayList<FloatArray> = ArrayList() // all recorded data
+
+    // callbacks will write to these variables
+    private var _rotVec: FloatArray = FloatArray(5) // Rotation Vector sensor or estimation
+    private var _lacc: FloatArray = FloatArray(3) // linear acceleration (without gravity)
+    private var _accl: FloatArray = FloatArray(3) // raw acceleration
+    private var _grav: FloatArray = FloatArray(3) // gravity
+    private var _pres: FloatArray = FloatArray(1) // Atmospheric pressure in hPa (millibar)
+    private var _hr: FloatArray = FloatArray(1) // Heart Rate
+    private var _hrRaw: FloatArray = FloatArray(16) // Samsung's Raw HR data
+    private var _gyro: FloatArray = FloatArray(3) // gyroscope
+    private var _magn: FloatArray = FloatArray(3) // magnetic
 
     /**
      * Triggered by the streaming ClipToggle onChecked event
@@ -39,8 +62,8 @@ class SensorDataHandler(calibrator: SensorCalibrator) {
     fun triggerImuStreamUdp(checked: Boolean) {
 
         // verify that app is in a state that allows to start or stop streaming
-        if (GlobalState.getSensorState() != SensorDataHandlerState.Idle &&
-            GlobalState.getSensorState() != SensorDataHandlerState.Streaming
+        if (sensorStrState.value != SensorDataHandlerState.Idle &&
+            sensorStrState.value != SensorDataHandlerState.Streaming
         ) {
             Log.v(TAG, "not ready to start or stop streaming")
             return
@@ -48,7 +71,7 @@ class SensorDataHandler(calibrator: SensorCalibrator) {
 
         // if toggle is true (checked), proceed with creating a socket and begin to stream data
         if (checked) {
-            GlobalState.setSensorState(SensorDataHandlerState.Streaming)
+            _sensorStrState.value = SensorDataHandlerState.Streaming
 
             // run the streaming in a thread
             thread {
@@ -59,23 +82,21 @@ class SensorDataHandler(calibrator: SensorCalibrator) {
                     val socketInetAddress = InetAddress.getByName(GlobalState.getIP())
                     val streamStartTimeStamp = LocalDateTime.now()
 
-                    while (GlobalState.getSensorState() == SensorDataHandlerState.Streaming) {
+                    while (sensorStrState.value == SensorDataHandlerState.Streaming) {
                         val diff =
                             Duration.between(streamStartTimeStamp, LocalDateTime.now()).toMillis()
                         // write to data
                         val sensorData = floatArrayOf(diff.toFloat()) +
-                                GlobalState.getSensorReadingStream() +
+                                _rotVec + // rotation vector[5]  is a quaternion [x,y,z,w,confidence]
+                                _lacc + // [3] linear acceleration x,y,z
+                                _pres + // [1] atmospheric pressure
+                                _grav + // [3] vector indicating the direction and magnitude of gravity x,y,z
+                                _gyro + // [3] gyro data for time series prediction
+                                _hrRaw + // [16] undocumented data from Samsung's Hr raw sensor
                                 floatArrayOf(
-                                    _calib.initPres.value.toFloat(), // initial atmospheric pressure collected during calibration
-                                    _calib.northDeg.value.toFloat() // body orientation in relation to magnetic north pole collected during calibration
+                                    Constants.CALIB_PRESS.toFloat(), // initial atmospheric pressure collected during calibration
+                                    Constants.CALIB_NORTH.toFloat() // body orientation in relation to magnetic north pole collected during calibration
                                 )
-
-//                        // write sensor data as string
-//                        var dataString = "#START,"
-//                        for (ety in sensorData) {
-//                            dataString += "%e,".format(ety)
-//                        }
-//                        dataString += "#END"
 
                         val buffer = ByteBuffer.allocate(4 * sensorData.size)
                         for (v in sensorData) {
@@ -94,13 +115,13 @@ class SensorDataHandler(calibrator: SensorCalibrator) {
                     udpSocket.close()
                 } catch (e: Exception) {
                     Log.v(TAG, "Streaming error $e")
-                    GlobalState.setSensorState(SensorDataHandlerState.Idle)
+                    _sensorStrState.value = SensorDataHandlerState.Idle
                     Log.v(TAG, "stopped streaming")
                 }
             }
 
         } else {
-            GlobalState.setSensorState(SensorDataHandlerState.Idle)
+            _sensorStrState.value = SensorDataHandlerState.Idle
             Log.v(TAG, "stopped streaming")
         }
     }
@@ -111,15 +132,15 @@ class SensorDataHandler(calibrator: SensorCalibrator) {
      */
     fun recordTrigger(checked: Boolean) {
         // no actions allowed if not in ready or recording state
-        if (GlobalState.getSensorState() != SensorDataHandlerState.Idle &&
-            GlobalState.getSensorState() != SensorDataHandlerState.Recording
+        if (sensorStrState.value != SensorDataHandlerState.Idle &&
+            sensorStrState.value != SensorDataHandlerState.Recording
         ) {
             Log.v(TAG, "not ready to record or stop recording")
             return
         }
         if (checked) {
             //if turned on, record exact start time
-            GlobalState.setSensorState(SensorDataHandlerState.Recording)
+            _sensorStrState.value = SensorDataHandlerState.Recording
             _startRecordTimeStamp = LocalDateTime.now()
 
             // Such that the while loop that doesn't block the co-routine
@@ -128,16 +149,23 @@ class SensorDataHandler(calibrator: SensorCalibrator) {
                 // must be added. Therefore, we keep track of passed time in a separate calculation
                 var steps = 0
 
-                while (GlobalState.getSensorState() == SensorDataHandlerState.Recording) {
+                while (sensorStrState.value == SensorDataHandlerState.Recording) {
                     // estimate time difference to given start point as our time stamp
                     val diff =
                         Duration.between(_startRecordTimeStamp, LocalDateTime.now()).toMillis()
                     // write to data
                     data.add(
                         floatArrayOf(diff.toFloat()) +
-                                GlobalState.getSensorReadingRecord() +
-                                floatArrayOf(_calib.initPres.value.toFloat()) + // initial atmospheric pressure collected during calibration
-                                floatArrayOf(_calib.northDeg.value.toFloat()) // body orientation in relation to magnetic north pole collected during calibration
+                                _rotVec + // rotation vector[5]  is a quaternion [x,y,z,w,confidence]
+                                _lacc + // [3] linear acceleration x,y,z
+                                _pres + // [1] atmospheric pressure
+                                _grav + // [3] vector indicating the direction and magnitude of gravity x,y,z
+                                _gyro + // [3] gyro data for time series prediction
+                                _hrRaw + // [16] undocumented data from Samsung's Hr raw sensor
+                                floatArrayOf(
+                                    Constants.CALIB_PRESS.toFloat(), // initial atmospheric pressure collected during calibration
+                                    Constants.CALIB_NORTH.toFloat() // body orientation in relation to magnetic north pole collected during calibration
+                                )
                     )
                     // delay by a given amount of milliseconds
                     Thread.sleep(STREAM_INTERVAL)
@@ -147,11 +175,11 @@ class SensorDataHandler(calibrator: SensorCalibrator) {
             }
         } else {
             // if turned off, safe data an clear
-            GlobalState.setSensorState(SensorDataHandlerState.Processing)
+            _sensorStrState.value = SensorDataHandlerState.Processing
             // data processing in separate thread to not jack the UI
             thread {
                 // next state determined by whether data processing was successful
-                GlobalState.setSensorState(saveToDatedCSV(_startRecordTimeStamp, data))
+                _sensorStrState.value = saveToDatedCSV(_startRecordTimeStamp, data)
                 data.clear()
             }
         }
@@ -215,5 +243,44 @@ class SensorDataHandler(calibrator: SensorCalibrator) {
         // Parse the file and path to uri
         Log.v(TAG, "Text file created at ${textFile.absolutePath}.")
         return SensorDataHandlerState.Idle
+    }
+
+    // Events
+    /** sensor callbacks */
+    // Individual sensor reads are triggered by their onValueChanged events
+    fun onLaccReadout(newReadout: FloatArray) {
+        _lacc = newReadout
+    }
+
+    fun onRotVecReadout(newReadout: FloatArray) {
+        _rotVec = newReadout // [x,y,z,w]
+    }
+
+    fun onAcclReadout(newReadout: FloatArray) {
+        _accl = newReadout
+    }
+
+    fun onGyroReadout(newReadout: FloatArray) {
+        _gyro = newReadout
+    }
+
+    fun onMagnReadout(newReadout: FloatArray) {
+        _magn = newReadout
+    }
+
+    fun onHrReadout(newReadout: FloatArray) {
+        _hr = newReadout
+    }
+
+    fun onHrRawReadout(newReadout: FloatArray) {
+        _hrRaw = newReadout
+    }
+
+    fun onPressureReadout(newReadout: FloatArray) {
+        _pres = newReadout
+    }
+
+    fun onGravReadout(newReadout: FloatArray) {
+        _grav = newReadout
     }
 }
