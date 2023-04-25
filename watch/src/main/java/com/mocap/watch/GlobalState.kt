@@ -16,12 +16,6 @@ enum class Views {
 }
 
 
-
-enum class SoundStreamState {
-    Idle,
-    Streaming
-}
-
 enum class AppModes {
     Dual, // requires to be connected to a phone
     Standalone, // data collection from smartwatch only
@@ -45,10 +39,6 @@ object GlobalState {
     val viewState = _viewState.asStateFlow()
 
 
-
-    private val _soundStrState = MutableStateFlow(SoundStreamState.Idle)
-    val soundStrState = _soundStrState.asStateFlow()
-
     private var rotVec: FloatArray = FloatArray(5) // Rotation Vector sensor or estimation
     private var lacc: FloatArray = FloatArray(3) // linear acceleration (without gravity)
     private var accl: FloatArray = FloatArray(3) // raw acceleration
@@ -60,47 +50,7 @@ object GlobalState {
     private var magn: FloatArray = FloatArray(3) // magnetic
 
 
-
-
     fun setLastPingResponse(dateStr: String) {
         _lastPingResponse.value = dateStr
-    }
-
-    fun setIP(ip: String) {
-        _ip = ip
-
-        // permission rules only allow to write into the public shared directory
-        // /storage/emulated/0/Documents/sensorrecord_ip.txt
-        val fileName = "sensorrecord_ip.txt"
-        val path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-        val textFile = File(path, fileName)
-        if (textFile.exists()) {
-            textFile.delete()
-        }
-        val fOut = FileWriter(textFile)
-        fOut.write(ip)
-        fOut.flush()
-        fOut.close()
-
-        // return to home view
-        setHomeView()
-    }
-
-    fun getIP(): String {
-        if (_ip == "") {
-            // permission rules only allow to write into the public shared directory
-            // /storage/emulated/0/Documents/sensorrecord_ip.txt
-            val fileName = "sensorrecord_ip.txt"
-            val path =
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-            val textFile = File(path, fileName)
-            _ip = if (textFile.exists()) {
-                textFile.readText() // read from file if it exists
-            } else {
-                "192.168.0.12" // default IP
-            }
-
-        }
-        return _ip
     }
 }

@@ -13,15 +13,15 @@ import androidx.wear.compose.material.Text
 
 import kotlinx.coroutines.flow.StateFlow
 
-import com.mocap.watch.Constants
+import com.mocap.watch.DataSingleton
 import com.mocap.watch.stateModules.SensorDataHandlerState
-import com.mocap.watch.SoundStreamState
+import com.mocap.watch.stateModules.AudioModuleState
 import com.mocap.watch.ui.DefaultText
 import com.mocap.watch.ui.SensorToggleChip
 
 @Composable
 fun RenderStandAlone(
-    soundStateFlow: StateFlow<SoundStreamState>,
+    soundStateFlow: StateFlow<AudioModuleState>,
     sensorStateFlow: StateFlow<SensorDataHandlerState>,
     calibCallback: () -> Unit,
     recordCallback: (Boolean) -> Unit,
@@ -30,8 +30,11 @@ fun RenderStandAlone(
     ipSetCallback: () -> Unit
 ) {
 
-    val soundState by soundStateFlow.collectAsState()
+    val audioState by soundStateFlow.collectAsState()
     val sensorState by sensorStateFlow.collectAsState()
+    val ip by DataSingleton.IP.collectAsState()
+    val north by DataSingleton.CALIB_NORTH.collectAsState()
+    val press by DataSingleton.CALIB_PRESS.collectAsState()
 
     // display information in a column
     ScalingLazyColumn(
@@ -40,8 +43,8 @@ fun RenderStandAlone(
         // calibration
         item {
             DefaultText(
-                text = "pres: ${"%.2f".format(Constants.CALIB_PRESS)} " +
-                        "deg: ${"%.2f".format(Constants.CALIB_NORTH)}"
+                text = "pres: ${"%.2f".format(press)} " +
+                        "deg: ${"%.2f".format(north)}"
             )
         }
         item {
@@ -81,20 +84,20 @@ fun RenderStandAlone(
             SensorToggleChip(
                 enabled = true,
                 text = "Stream MIC",
-                checked = (soundState == SoundStreamState.Streaming),
+                checked = (audioState == AudioModuleState.Streaming),
                 onChecked = { micStreamCallback(it) },
                 modifier = Modifier.fillMaxWidth()
             )
         }
         item {
             DefaultText(
-                text = Constants.IP
+                text = ip
             )
         }
         item {
             Button(
                 enabled = (sensorState == SensorDataHandlerState.Idle) &&
-                        (soundState == SoundStreamState.Idle),
+                        (audioState == AudioModuleState.Idle),
                 onClick = { ipSetCallback() },
                 modifier = Modifier.fillMaxWidth()
             ) {

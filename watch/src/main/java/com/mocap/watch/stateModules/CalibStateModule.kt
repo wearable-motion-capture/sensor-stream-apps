@@ -2,7 +2,7 @@ package com.mocap.watch.stateModules
 
 import android.os.VibrationEffect
 import android.os.Vibrator
-import com.mocap.watch.Constants
+import com.mocap.watch.DataSingleton
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.time.Duration
@@ -76,7 +76,7 @@ class CalibStateModule(vibrator: Vibrator, calibDone: () -> Unit) {
             }
 
             // first calibration step done. Save the averages
-            Constants.CALIB_PRESS = pressures.average()
+            DataSingleton.setCalibPress(pressures.average())
             _holdYRot = holdDegrees.average()
 
             // signal with vibration
@@ -136,7 +136,7 @@ class CalibStateModule(vibrator: Vibrator, calibDone: () -> Unit) {
                 )
             )
             // add 90 degrees for forward orientation of arm and hip
-            Constants.CALIB_NORTH = northDegrees.average() + 90
+            DataSingleton.setCalibNorth(northDegrees.average() + 90)
 
             // last calibration step completed
             _calibState.value = CalibrationState.Idle

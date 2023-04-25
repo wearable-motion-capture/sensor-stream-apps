@@ -2,8 +2,7 @@ package com.mocap.watch.stateModules
 
 import android.os.Environment
 import android.util.Log
-import com.mocap.watch.Constants
-import com.mocap.watch.GlobalState
+import com.mocap.watch.DataSingleton
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -24,10 +23,10 @@ enum class SensorDataHandlerState {
     Recording, // recording sensor data into memory
     Processing, // processing sensor data from memory to CSV
     Error, // error state. Stop using the app,
-    Streaming // streaming to IP and Port set in SensorViewModel
+    Streaming // streaming to IP and Port set in StateModule
 }
 
-class StandaloneModule() {
+class StandaloneModule {
     /** setup-specific parameters */
     companion object {
         private const val TAG = "StandaloneModule"  // for logging
@@ -37,6 +36,8 @@ class StandaloneModule() {
 
     private val _sensorStrState = MutableStateFlow(SensorDataHandlerState.Idle)
     val sensorStrState = _sensorStrState.asStateFlow()
+
+    private val _ip = DataSingleton.IP.value
 
     // used by the recording function to zero out time stamps when writing to file
     private var _startRecordTimeStamp = LocalDateTime.now()
@@ -55,9 +56,15 @@ class StandaloneModule() {
     private var _gyro: FloatArray = FloatArray(3) // gyroscope
     private var _magn: FloatArray = FloatArray(3) // magnetic
 
+
+    fun reset(){
+        _sensorStrState.value = SensorDataHandlerState.Idle
+    }
+
     /**
-     * Triggered by the streaming ClipToggle onChecked event
-     * opens a TCP socket and streams sensor data to set IP as long as the current stat is STATE.Streaming.
+     * Triggered by the streaming ClipToggle UI element.
+     * Opens a TCP socket and streams sensor data to set IP as long as
+     * the current state is STATE.Streaming.
      */
     fun triggerImuStreamUdp(checked: Boolean) {
 
@@ -72,6 +79,8 @@ class StandaloneModule() {
         // if toggle is true (checked), proceed with creating a socket and begin to stream data
         if (checked) {
             _sensorStrState.value = SensorDataHandlerState.Streaming
+            val press = DataSingleton.CALIB_PRESS.value.toFloat()
+            val north = DataSingleton.CALIB_NORTH.value.toFloat()
 
             // run the streaming in a thread
             thread {
@@ -79,7 +88,7 @@ class StandaloneModule() {
                 try {
                     val udpSocket = DatagramSocket(PORT)
                     udpSocket.broadcast = true
-                    val socketInetAddress = InetAddress.getByName(GlobalState.getIP())
+                    val socketInetAddress = InetAddress.getByName(_ip)
                     val streamStartTimeStamp = LocalDateTime.now()
 
                     while (sensorStrState.value == SensorDataHandlerState.Streaming) {
@@ -94,8 +103,8 @@ class StandaloneModule() {
                                 _gyro + // [3] gyro data for time series prediction
                                 _hrRaw + // [16] undocumented data from Samsung's Hr raw sensor
                                 floatArrayOf(
-                                    Constants.CALIB_PRESS.toFloat(), // initial atmospheric pressure collected during calibration
-                                    Constants.CALIB_NORTH.toFloat() // body orientation in relation to magnetic north pole collected during calibration
+                                    press, // initial atmospheric pressure collected during calibration
+                                    north // body orientation in relation to magnetic north pole collected during calibration
                                 )
 
                         val buffer = ByteBuffer.allocate(4 * sensorData.size)
@@ -142,6 +151,8 @@ class StandaloneModule() {
             //if turned on, record exact start time
             _sensorStrState.value = SensorDataHandlerState.Recording
             _startRecordTimeStamp = LocalDateTime.now()
+            val press = DataSingleton.CALIB_PRESS.value.toFloat()
+            val north = DataSingleton.CALIB_NORTH.value.toFloat()
 
             // Such that the while loop that doesn't block the co-routine
             thread {
@@ -163,8 +174,8 @@ class StandaloneModule() {
                                 _gyro + // [3] gyro data for time series prediction
                                 _hrRaw + // [16] undocumented data from Samsung's Hr raw sensor
                                 floatArrayOf(
-                                    Constants.CALIB_PRESS.toFloat(), // initial atmospheric pressure collected during calibration
-                                    Constants.CALIB_NORTH.toFloat() // body orientation in relation to magnetic north pole collected during calibration
+                                    press, // initial atmospheric pressure collected during calibration
+                                    north // body orientation in relation to magnetic north pole collected during calibration
                                 )
                     )
                     // delay by a given amount of milliseconds

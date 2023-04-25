@@ -10,6 +10,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.Modifier
+import androidx.preference.PreferenceManager
 import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.Text
 
@@ -44,16 +45,24 @@ class MainActivity : ComponentActivity() {
                 Log.d(TAG, "body sensor and audio recording permissions already granted")
             }
 
+            // retrieve stored IP and update DataSingleton
+            val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+            var storedIp = sharedPref.getString(DataSingleton.IP_KEY, DataSingleton.IP_DEFAULT)
+            if (storedIp == null) {
+                storedIp = DataSingleton.IP_DEFAULT
+            }
+            DataSingleton.setIp(storedIp)
+
+
             // keep screen on
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-            // for colours
             WatchTheme {
                 Button(
-                    onClick = { startActivity(Intent("com.mocap.watch.activity.Calibration")) },
+                    onClick = { startActivity(Intent("com.mocap.watch.activity.Standalone")) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(text = "Recalibrate")
+                    Text(text = "Standalone")
                 }
             }
         }

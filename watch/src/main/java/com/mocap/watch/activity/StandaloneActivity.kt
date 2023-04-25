@@ -1,45 +1,46 @@
 package com.mocap.watch.activity
 
+import RenderStandAlone
+import android.Manifest
 import android.content.Intent
 import android.hardware.Sensor
 import android.os.*
 import androidx.activity.compose.setContent
-import androidx.core.content.ContextCompat
-import com.mocap.watch.stateModules.PingRequester
+import androidx.annotation.RequiresPermission
+import com.mocap.watch.stateModules.AudioModule
 import com.mocap.watch.stateModules.SensorListener
 import com.mocap.watch.stateModules.StandaloneModule
 import com.mocap.watch.ui.theme.WatchTheme
 
 
-open class DualActivity : SensorActivity() {
+open class StandaloneActivity : SensorActivity() {
 
     companion object {
         private const val TAG = "StandaloneActivity"  // for logging
     }
 
+    // instantiate utilized state modules
+    private val _sensorStateModule = StandaloneModule()
+    private val _audioStateModule = AudioModule()
+
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
-            // for colours
             WatchTheme {
 
-
-                val sensorStateModule = StandaloneModule()
                 // make use of the SensorActivity management
-                createListeners(sensorStateModule)
-
-                val soundStateModule = StandaloneModule()
-
+                createListeners(_sensorStateModule)
 
                 RenderStandAlone(
-                    soundStateFlow= ,
-                    sensorStateFlow=stateModule.sensorStrState,
+                    soundStateFlow = _audioStateModule.soundStrState,
+                    sensorStateFlow = _sensorStateModule.sensorStrState,
                     calibCallback = { startActivity(Intent("com.mocap.watch.activity.Calibration")) },
-                    recordCallback = { stateModule.recordTrigger(it) },
-                    imuStreamCallback = {stateModule.triggerImuStreamUdp },
-                    micStreamCallback =
-                    ipSetCallback
+                    ipSetCallback = { startActivity(Intent("com.mocap.watch.activity.SetIP")) },
+                    recordCallback = { _sensorStateModule.recordTrigger(it) },
+                    imuStreamCallback = { _sensorStateModule.triggerImuStreamUdp(it) },
+                    micStreamCallback = { _audioStateModule.triggerMicStream(it) }
                 )
 
             }
@@ -82,12 +83,10 @@ open class DualActivity : SensorActivity() {
 
     }
 
-    override fun onResume() {
-        super.onResume()
-    }
-
     override fun onPause() {
         super.onPause()
+        _sensorStateModule.reset()
+        _audioStateModule.reset()
     }
 }
 
