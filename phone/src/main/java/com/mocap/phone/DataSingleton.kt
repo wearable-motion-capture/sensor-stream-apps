@@ -3,7 +3,7 @@ package com.mocap.phone
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-object GlobalState {
+object DataSingleton {
     const val PING_PATH = "/ping"
 
     // Flow variables trigger a re-draw of UI elements

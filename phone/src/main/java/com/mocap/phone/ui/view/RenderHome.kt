@@ -11,16 +11,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
-import com.mocap.phone.GlobalState
-import com.mocap.phone.modules.PingRequester
+import com.mocap.phone.DataSingleton
 
 /**
  * Displays all the main functions
  */
 @Composable
-fun RenderHome(pingRequester: PingRequester) {
+fun RenderHome(pingCallback: () -> Unit) {
 
-    val lastPing by GlobalState.lastPingResponse.collectAsState()
+    val lastPing by DataSingleton.lastPingResponse.collectAsState()
 
 
     LazyColumn(
@@ -44,7 +43,7 @@ fun RenderHome(pingRequester: PingRequester) {
         }
         item {
             Button(
-                onClick = { pingRequester.requestPing() },
+                onClick = { pingCallback() },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(text = "Ping Watch")

@@ -8,6 +8,8 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.Text
 import com.mocap.watch.DataSingleton
+import com.mocap.watch.ui.DefaultButton
+import com.mocap.watch.ui.DefaultText
 
 @Composable
 fun RenderModeSelection(
@@ -19,31 +21,21 @@ fun RenderModeSelection(
         modifier = Modifier.fillMaxWidth()
     ) {
         item {
-            Text(
-                text = "Select App Mode",
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
+            DefaultText(
+                text = "Select App Mode"
             )
         }
         item {
-            Button(
+            DefaultButton(
                 onClick = { dualCallback() },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = "Dual"
-                )
-            }
+                text = "Dual"
+            )
         }
         item {
-            Button(
+            DefaultButton(
                 onClick = { standaloneCallback() },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = "Standalone"
-                )
-            }
+                text = "Standalone"
+            )
         }
         item {
             Text(text = "App Version: ${DataSingleton.VERSION}")

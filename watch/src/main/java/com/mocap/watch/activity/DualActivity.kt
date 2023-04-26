@@ -2,13 +2,26 @@ package com.mocap.watch.activity
 
 import android.content.Intent
 import android.hardware.Sensor
+import android.net.Uri
 import com.mocap.watch.stateModules.DualModule
 import com.mocap.watch.stateModules.SensorListener
 import android.os.*
+import android.util.Log
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
+import androidx.lifecycle.lifecycleScope
+import com.google.android.gms.wearable.CapabilityClient
+import com.google.android.gms.wearable.Node
+import com.google.android.gms.wearable.Wearable
 import com.mocap.watch.ui.theme.WatchTheme
 import com.mocap.watch.ui.view.RenderDualMode
+import com.mocap.watch.viewmodel.ChannelViewModel
+import com.mocap.watch.viewmodel.PingViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 
 class DualActivity : SensorActivity() {
@@ -17,7 +30,11 @@ class DualActivity : SensorActivity() {
         private const val TAG = "DualActivity"  // for logging
     }
 
-    private val _dualModule = DualModule()
+    private val _messageClient by lazy { Wearable.getMessageClient(this) }
+    private val _pingViewModel by viewModels<PingViewModel>()
+    private val _channelViewModel by viewModels<ChannelViewModel>()
+    private val capabilityClient by lazy { Wearable.getCapabilityClient(this) }
+    // private val _scope = CoroutineScope(Job() + Dispatchers.IO)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,22 +43,74 @@ class DualActivity : SensorActivity() {
             // for colours
             WatchTheme {
 
+                val dualModule = DualModule()
                 // make use of the SensorActivity management
-                createListeners(_dualModule)
+                createListeners(dualModule)
 
                 // keep screen on
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+                val pingStateFlow = _pingViewModel.connected
+
                 RenderDualMode(
-                    pingCallback = {},
-                    calibCallback = {
-                        startActivity(Intent("com.mocap.watch.activity.Calibration"))
-                    },
-                    finishCallback = { this.finish() }
+                    pingStateFlow = pingStateFlow,
+                    pingCallback = _pingViewModel::requestPing,
+                    calibCallback = { startActivity(Intent("com.mocap.watch.activity.Calibration")) },
+                    queryDeviceCallback = ::onQueryOtherDevicesClicked,
+                    finishCallback = ::finish
                 )
             }
         }
     }
+
+
+    private fun onQueryOtherDevicesClicked() {
+        lifecycleScope.launch {
+            try {
+                val nodes = getCapabilitiesForReachableNodes()
+                val filterd = nodes.filterValues { "mobile" in it || "wear" in it }.keys
+                displayNodes(filterd)
+            } catch (cancellationException: CancellationException) {
+                throw cancellationException
+            } catch (exception: Exception) {
+                Log.d(TAG, "Querying nodes failed: $exception")
+            }
+        }
+    }
+
+    /**
+     * Collects the capabilities for all nodes that are reachable using the [CapabilityClient].
+     *
+     * [CapabilityClient.getAllCapabilities] returns this information as a [Map] from capabilities
+     * to nodes, while this function inverts the map so we have a map of [Node]s to capabilities.
+     *
+     * This form is easier to work with when trying to operate upon all [Node]s.
+     */
+    private suspend fun getCapabilitiesForReachableNodes(): Map<Node, Set<String>> =
+        capabilityClient.getAllCapabilities(CapabilityClient.FILTER_REACHABLE)
+            .await()
+            // Pair the list of all reachable nodes with their capabilities
+            .flatMap { (capability, capabilityInfo) ->
+                capabilityInfo.nodes.map { it to capability }
+            }
+            // Group the pairs by the nodes
+            .groupBy(
+                keySelector = { it.first },
+                valueTransform = { it.second }
+            )
+            // Transform the capability list for each node into a set
+            .mapValues { it.value.toSet() }
+
+
+    private fun displayNodes(nodes: Set<Node>) {
+        val message = if (nodes.isEmpty()) {
+            "no devices"
+        } else {
+            nodes.joinToString(", ") { it.displayName }
+        }
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
 
     private fun createListeners(stateModule: DualModule) {
         super.setSensorListeners(
@@ -78,4 +147,22 @@ class DualActivity : SensorActivity() {
 //            34 // Samsung HR Raw Sensor this is the only Galaxy5 raw sensor that worked
 
     }
+
+    override fun onResume() {
+        super.onResume()
+        _messageClient.addListener(_pingViewModel)
+        capabilityClient.addListener(
+            _channelViewModel,
+            Uri.parse("wear://"),
+            CapabilityClient.FILTER_REACHABLE
+        )
+    }
+
+    override fun onPause() {
+        super.onPause()
+        _messageClient.removeListener(_pingViewModel)
+        capabilityClient.removeListener(_channelViewModel)
+    }
+
+
 }

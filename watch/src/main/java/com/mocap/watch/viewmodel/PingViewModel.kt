@@ -1,25 +1,49 @@
-package com.mocap.watch.stateModules
+package com.mocap.watch.viewmodel
 
-import android.content.Context
+import android.app.Application
 import android.util.Log
+import androidx.lifecycle.AndroidViewModel
 import com.google.android.gms.tasks.Tasks
+import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
-import com.google.android.gms.wearable.WearableListenerService
-import com.mocap.watch.GlobalState
-import com.mocap.watch.GlobalState.PING_PATH
+import com.mocap.watch.DataSingleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import java.util.Calendar
-import kotlinx.coroutines.*
+
+enum class PingState {
+    Unchecked,
+    Error,
+    Waiting,
+    Connected
+}
 
 
-class PingRequester(context: Context) {
+class PingViewModel(application: Application) :
+    AndroidViewModel(application),
+    MessageClient.OnMessageReceivedListener {
+
+    private val _messageClient by lazy { Wearable.getMessageClient(application) }
+    private val _nodeClient by lazy { Wearable.getNodeClient(application) }
+    private val _scope = CoroutineScope(Job() + Dispatchers.IO)
+
+    private val _connected = MutableStateFlow(PingState.Unchecked)
+    val connected = _connected.asStateFlow()
+
+
     companion object {
-        private const val TAG = "PingRequester"
+        private const val TAG = "PingViewModel"  // for logging
     }
 
-    private val _messageClient by lazy { Wearable.getMessageClient(context) }
-    private val _nodeClient by lazy { Wearable.getNodeClient(context) }
-    private val _scope = CoroutineScope(Job() + Dispatchers.IO)
+    override fun onCleared() {
+        _scope.cancel()
+    }
 
     fun requestPing() {
         /**
@@ -39,45 +63,34 @@ class PingRequester(context: Context) {
             // check if a single device is connected
             val nodes = Tasks.await(nodeListTask)
             if (nodes.isEmpty()) {
+                _connected.value = PingState.Error
                 Log.d(TAG, "No device connected")
                 return@launch // exit coroutine
             } else if (nodes.count() > 1) {
-                throw Exception("too many devices connected")
+                _connected.value = PingState.Error
+                Log.d(TAG, "too many devices connected")
+                return@launch // exit coroutine
             }
 
             // send the ping request
+            _connected.value = PingState.Waiting
             val node = nodes[0]
             val sendMessageTask = _messageClient.sendMessage(
-                node.id, PING_PATH, message.toByteArray(Charsets.UTF_8)
+                node.id, DataSingleton.PING_PATH, message.toByteArray(Charsets.UTF_8)
             )
             Tasks.await(sendMessageTask)
             Log.v(TAG, "Ping requested send to ${node.displayName} (${node.id})")
         }
     }
-}
-
-
-class PingHandlerService : WearableListenerService() {
-    /**
-     * This service is initialized through the AndroidManifest
-     */
-
-    companion object {
-        private const val TAG = "PingHandlerService"
-    }
-
-    private val _messageClient by lazy { Wearable.getMessageClient(this) }
-    private val _scope = CoroutineScope(Job() + Dispatchers.IO)
 
     override fun onMessageReceived(messageEvent: MessageEvent) {
         /** Checks received messages for PingPath messages */
-        super.onMessageReceived(messageEvent)
 
         val sourceId = messageEvent.sourceNodeId
         Log.d(TAG, "Message received from: $sourceId with path ${messageEvent.path}")
 
         when (messageEvent.path) {
-            PING_PATH ->
+            DataSingleton.PING_PATH ->
                 when (messageEvent.data.toString(Charsets.UTF_8)) {
                     // if the message is a ping request, send the reply.
                     "request" -> answerPing(messageEvent.sourceNodeId)
@@ -87,17 +100,12 @@ class PingHandlerService : WearableListenerService() {
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        _scope.cancel()
-    }
-
     private fun logPing() {
         /** Update the global state Ping timestamp */
         val date = Calendar.getInstance().time
         val dateInString = date.toString()
-        GlobalState.setLastPingResponse(dateInString)
         Log.d(TAG, "Ping received $dateInString")
+        _connected.value = PingState.Connected
     }
 
     private fun answerPing(nodeId: String) {
@@ -106,7 +114,7 @@ class PingHandlerService : WearableListenerService() {
 
         _scope.launch {
             val sendMessageTask = _messageClient.sendMessage(
-                nodeId, PING_PATH, message.toByteArray(Charsets.UTF_8)
+                nodeId, DataSingleton.PING_PATH, message.toByteArray(Charsets.UTF_8)
             )
             Tasks.await(sendMessageTask)
             Log.d(TAG, "Ping response sent to $nodeId")

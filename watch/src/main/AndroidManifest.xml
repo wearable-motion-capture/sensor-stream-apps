@@ -77,13 +77,12 @@
             </intent-filter>
         </activity>
 
-        <!-- Listen for ping messaged from connected devices -->
+        <!-- Listen for ping messaged from connected devices
         <service
             android:name=".stateModules.PingHandlerService"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
-                <!--action android:name="com.google.android.gms.wearable.DATA_CHANGED" /-->
                 <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
                 <data
                     android:host="*"
@@ -91,6 +90,7 @@
                     android:scheme="wear" />
             </intent-filter>
         </service>
+        -->
     </application>
 
 </manifest>

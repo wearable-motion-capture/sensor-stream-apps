@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 object DataSingleton {
     const val PING_PATH = "/ping" // message path
+    const val CHANNEL_PATH = "/channel"
     const val IP_KEY = "com.mocap.watch.ip" // shared preferences lookup
     const val IP_DEFAULT = "192.168.0.12"
     const val VERSION = "0.1.1"
