@@ -4,44 +4,50 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
-import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.mocap.watch.DataSingleton
 import com.mocap.watch.ui.DefaultButton
 import com.mocap.watch.ui.DefaultText
 import com.mocap.watch.ui.RedButton
-import com.mocap.watch.viewmodel.PingState
+import com.mocap.watch.ui.StreamToggle
 import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 fun RenderDualMode(
-    pingStateFlow: StateFlow<PingState>,
-    pingCallback: () -> Unit,
+    connectedNodeName: StateFlow<String>,
+    appActiveStateFlow: StateFlow<Boolean>,
     calibCallback: () -> Unit,
-    queryDeviceCallback: () -> Unit,
+    streamCallback: (Boolean) -> Unit,
     finishCallback: () -> Unit
 ) {
     val initPres by DataSingleton.CALIB_PRESS.collectAsState()
     val northDeg by DataSingleton.CALIB_NORTH.collectAsState()
-    val pingState by pingStateFlow.collectAsState()
+    val nodeName by connectedNodeName.collectAsState()
+    val appState by appActiveStateFlow.collectAsState()
+
+    var streamCheck by remember { mutableStateOf(false) }
 
     // display information in a column
     ScalingLazyColumn(
         modifier = Modifier.fillMaxWidth()
     ) {
         item {
-            DisplayPingState(pingState)
+            DefaultText(text = "Connected: $nodeName")
         }
         item {
-            // Phone connection
-            DefaultButton(
-                onClick = pingCallback,
-                text = "Ping Phone"
+            Text(
+                text = if (appState) "Phone App Active" else "Phone App Inactive",
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                color = if (appState) Color.Green else Color.Red
             )
         }
         item {
@@ -58,10 +64,13 @@ fun RenderDualMode(
             )
         }
         item {
-            DefaultButton(
-                onClick = queryDeviceCallback,
-                text = "Query"
-            )
+            StreamToggle(enabled = true,
+                text = "Stream to Phone",
+                checked = streamCheck,
+                onChecked = {
+                    streamCheck = !streamCheck
+                    streamCallback(it)
+                })
         }
         item {
             RedButton(
@@ -70,22 +79,4 @@ fun RenderDualMode(
             )
         }
     }
-}
-
-@Composable
-fun DisplayPingState(state: PingState) {
-    val color = when (state) {
-        PingState.Connected -> Color.Green
-        PingState.Error -> Color.Red
-        PingState.Unchecked -> Color.Red
-        PingState.Waiting -> Color.Yellow
-    }
-    Text(
-        modifier = Modifier.fillMaxWidth(),
-        textAlign = TextAlign.Center,
-        text = state.name,
-        style = MaterialTheme.typography.body1.copy(
-            color = color
-        )
-    )
 }

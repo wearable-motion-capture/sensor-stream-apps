@@ -18,7 +18,7 @@ import com.mocap.watch.stateModules.AudioModuleState
 import com.mocap.watch.ui.DefaultButton
 import com.mocap.watch.ui.DefaultText
 import com.mocap.watch.ui.RedButton
-import com.mocap.watch.ui.SensorToggleChip
+import com.mocap.watch.ui.StreamToggle
 
 @Composable
 fun RenderStandAlone(
@@ -58,35 +58,32 @@ fun RenderStandAlone(
         }
         // Sensor data handler
         item {
-            SensorToggleChip(
+            StreamToggle(
                 enabled = (sensorState == SensorDataHandlerState.Idle) or
                         (sensorState == SensorDataHandlerState.Recording),
                 text = "Record Locally",
                 checked = (sensorState == SensorDataHandlerState.Recording),
-                onChecked = { recordCallback(it) },
-                modifier = Modifier.fillMaxWidth()
+                onChecked = { recordCallback(it) }
             )
         }
         item {
             DataStateDisplay(state = sensorState, modifier = Modifier.fillMaxWidth())
         }
         item {
-            SensorToggleChip(
+            StreamToggle(
                 enabled = (sensorState == SensorDataHandlerState.Idle) or
                         (sensorState == SensorDataHandlerState.Streaming),
                 text = "Stream to IP",
                 checked = (sensorState == SensorDataHandlerState.Streaming),
-                onChecked = { imuStreamCallback(it) },
-                modifier = Modifier.fillMaxWidth()
+                onChecked = { imuStreamCallback(it) }
             )
         }
         item {
-            SensorToggleChip(
+            StreamToggle(
                 enabled = true,
                 text = "Stream MIC",
                 checked = (audioState == AudioModuleState.Streaming),
-                onChecked = { micStreamCallback(it) },
-                modifier = Modifier.fillMaxWidth()
+                onChecked = { micStreamCallback(it) }
             )
         }
         item {

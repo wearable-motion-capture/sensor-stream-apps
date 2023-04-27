@@ -28,7 +28,7 @@
             android:value="true" />
 
         <activity
-            android:name=".MainActivity"
+            android:name=".WatchMainActivity"
             android:exported="true"
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>

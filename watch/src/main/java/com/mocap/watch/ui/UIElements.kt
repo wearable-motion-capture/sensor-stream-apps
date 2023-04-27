@@ -1,39 +1,25 @@
 package com.mocap.watch.ui
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
-import androidx.compose.foundation.interaction.collectIsHoveredAsState
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.material.*
-import kotlinx.coroutines.flow.onStart
 
 
-/**
- * The basic toggle chips to start/stop recording and streaming
- */
+/**The basic toggle chips to start/stop recording and streaming */
 @Composable
-fun SensorToggleChip(
+fun StreamToggle(
     enabled: Boolean,
     text: String,
     checked: Boolean,
-    onChecked: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    onChecked: (Boolean) -> Unit
 ) {
     ToggleChip(
         enabled = enabled,
-        modifier = modifier,
+        modifier = Modifier.fillMaxWidth(),
         checked = checked,
         toggleControl = {
             Icon(

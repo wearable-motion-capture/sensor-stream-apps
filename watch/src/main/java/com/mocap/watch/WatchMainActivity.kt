@@ -17,7 +17,7 @@ import com.mocap.watch.ui.view.RenderModeSelection
  * The MainActivity is where the app starts. It creates the ViewModel, registers sensor listeners
  * and handles the UI.
  */
-class MainActivity : ComponentActivity() {
+class WatchMainActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "MainActivity"  // for logging

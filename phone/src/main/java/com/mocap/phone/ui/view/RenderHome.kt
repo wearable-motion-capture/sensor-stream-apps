@@ -17,10 +17,7 @@ import com.mocap.phone.DataSingleton
  * Displays all the main functions
  */
 @Composable
-fun RenderHome(pingCallback: () -> Unit) {
-
-    val lastPing by DataSingleton.lastPingResponse.collectAsState()
-
+fun RenderHome() {
 
     LazyColumn(
         modifier = Modifier
@@ -33,21 +30,6 @@ fun RenderHome(pingCallback: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center
             )
-        }
-        item {
-            Text(
-                text = "Last Ping: $lastPing",
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
-            )
-        }
-        item {
-            Button(
-                onClick = { pingCallback() },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = "Ping Watch")
-            }
         }
     }
 }

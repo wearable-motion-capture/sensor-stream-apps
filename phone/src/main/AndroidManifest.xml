@@ -6,7 +6,7 @@
         android:label="mocap_phone"
         android:theme="@android:style/Theme.DeviceDefault">
         <activity
-            android:name=".MainActivity"
+            android:name=".PhoneMain"
             android:exported="true"
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
