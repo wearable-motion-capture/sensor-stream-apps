@@ -1,6 +1,5 @@
 package com.mocap.watch.activity
 
-import android.content.SharedPreferences
 import android.os.*
 import android.util.Log
 
@@ -23,18 +22,15 @@ class IpSetActivity : ComponentActivity() {
 
         setContent {
             WatchTheme {
-
-                val sharedPref = getDefaultSharedPreferences(this)
-
                 RenderIpSetting(
-                    setIpCallback = { setIpAndFinish(it, sharedPref = sharedPref) }
+                    setIpCallback = { setIpAndFinish(it) }
                 )
-
             }
         }
     }
 
-    private fun setIpAndFinish(ip: String, sharedPref: SharedPreferences) {
+    private fun setIpAndFinish(ip: String) {
+        val sharedPref = getDefaultSharedPreferences(this)
         with(sharedPref.edit()) {
             putString(DataSingleton.IP_KEY, ip)
             apply()

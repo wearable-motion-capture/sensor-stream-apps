@@ -1,4 +1,4 @@
-package com.mocap.watch.stateModules
+package com.mocap.watch.modules
 
 import android.os.Environment
 import android.util.Log

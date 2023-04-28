@@ -1,4 +1,4 @@
-package com.mocap.watch.stateModules
+package com.mocap.watch.modules
 
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -76,7 +76,7 @@ class CalibStateModule(vibrator: Vibrator, calibDone: () -> Unit) {
             }
 
             // first calibration step done. Save the averages
-            DataSingleton.setCalibPress(pressures.average())
+            DataSingleton.setCalibPress(pressures.average().toFloat())
             _holdYRot = holdDegrees.average()
 
             // signal with vibration

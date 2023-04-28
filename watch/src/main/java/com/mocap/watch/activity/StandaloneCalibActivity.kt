@@ -4,13 +4,13 @@ import android.hardware.Sensor
 import android.os.*
 import android.view.WindowManager
 import androidx.activity.compose.setContent
-import com.mocap.watch.stateModules.CalibStateModule
-import com.mocap.watch.stateModules.SensorListener
+import com.mocap.watch.modules.CalibStateModule
+import com.mocap.watch.modules.SensorListener
 import com.mocap.watch.ui.theme.WatchTheme
-import com.mocap.watch.ui.view.CalibRender
+import com.mocap.watch.ui.view.RenderStandaloneCalib
 
 
-class CalibActivity : SensorActivity() {
+class StandaloneCalibActivity : SensorActivity() {
 
     companion object {
         private const val TAG = "Calibration"  // for logging
@@ -61,7 +61,7 @@ class CalibActivity : SensorActivity() {
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
                 // render the UI
-                CalibRender(
+                RenderStandaloneCalib(
                     calibStateFlow = _calibStateModule.calibState,
                     calibTrigger = { _calibStateModule.calibrationTrigger() },
                     calibDone = { done() }

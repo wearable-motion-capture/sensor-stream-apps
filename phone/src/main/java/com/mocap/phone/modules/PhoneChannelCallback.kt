@@ -20,7 +20,6 @@ class PhoneChannelCallback(
         private const val TAG = "ChannelCallback"
     }
 
-
     /**
      * Called when a channel is opened.
      * Simply forwards it to the input callback

@@ -52,10 +52,10 @@ class WatchMainActivity : ComponentActivity() {
             WatchTheme {
                 RenderModeSelection(
                     standaloneCallback = {
-                        startActivity(Intent("com.mocap.watch.activity.Standalone"))
+                        startActivity(Intent("com.mocap.watch.activity.STANDALONE"))
                     },
                     dualCallback = {
-                        startActivity(Intent("com.mocap.watch.activity.Dual"))
+                        startActivity(Intent("com.mocap.watch.activity.DUAL"))
                     }
                 )
             }

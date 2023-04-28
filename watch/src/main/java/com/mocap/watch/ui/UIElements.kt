@@ -67,5 +67,4 @@ fun RedButton(onClick: () -> Unit, text: String) {
     ) {
         Text(text = text)
     }
-
 }

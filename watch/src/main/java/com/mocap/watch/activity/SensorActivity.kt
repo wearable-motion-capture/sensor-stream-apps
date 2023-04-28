@@ -3,7 +3,7 @@ package com.mocap.watch.activity
 import android.hardware.SensorManager
 import android.os.*
 import androidx.activity.ComponentActivity
-import com.mocap.watch.stateModules.SensorListener
+import com.mocap.watch.modules.SensorListener
 
 /**
  * This is an open class for all activities that access sensor values

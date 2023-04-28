@@ -1,6 +1,6 @@
 package com.mocap.watch.activity
 
-import RenderStandAlone
+import RenderStandalone
 import android.Manifest
 import android.content.Intent
 import android.hardware.Sensor
@@ -8,9 +8,9 @@ import android.os.*
 import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresPermission
-import com.mocap.watch.stateModules.AudioModule
-import com.mocap.watch.stateModules.SensorListener
-import com.mocap.watch.stateModules.StandaloneModule
+import com.mocap.watch.modules.AudioModule
+import com.mocap.watch.modules.SensorListener
+import com.mocap.watch.modules.StandaloneModule
 import com.mocap.watch.ui.theme.WatchTheme
 
 
@@ -37,7 +37,7 @@ open class StandaloneActivity : SensorActivity() {
                 // keep screen on
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-                RenderStandAlone(
+                RenderStandalone(
                     soundStateFlow = _audioStateModule.soundStrState,
                     sensorStateFlow = _sensorStateModule.sensorStrState,
                     calibCallback = {

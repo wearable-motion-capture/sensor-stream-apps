@@ -21,7 +21,7 @@ import com.mocap.watch.ui.StreamToggle
 import kotlinx.coroutines.flow.StateFlow
 
 @Composable
-fun RenderDualMode(
+fun RenderDual(
     connectedNodeName: StateFlow<String>,
     appActiveStateFlow: StateFlow<Boolean>,
     calibCallback: () -> Unit,
@@ -44,7 +44,7 @@ fun RenderDualMode(
         }
         item {
             Text(
-                text = if (appState) "Phone App Active" else "Phone App Inactive",
+                text = if (appState) "Phone App Ready" else "Phone App Inactive",
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
                 color = if (appState) Color.Green else Color.Red

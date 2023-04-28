@@ -1,6 +1,7 @@
 package com.mocap.watch.ui.view
 
 import android.view.MotionEvent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.wear.compose.foundation.lazy.AutoCenteringParams
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
@@ -85,7 +87,9 @@ fun RenderIpSetting(setIpCallback: (String) -> Unit) {
                 .align(Alignment.Center)
                 .wrapContentSize()
                 .pointerInteropFilter {
-                    if (it.action == MotionEvent.ACTION_DOWN) selectedColumn = column
+                    if (it.action == MotionEvent.ACTION_DOWN) {
+                        selectedColumn = column
+                    }
                     true
                 }
         )

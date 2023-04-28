@@ -8,18 +8,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
-import com.mocap.watch.stateModules.CalibrationState
 import com.mocap.watch.ui.DefaultButton
 import com.mocap.watch.ui.RedButton
+import com.mocap.watch.viewmodel.DualCalibrationState
 import kotlinx.coroutines.flow.StateFlow
 
 @Composable
-fun CalibRender(
-    calibStateFlow: StateFlow<CalibrationState>,
+fun RenderDualCalib(
+    calibStateFlow: StateFlow<DualCalibrationState>,
     calibTrigger: () -> Unit,
     calibDone: () -> Unit
 ) {
-
     val calibState by calibStateFlow.collectAsState()
 
     ScalingLazyColumn(
@@ -30,20 +29,23 @@ fun CalibRender(
         item {
             Text(
                 text = when (calibState) {
-                    CalibrationState.Idle ->
+                    DualCalibrationState.Idle ->
                         "Hold at 90deg at \n" +
                                 "chest height. \n" +
                                 "Then, press:"
 
-                    CalibrationState.Hold ->
+                    DualCalibrationState.Hold ->
                         "Keep holding at \n" +
                                 "chest height"
 
-                    CalibrationState.Forward ->
+                    DualCalibrationState.Forward ->
                         "Extend arm \n" +
                                 "forward, parallel \n" +
                                 "to ground. When vibrating \n" +
                                 "pulse stops, wait for final vibration."
+
+                    DualCalibrationState.Phone ->
+                        "Wait for\nphone calibration."
                 },
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
@@ -53,13 +55,13 @@ fun CalibRender(
         }
         item {
             DefaultButton(
-                enabled = calibState == CalibrationState.Idle,
+                enabled = calibState == DualCalibrationState.Idle,
                 onClick = { calibTrigger() },
                 text = "Start"
             )
         }
         item {
-            CalibrationStateDisplay(
+            DualCalibrationStateDisplay(
                 state = calibState,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -73,6 +75,7 @@ fun CalibRender(
     }
 }
 
+
 /**
  * The simple state display during the calibration procedure of the watch.
  * Switches between:
@@ -80,9 +83,9 @@ fun CalibRender(
  * Up and down are also options, which are not part of the current routine
  */
 @Composable
-fun CalibrationStateDisplay(state: CalibrationState, modifier: Modifier = Modifier) {
+fun DualCalibrationStateDisplay(state: DualCalibrationState, modifier: Modifier = Modifier) {
     var color = Color.Red
-    if (state == CalibrationState.Forward) {
+    if (state == DualCalibrationState.Forward) {
         color = Color.Cyan
     }
     Text(

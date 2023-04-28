@@ -4,7 +4,7 @@ import android.content.Intent
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.net.Uri
-import com.mocap.watch.stateModules.SensorListener
+import com.mocap.watch.modules.SensorListener
 import android.os.*
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -13,9 +13,10 @@ import androidx.activity.viewModels
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.Wearable
 import com.mocap.watch.DataSingleton
-import com.mocap.watch.stateModules.WatchChannelCallback
+import com.mocap.watch.modules.WatchChannelCallback
+import com.mocap.watch.ui.DefaultButton
 import com.mocap.watch.ui.theme.WatchTheme
-import com.mocap.watch.ui.view.RenderDualMode
+import com.mocap.watch.ui.view.RenderDual
 import com.mocap.watch.viewmodel.DualViewModel
 
 
@@ -83,46 +84,17 @@ class DualActivity : ComponentActivity() {
                 val connectedNode = _dualViewModel.nodeName
                 val appActiveStateFlow = _dualViewModel.appActive
 
-                RenderDualMode(
+                RenderDual(
                     connectedNodeName = connectedNode,
                     appActiveStateFlow = appActiveStateFlow,
-                    calibCallback = { startActivity(Intent("com.mocap.watch.activity.Calibration")) },
+                    calibCallback = {
+                        startActivity(Intent("com.mocap.watch.activity.DUAL_CALIBRATION"))
+                    },
                     streamCallback = { _dualViewModel.streamTrigger(it) },
                     finishCallback = ::finish
                 )
             }
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        _capabilityClient.addListener(
-            _dualViewModel,
-            Uri.parse("wear://"),
-            CapabilityClient.FILTER_REACHABLE
-        )
-        _capabilityClient.addLocalCapability(DataSingleton.WATCH_APP_ACTIVE)
-        if (!this::_sensorManager.isInitialized) {
-            return
-        } else {
-            registerSensorListeners()
-        }
-        _channelClient.registerChannelCallback(_watchCallback)
-    }
-
-    override fun onPause() {
-        super.onPause()
-        _capabilityClient.removeListener(_dualViewModel)
-        _capabilityClient.addLocalCapability(DataSingleton.WATCH_APP_ACTIVE)
-        if (!this::_sensorManager.isInitialized) {
-            return
-        } else {
-            // unregister listeners
-            for (l in _listeners) {
-                _sensorManager.unregisterListener(l)
-            }
-        }
-        _channelClient.unregisterChannelCallback(_watchCallback)
     }
 
     private fun registerSensorListeners() {
@@ -133,6 +105,32 @@ class DualActivity : ComponentActivity() {
                 _sensorManager.getDefaultSensor(l.code),
                 SensorManager.SENSOR_DELAY_FASTEST
             )
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        _channelClient.registerChannelCallback(_watchCallback)
+        _capabilityClient.addLocalCapability(DataSingleton.WATCH_APP_ACTIVE)
+        _capabilityClient.addListener(
+            _dualViewModel,
+            Uri.parse("wear://"),
+            CapabilityClient.FILTER_REACHABLE
+        )
+        if (this::_sensorManager.isInitialized) {
+            registerSensorListeners()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        _channelClient.unregisterChannelCallback(_watchCallback)
+        _capabilityClient.removeListener(_dualViewModel)
+        _capabilityClient.removeLocalCapability(DataSingleton.WATCH_APP_ACTIVE)
+        if (this::_sensorManager.isInitialized) {
+            for (l in _listeners) {
+                _sensorManager.unregisterListener(l)
+            }
         }
     }
 }

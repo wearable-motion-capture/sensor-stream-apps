@@ -13,15 +13,15 @@ import androidx.wear.compose.material.Text
 import kotlinx.coroutines.flow.StateFlow
 
 import com.mocap.watch.DataSingleton
-import com.mocap.watch.stateModules.SensorDataHandlerState
-import com.mocap.watch.stateModules.AudioModuleState
+import com.mocap.watch.modules.SensorDataHandlerState
+import com.mocap.watch.modules.AudioModuleState
 import com.mocap.watch.ui.DefaultButton
 import com.mocap.watch.ui.DefaultText
 import com.mocap.watch.ui.RedButton
 import com.mocap.watch.ui.StreamToggle
 
 @Composable
-fun RenderStandAlone(
+fun RenderStandalone(
     soundStateFlow: StateFlow<AudioModuleState>,
     sensorStateFlow: StateFlow<SensorDataHandlerState>,
     calibCallback: () -> Unit,

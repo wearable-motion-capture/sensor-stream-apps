@@ -13,7 +13,7 @@
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="mocap_watch"
-        android:supportsRtl="true"
+        android:supportsRtl="false"
         android:theme="@android:style/Theme.DeviceDefault">
         <uses-library
             android:name="com.google.android.wearable"
@@ -41,15 +41,6 @@
                 android:value="" />
         </activity>
         <activity
-            android:name=".activity.CalibActivity"
-            android:exported="true"
-            android:theme="@android:style/Theme.DeviceDefault">
-            <intent-filter>
-                <action android:name="com.mocap.watch.activity.Calibration" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
-        <activity
             android:name=".activity.IpSetActivity"
             android:exported="true"
             android:theme="@android:style/Theme.DeviceDefault">
@@ -63,7 +54,16 @@
             android:exported="true"
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
-                <action android:name="com.mocap.watch.activity.Standalone" />
+                <action android:name="com.mocap.watch.activity.STANDALONE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".activity.StandaloneCalibActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.DeviceDefault">
+            <intent-filter>
+                <action android:name="com.mocap.watch.activity.StandaloneCalibration" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -72,14 +72,23 @@
             android:exported="true"
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
-                <action android:name="com.mocap.watch.activity.Dual" />
+                <action android:name="com.mocap.watch.activity.DUAL" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".activity.DualCalibActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.DeviceDefault">
+            <intent-filter>
+                <action android:name="com.mocap.watch.activity.DUAL_CALIBRATION" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
 
         <!-- Listen for ping messaged from connected devices
         <service
-            android:name=".stateModules.PingHandlerService"
+            android:name=".modules.PingHandlerService"
             android:enabled="true"
             android:exported="true">
             <intent-filter>

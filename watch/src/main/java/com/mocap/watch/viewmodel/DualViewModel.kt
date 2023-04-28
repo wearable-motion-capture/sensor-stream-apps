@@ -20,7 +20,6 @@ import kotlinx.coroutines.launch
 import java.nio.ByteBuffer
 import java.time.Duration
 import java.time.LocalDateTime
-import kotlin.concurrent.thread
 
 
 enum class StreamState {
@@ -40,6 +39,7 @@ class DualViewModel(application: Application) :
     }
 
     private val _capabilityClient by lazy { Wearable.getCapabilityClient(application) }
+    private val _messageClient by lazy { Wearable.getMessageClient(application) }
     private val _channelClient by lazy { Wearable.getChannelClient(application) }
     private val _scope = CoroutineScope(Job() + Dispatchers.IO)
 
@@ -58,7 +58,6 @@ class DualViewModel(application: Application) :
     private var _accl: FloatArray = FloatArray(3) // raw acceleration
     private var _grav: FloatArray = FloatArray(3) // gravity
     private var _pres: FloatArray = FloatArray(1) // Atmospheric pressure in hPa (millibar)
-    private var _hr: FloatArray = FloatArray(1) // Heart Rate
     private var _hrRaw: FloatArray = FloatArray(16) // Samsung's Raw HR data
     private var _gyro: FloatArray = FloatArray(3) // gyroscope
     private var _magn: FloatArray = FloatArray(3) // magnetic
@@ -73,6 +72,37 @@ class DualViewModel(application: Application) :
         _streamState.value = StreamState.Idle
     }
 
+    fun sendTestMessage() {
+        _scope.launch {
+            // Connect to phone node
+            val task = _capabilityClient.getAllCapabilities(CapabilityClient.FILTER_REACHABLE)
+            val res = Tasks.await(task)
+            val phoneNodes = res.getValue(DataSingleton.PHONE_APP_ACTIVE).nodes
+            // throw error if more than one phone connected or no phone connected
+            if ((phoneNodes.count() > 1) || (phoneNodes.isEmpty())) {
+                throw Exception(
+                    "0 or more than 1 node with active phone app detected. " +
+                            "List of available nodes: $phoneNodes"
+                )
+            }
+            val node = phoneNodes.first()
+            Log.d(TAG, "Found node ${node.id}")
+
+            // feed into byte buffer
+            val msgData = DataSingleton.forwardQuat.value +
+                    floatArrayOf(DataSingleton.CALIB_PRESS.value)
+            val buffer = ByteBuffer.allocate(4 * msgData.size) // [quat, pres]
+            for (v in msgData) buffer.putFloat(v)
+
+            // send byte array in a message
+            val sendMessageTask = _messageClient.sendMessage(
+                node.id, DataSingleton.CALIBRATION_PATH, buffer.array()
+            )
+            val msgRes = Tasks.await(sendMessageTask)
+            Log.d(TAG, "Sent Calibration message to ${node.id}")
+        }
+    }
+
     fun streamTrigger(checked: Boolean) {
         if (!checked) {
             // stop streaming
@@ -80,7 +110,7 @@ class DualViewModel(application: Application) :
             return
         } else {
             // otherwise, start a streaming channel
-            thread {
+            Thread {
                 // Connect to phone node
                 val task = _capabilityClient.getAllCapabilities(CapabilityClient.FILTER_REACHABLE)
                 val res = Tasks.await(task)
@@ -104,13 +134,9 @@ class DualViewModel(application: Application) :
                 val streamTask = _channelClient.getOutputStream(channel)
                 val stream = Tasks.await(streamTask)
 
-                // get additional message data
-                val streamStartTimeStamp = LocalDateTime.now()
-                val press = DataSingleton.CALIB_PRESS.value.toFloat()
-                val north = DataSingleton.CALIB_NORTH.value.toFloat()
-
                 // start the stream loop
                 _streamState.value = StreamState.Streaming
+                val streamStartTimeStamp = LocalDateTime.now()
                 while (streamState.value == StreamState.Streaming) {
                     val diff =
                         Duration.between(
@@ -120,19 +146,15 @@ class DualViewModel(application: Application) :
 
                     // compose message as float array
                     val sensorData = floatArrayOf(diff.toFloat()) +
-                            _rotVec + // rotation vector[5]  is a quaternion [x,y,z,w,confidence]
+                            _rotVec + // transformed rotation vector[4] is a quaternion [w,x,y,z]
                             _lacc + // [3] linear acceleration x,y,z
                             _pres + // [1] atmospheric pressure
                             _grav + // [3] vector indicating the direction and magnitude of gravity x,y,z
                             _gyro + // [3] gyro data for time series prediction
-                            _hrRaw + // [16] undocumented data from Samsung's Hr raw sensor
-                            floatArrayOf(
-                                press, // initial atmospheric pressure collected during calibration
-                                north // body orientation in relation to magnetic north pole collected during calibration
-                            )
+                            _hrRaw // [16] undocumented data from Samsung's Hr raw sensor
 
                     // feed into byte buffer
-                    val buffer = ByteBuffer.allocate(4 * 34)
+                    val buffer = ByteBuffer.allocate(4 * DataSingleton.WATCH_MESSAGE_SIZE)
                     for (v in sensorData) {
                         buffer.putFloat(v)
                     }
@@ -143,6 +165,7 @@ class DualViewModel(application: Application) :
                 }
                 // while loop closed. Close stream and channel
                 stream.close()
+
                 _channelClient.close(channel)
                 Log.d(TAG, "Closed Channel to ${channel.nodeId}")
             }
@@ -213,7 +236,14 @@ class DualViewModel(application: Application) :
     }
 
     fun onRotVecReadout(newReadout: FloatArray) {
-        _rotVec = newReadout // [x,y,z,w]
+        // newReadout is [x,y,z,w, confidence]
+        // our preferred order system is [w,x,y,z]
+        _rotVec = floatArrayOf(
+            newReadout[3],
+            newReadout[0],
+            newReadout[1],
+            newReadout[2]
+        )
     }
 
     fun onAcclReadout(newReadout: FloatArray) {
@@ -226,10 +256,6 @@ class DualViewModel(application: Application) :
 
     fun onMagnReadout(newReadout: FloatArray) {
         _magn = newReadout
-    }
-
-    fun onHrReadout(newReadout: FloatArray) {
-        _hr = newReadout
     }
 
     fun onHrRawReadout(newReadout: FloatArray) {
