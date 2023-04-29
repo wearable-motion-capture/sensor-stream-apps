@@ -6,6 +6,7 @@ import android.os.*
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import com.google.android.gms.wearable.Wearable
 import com.mocap.watch.modules.SensorListener
 import com.mocap.watch.ui.theme.WatchTheme
 import com.mocap.watch.ui.view.RenderDualCalib
@@ -18,6 +19,7 @@ class DualCalibActivity : ComponentActivity() {
         private const val TAG = "DualCalibration"  // for logging
     }
 
+    private val _messageClient by lazy { Wearable.getMessageClient(application) }
     private lateinit var _viewModel: DualCalibViewModel
     private lateinit var _vibrator: Vibrator
     private var _listeners = listOf<SensorListener>()
@@ -39,7 +41,11 @@ class DualCalibActivity : ComponentActivity() {
             }
 
             // with the vibration service, create the view model
-            _viewModel = DualCalibViewModel(this.application, _vibrator)
+            _viewModel = DualCalibViewModel(
+                application = this.application,
+                vibrator = _vibrator,
+                onCompleteCallback = this::onComplete
+            )
 
             // add Sensor Listeners with our calibrator callbacks
             _sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
@@ -74,7 +80,6 @@ class DualCalibActivity : ComponentActivity() {
      */
     private fun registerSensorListeners() {
         if (this::_sensorManager.isInitialized) {
-            //
             for (l in _listeners) {
                 _sensorManager.registerListener(
                     l,
@@ -83,6 +88,7 @@ class DualCalibActivity : ComponentActivity() {
                 )
             }
         }
+        if (this::_viewModel.isInitialized) _messageClient.addListener(_viewModel)
     }
 
     /**
@@ -90,12 +96,11 @@ class DualCalibActivity : ComponentActivity() {
      * the calibration activity
      */
     private fun onComplete() {
-        if (this::_vibrator.isInitialized) {
-            _vibrator.cancel()
-        }
+        if (this::_vibrator.isInitialized) _vibrator.cancel()
         if (this::_sensorManager.isInitialized) {
             for (l in _listeners) _sensorManager.unregisterListener(l)
         }
+        if (this::_viewModel.isInitialized) _messageClient.removeListener(_viewModel)
         this.finish()
     }
 

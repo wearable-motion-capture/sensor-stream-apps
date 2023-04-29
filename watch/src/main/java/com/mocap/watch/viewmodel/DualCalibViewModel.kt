@@ -3,11 +3,12 @@ package com.mocap.watch.viewmodel
 import android.app.Application
 import android.os.VibrationEffect
 import android.os.Vibrator
-import android.provider.ContactsContract.Data
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.CapabilityClient
+import com.google.android.gms.wearable.MessageClient
+import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
 import com.mocap.watch.DataSingleton
 import kotlinx.coroutines.CoroutineScope
@@ -31,16 +32,22 @@ enum class DualCalibrationState {
     Phone
 }
 
-class DualCalibViewModel(application: Application, vibrator: Vibrator) :
-    AndroidViewModel(application) {
+class DualCalibViewModel(
+    application: Application,
+    vibrator: Vibrator,
+    onCompleteCallback: () -> Unit
+) :
+    AndroidViewModel(application),
+    MessageClient.OnMessageReceivedListener {
 
     companion object {
         private const val TAG = "DualCalibViewModel"  // for logging
-        private const val CALIBRATION_WAIT = 3000L
+        private const val CALIBRATION_WAIT = 2000L
         private const val COROUTINE_SLEEP = 10L
     }
 
     private val _vibrator = vibrator
+    private val _onCompleteCallback = onCompleteCallback
     private val _capabilityClient by lazy { Wearable.getCapabilityClient(application) }
     private val _messageClient by lazy { Wearable.getMessageClient(application) }
     private val _scope = CoroutineScope(Job() + Dispatchers.IO)
@@ -120,7 +127,7 @@ class DualCalibViewModel(application: Application, vibrator: Vibrator) :
             // final vibration pulse to confirm
             _vibrator.vibrate(
                 VibrationEffect.createOneShot(
-                    500L, VibrationEffect.DEFAULT_AMPLITUDE
+                    200L, VibrationEffect.DEFAULT_AMPLITUDE
                 )
             )
 
@@ -152,6 +159,34 @@ class DualCalibViewModel(application: Application, vibrator: Vibrator) :
             Log.d(TAG, "Sent Calibration message to ${node.id}")
         }
     }
+
+
+    /**
+     * Checks received messages if phone calibration is complete
+     */
+    override fun onMessageReceived(p0: MessageEvent) {
+        Log.d(TAG, "Received from: ${p0.sourceNodeId} with path ${p0.path}")
+        when (p0.path) {
+            DataSingleton.CALIBRATION_PATH -> {
+                if (calibState.value == DualCalibrationState.Phone) {
+                    _calibState.value = DualCalibrationState.Idle
+                    _scope.launch {
+                        // final vibration pulse to confirm
+                        _vibrator.vibrate(
+                            VibrationEffect.createOneShot(
+                                200L, VibrationEffect.DEFAULT_AMPLITUDE
+                            )
+                        )
+                        delay(200L)
+                        // complete calibration and close everything
+                        _onCompleteCallback()
+                    }
+
+                }
+            }
+        }
+    }
+
 
     /**
      * kill the calibration procedure if activity finishes unexpectedly

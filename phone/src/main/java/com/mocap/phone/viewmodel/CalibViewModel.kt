@@ -5,6 +5,8 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
+import com.google.android.gms.tasks.Tasks
+import com.google.android.gms.wearable.Wearable
 import com.mocap.phone.DataSingleton
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,11 +20,13 @@ class CalibViewModel(application: Application, vibrator: Vibrator) :
 
     companion object {
         private const val TAG = "PhoneCalibration"  // for logging
-        private const val CALIBRATION_WAIT = 3000 // wait time in one calibration position
+        private const val CALIBRATION_WAIT = 2000L // wait time in one calibration position
         private const val THREAD_SLEEP = 10L
     }
 
     private val _vibrator = vibrator
+    private val _messageClient by lazy { Wearable.getMessageClient(application) }
+
     private val _quatReading = MutableStateFlow(
         floatArrayOf(1.0F, 0.0F, 0.0F, 0.0F) // identity quat
     )
@@ -34,7 +38,8 @@ class CalibViewModel(application: Application, vibrator: Vibrator) :
     /**
      * records orientation for CALIBRATION_WAIT milliseconds and saves average to DataSingleton
      */
-    fun calibrationTrigger(doneCallback: () -> Unit) {
+    fun calibrationTrigger(doneCallback: () -> Unit, sourceId: String? = null) {
+
         Log.v(TAG, "Calibration Triggered")
         thread {
             val start = LocalDateTime.now()
@@ -60,6 +65,14 @@ class CalibViewModel(application: Application, vibrator: Vibrator) :
                 )
             )
             Thread.sleep(500L)
+
+            // send a reply if the calibration was triggered by a connected node with sourceID
+            if (sourceId != null) {
+                val repTask = _messageClient.sendMessage(
+                    sourceId, DataSingleton.CALIBRATION_PATH, null
+                )
+                Tasks.await(repTask)
+            }
 
             // finish activity
             doneCallback()

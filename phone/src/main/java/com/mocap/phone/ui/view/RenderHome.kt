@@ -10,8 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import com.mocap.phone.DataSingleton
-import com.mocap.phone.ui.DefaultButton
 import com.mocap.phone.ui.DefaultText
+import com.mocap.phone.viewmodel.StreamState
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -20,12 +20,14 @@ import kotlinx.coroutines.flow.StateFlow
 @Composable
 fun RenderHome(
     connectedNodeStateFlow: StateFlow<String>,
-    appActiveStateFlow: StateFlow<Boolean>
+    appActiveStateFlow: StateFlow<Boolean>,
+    streamStateFlow: StateFlow<StreamState>
 ) {
     val phoneForwardQuat by DataSingleton.phoneQuat.collectAsState()
     val watchForwardQuat by DataSingleton.watchQuat.collectAsState()
     val watchPressure by DataSingleton.watchPres.collectAsState()
 
+    val streamState by streamStateFlow.collectAsState()
     val nodeName by connectedNodeStateFlow.collectAsState()
     val appState by appActiveStateFlow.collectAsState()
 
@@ -71,6 +73,10 @@ fun RenderHome(
                 text = ("Watch Pressure:\n %.2f").format(watchPressure)
             )
         }
-
+        item {
+            DefaultText(
+                text = ("Streaming:\n$streamState}")
+            )
+        }
     }
 }

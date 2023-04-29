@@ -2,7 +2,10 @@ package com.mocap.phone.activity
 
 import android.hardware.Sensor
 import android.hardware.SensorManager
-import android.os.*
+import android.os.Build
+import android.os.Bundle
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -53,11 +56,18 @@ class CalibActivity : ComponentActivity() {
             // keep screen on to not enter ambient mode
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+            // check if a source node ID was sent with the application
+            val sourceId: String? = intent.extras?.getString("sourceNodeId")
+
+
             PhoneTheme {
                 RenderCalib(quatReadingStateFlow = _viewModel.quatReading)
 
                 // begin the calibration
-                _viewModel.calibrationTrigger(this::onComplete)
+                _viewModel.calibrationTrigger(
+                    doneCallback = this::onComplete,
+                    sourceId = sourceId
+                )
             }
         }
     }

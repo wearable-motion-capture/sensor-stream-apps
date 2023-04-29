@@ -1,9 +1,6 @@
 package com.mocap.phone
 
-import android.app.Activity
-import android.content.Context
 import android.content.Intent
-import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.net.Uri
 import android.os.Bundle
@@ -11,16 +8,12 @@ import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.ActivityResult
-import androidx.activity.result.contract.ActivityResultContract
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
 import com.mocap.phone.modules.PhoneChannelCallback
-import com.mocap.phone.modules.SensorListener
 import com.mocap.phone.viewmodel.PhoneViewModel
 import com.mocap.phone.ui.theme.PhoneTheme
 import com.mocap.phone.ui.view.RenderHome
@@ -66,20 +59,11 @@ class PhoneMain : ComponentActivity(), MessageClient.OnMessageReceivedListener {
 
                 RenderHome(
                     connectedNodeStateFlow = connectedNodeStateFlow,
-                    appActiveStateFlow = appActiveStateFlow
+                    appActiveStateFlow = appActiveStateFlow,
+                    streamStateFlow = streamStateFlow
                 )
             }
         }
-    }
-
-
-    val startForResult = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result: ActivityResult ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val intent = result.data
-        }
-        Log.d(TAG, "activity done ${result.resultCode} ${result.data}")
     }
 
     /**
@@ -100,8 +84,11 @@ class PhoneMain : ComponentActivity(), MessageClient.OnMessageReceivedListener {
                     )
                 )
                 DataSingleton.setWatchRelPres(b.getFloat(16))
-                // trigger phone calibration
-                startForResult.launch(Intent("mocap.com.phone.CALIBRATION"))
+
+                // trigger phone calibration and pass it the node ID that sent the trigger
+                val i = Intent("mocap.com.phone.CALIBRATION")
+                i.putExtra("sourceNodeId", messageEvent.sourceNodeId)
+                startActivity(i)
             }
         }
     }
