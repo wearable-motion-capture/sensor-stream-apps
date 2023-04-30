@@ -27,7 +27,9 @@ fun StreamToggle(
                 contentDescription = if (checked) "On" else "Off"
             )
         },
-        onCheckedChange = onChecked,
+        onCheckedChange = {
+            onChecked(it)
+        },
         label = {
             Text(
                 text = text,

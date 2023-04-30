@@ -46,6 +46,9 @@ fun RenderDualCalib(
 
                     DualCalibrationState.Phone ->
                         "Wait for\nphone calibration."
+
+                    DualCalibrationState.Error ->
+                        "Communication with\nphone failed."
                 },
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
@@ -84,9 +87,12 @@ fun RenderDualCalib(
  */
 @Composable
 fun DualCalibrationStateDisplay(state: DualCalibrationState, modifier: Modifier = Modifier) {
-    var color = Color.Red
-    if (state == DualCalibrationState.Forward) {
-        color = Color.Cyan
+    var color = when (state) {
+        DualCalibrationState.Hold -> Color.Red
+        DualCalibrationState.Forward -> Color.Cyan
+        DualCalibrationState.Error -> Color.Red
+        DualCalibrationState.Phone -> Color.Yellow
+        DualCalibrationState.Idle -> Color.Green
     }
     Text(
         modifier = modifier,

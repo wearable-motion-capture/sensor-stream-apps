@@ -9,6 +9,7 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.preference.PreferenceManager
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.MessageEvent
@@ -47,20 +48,31 @@ class PhoneMain : ComponentActivity(), MessageClient.OnMessageReceivedListener {
             // register sensor listeners manually after startup
             registerSensorListeners()
 
+            // retrieve stored IP and update DataSingleton
+            val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+            var storedIp = sharedPref.getString(DataSingleton.IP_KEY, DataSingleton.IP_DEFAULT)
+            if (storedIp == null) {
+                storedIp = DataSingleton.IP_DEFAULT
+            }
+            DataSingleton.setIp(storedIp)
+
             PhoneTheme {
                 // keep screen on
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
                 // check if a phone is connected and set state flows accordingly
                 _viewModel.queryCapabilities()
-                val connectedNodeStateFlow = _viewModel.nodeName
-                val appActiveStateFlow = _viewModel.appActive
-                val streamStateFlow = _viewModel.streamState
 
                 RenderHome(
-                    connectedNodeStateFlow = connectedNodeStateFlow,
-                    appActiveStateFlow = appActiveStateFlow,
-                    streamStateFlow = streamStateFlow
+                    connectedNodeSF = _viewModel.nodeName,
+                    appActiveSF = _viewModel.appActive,
+                    streamSF = _viewModel.streamState,
+                    watchHzSF = _viewModel.watchStreamHz,
+                    imuUdpHzSF = _viewModel.broadcastHz,
+                    queueSizeSF = _viewModel.queueSize,
+                    ipSetCallback = {
+                        startActivity(Intent("com.mocap.phone.SET_IP"))
+                    }
                 )
             }
         }
@@ -86,7 +98,7 @@ class PhoneMain : ComponentActivity(), MessageClient.OnMessageReceivedListener {
                 DataSingleton.setWatchRelPres(b.getFloat(16))
 
                 // trigger phone calibration and pass it the node ID that sent the trigger
-                val i = Intent("mocap.com.phone.CALIBRATION")
+                val i = Intent("com.mocap.phone.CALIBRATION")
                 i.putExtra("sourceNodeId", messageEvent.sourceNodeId)
                 startActivity(i)
             }

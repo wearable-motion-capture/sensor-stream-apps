@@ -10,7 +10,19 @@ object DataSingleton {
     const val WATCH_APP_ACTIVE = "watch_app" // indicates if the watch app is active
     const val PHONE_CAPABILITY = "phone" // if the phone app is connected (see res/values/wear.xml)
     const val WATCH_CAPABILITY = "watch" // if the watch app is connected (see res/values/wear.xml)
-    const val WATCH_MESSAGE_SIZE = 34 // 34 floats
+    const val WATCH_MSG_SIZE = 34 // 34 floats
+    const val IP_KEY = "com.mocap.watch.ip" // shared preferences lookup
+    const val IP_DEFAULT = "192.168.0.12"
+    const val UDP_IMU_PORT = 50000
+    const val UDP_IMU_INTERVAL = 10L
+    const val UDP_IMU_MSG_SIZE = WATCH_MSG_SIZE + 13 // floats
+
+    // as state flow to update UI elements when IP changes
+    private val ipStateFlow = MutableStateFlow(IP_DEFAULT)
+    val ip = ipStateFlow.asStateFlow()
+    fun setIp(st: String) {
+        ipStateFlow.value = st
+    }
 
     // as state flow to update UI elements when value changes
     // the calibrated watch forward orientation
@@ -30,7 +42,7 @@ object DataSingleton {
     // the calibrated watch relative pressure
     private val watchRelPres = MutableStateFlow(0.0F)
     val watchPres = watchRelPres.asStateFlow()
-    fun setWatchRelPres(v: Float) {
-        watchRelPres.value = v
+    fun setWatchRelPres(fl: Float) {
+        watchRelPres.value = fl
     }
 }

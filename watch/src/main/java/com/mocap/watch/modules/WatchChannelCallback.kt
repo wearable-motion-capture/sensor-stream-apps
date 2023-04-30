@@ -28,7 +28,7 @@ class WatchChannelCallback(
         appSpecificErrorCode: Int
     ) {
         if (channel.path == DataSingleton.CHANNEL_PATH) {
-            Log.d(TAG, "channel closed ${channel.nodeId}}")
+            Log.d(TAG, "Channel closed ${channel.nodeId}")
             _closeCallback(channel)
         }
     }

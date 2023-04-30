@@ -18,6 +18,7 @@ import com.mocap.watch.ui.DefaultButton
 import com.mocap.watch.ui.DefaultText
 import com.mocap.watch.ui.RedButton
 import com.mocap.watch.ui.StreamToggle
+import com.mocap.watch.viewmodel.StreamState
 import kotlinx.coroutines.flow.StateFlow
 
 @Composable
@@ -25,15 +26,15 @@ fun RenderDual(
     connectedNodeName: StateFlow<String>,
     appActiveStateFlow: StateFlow<Boolean>,
     calibCallback: () -> Unit,
+    streamStateFlow: StateFlow<StreamState>,
     streamCallback: (Boolean) -> Unit,
     finishCallback: () -> Unit
 ) {
     val initPres by DataSingleton.CALIB_PRESS.collectAsState()
-    val northDeg by DataSingleton.CALIB_NORTH.collectAsState()
+    val calQuat by DataSingleton.forwardQuat.collectAsState()
     val nodeName by connectedNodeName.collectAsState()
     val appState by appActiveStateFlow.collectAsState()
-
-    var streamCheck by remember { mutableStateOf(false) }
+    val streamSt by streamStateFlow.collectAsState()
 
     // display information in a column
     ScalingLazyColumn(
@@ -53,24 +54,29 @@ fun RenderDual(
         item {
             // Calibrate
             DefaultText(
-                text = "pres: ${"%.2f".format(initPres)}" +
-                        " deg: ${"%.2f".format(northDeg)}"
+                text = "pres: %.2f \n".format(initPres) +
+                        "quat: %.2f %.2f %.2f %.2f".format(
+                            calQuat[0],
+                            calQuat[1],
+                            calQuat[2],
+                            calQuat[3]
+                        )
             )
         }
         item {
             DefaultButton(
+                enabled = appState,
                 onClick = calibCallback,
                 text = "Recalibrate"
             )
         }
         item {
-            StreamToggle(enabled = true,
+            StreamToggle(
+                enabled = appState,
                 text = "Stream to Phone",
-                checked = streamCheck,
-                onChecked = {
-                    streamCheck = !streamCheck
-                    streamCallback(it)
-                })
+                checked = (streamSt == StreamState.Streaming),
+                onChecked = { streamCallback(it) }
+            )
         }
         item {
             RedButton(

@@ -90,6 +90,7 @@ class DualActivity : ComponentActivity() {
                     calibCallback = {
                         startActivity(Intent("com.mocap.watch.activity.DUAL_CALIBRATION"))
                     },
+                    streamStateFlow = _dualViewModel.streamState,
                     streamCallback = { _dualViewModel.streamTrigger(it) },
                     finishCallback = ::finish
                 )

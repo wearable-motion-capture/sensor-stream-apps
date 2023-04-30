@@ -11,6 +11,7 @@ import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
 import com.mocap.watch.DataSingleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -29,7 +30,8 @@ enum class DualCalibrationState {
     Idle,
     Hold,
     Forward,
-    Phone
+    Phone,
+    Error
 }
 
 class DualCalibViewModel(
@@ -133,30 +135,35 @@ class DualCalibViewModel(
 
             // now step 3: send message to phone
             _calibState.value = DualCalibrationState.Phone
-            // Connect to phone node
-            val task = _capabilityClient.getAllCapabilities(CapabilityClient.FILTER_REACHABLE)
-            val res = Tasks.await(task)
-            val phoneNodes = res.getValue(DataSingleton.PHONE_APP_ACTIVE).nodes
-            // throw error if more than one phone connected or no phone connected
-            if ((phoneNodes.count() > 1) || (phoneNodes.isEmpty())) {
-                throw Exception(
-                    "0 or more than 1 node with active phone app detected. " +
-                            "List of available nodes: $phoneNodes"
+            try {
+                // Connect to phone node
+                val task = _capabilityClient.getAllCapabilities(CapabilityClient.FILTER_REACHABLE)
+                val res = Tasks.await(task)
+                val phoneNodes = res.getValue(DataSingleton.PHONE_APP_ACTIVE).nodes
+                // throw error if more than one phone connected or no phone connected
+                if ((phoneNodes.count() > 1) || (phoneNodes.isEmpty())) {
+                    throw Exception(
+                        "0 or more than 1 node with active phone app detected. " +
+                                "List of available nodes: $phoneNodes"
+                    )
+                }
+                val node = phoneNodes.first()
+
+                // feed into byte buffer
+                val msgData = avgQuat + floatArrayOf(relPres.toFloat())
+                val buffer = ByteBuffer.allocate(4 * msgData.size) // [quat, pres]
+                for (v in msgData) buffer.putFloat(v)
+
+                // send byte array in a message
+                val sendMessageTask = _messageClient.sendMessage(
+                    node.id, DataSingleton.CALIBRATION_PATH, buffer.array()
                 )
+                Tasks.await(sendMessageTask)
+                Log.d(TAG, "Sent Calibration message to ${node.id}")
+            } catch (exception: Exception) {
+                Log.d(TAG, "Failed to send calibration request to phone:\n $exception")
+                _calibState.value = DualCalibrationState.Error
             }
-            val node = phoneNodes.first()
-
-            // feed into byte buffer
-            val msgData = avgQuat + floatArrayOf(relPres.toFloat())
-            val buffer = ByteBuffer.allocate(4 * msgData.size) // [quat, pres]
-            for (v in msgData) buffer.putFloat(v)
-
-            // send byte array in a message
-            val sendMessageTask = _messageClient.sendMessage(
-                node.id, DataSingleton.CALIBRATION_PATH, buffer.array()
-            )
-            Tasks.await(sendMessageTask)
-            Log.d(TAG, "Sent Calibration message to ${node.id}")
         }
     }
 

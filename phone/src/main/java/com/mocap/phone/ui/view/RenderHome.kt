@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import com.mocap.phone.DataSingleton
+import com.mocap.phone.ui.DefaultButton
 import com.mocap.phone.ui.DefaultText
 import com.mocap.phone.viewmodel.StreamState
 import kotlinx.coroutines.flow.StateFlow
@@ -19,17 +20,25 @@ import kotlinx.coroutines.flow.StateFlow
  */
 @Composable
 fun RenderHome(
-    connectedNodeStateFlow: StateFlow<String>,
-    appActiveStateFlow: StateFlow<Boolean>,
-    streamStateFlow: StateFlow<StreamState>
+    connectedNodeSF: StateFlow<String>,
+    appActiveSF: StateFlow<Boolean>,
+    streamSF: StateFlow<StreamState>,
+    watchHzSF: StateFlow<Float>,
+    imuUdpHzSF: StateFlow<Float>,
+    queueSizeSF: StateFlow<Int>,
+    ipSetCallback: () -> Unit
 ) {
     val phoneForwardQuat by DataSingleton.phoneQuat.collectAsState()
     val watchForwardQuat by DataSingleton.watchQuat.collectAsState()
     val watchPressure by DataSingleton.watchPres.collectAsState()
+    val ip by DataSingleton.ip.collectAsState()
 
-    val streamState by streamStateFlow.collectAsState()
-    val nodeName by connectedNodeStateFlow.collectAsState()
-    val appState by appActiveStateFlow.collectAsState()
+    val streamState by streamSF.collectAsState()
+    val nodeName by connectedNodeSF.collectAsState()
+    val appState by appActiveSF.collectAsState()
+    val watchHz by watchHzSF.collectAsState()
+    val imuUdpHz by imuUdpHzSF.collectAsState()
+    val queueSize by queueSizeSF.collectAsState()
 
     LazyColumn(
         modifier = Modifier
@@ -75,8 +84,16 @@ fun RenderHome(
         }
         item {
             DefaultText(
-                text = ("Streaming:\n$streamState}")
+                text = ("Streaming: $streamState \n" +
+                        "$watchHz Hz -> $imuUdpHz Hz\n" +
+                        "Queue Size: $queueSize")
             )
+        }
+        item {
+            DefaultButton(onClick = ipSetCallback, text = "Set target IP")
+        }
+        item {
+            DefaultText(text = ip)
         }
     }
 }
