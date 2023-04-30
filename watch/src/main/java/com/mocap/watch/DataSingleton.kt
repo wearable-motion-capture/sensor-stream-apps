@@ -12,6 +12,7 @@ object DataSingleton {
     const val PHONE_APP_ACTIVE = "phone_app" // indicates if the phone app is active
     const val WATCH_APP_ACTIVE = "watch_app" // indicates if the watch app is active
     const val WATCH_MESSAGE_SIZE = 31 // floats
+    const val STREAM_INTERVAL = 20L // floats
     const val PHONE_CAPABILITY =
         "phone" // if a phone with the phone app is connected (see res/values/wear.xml)
     const val WATCH_CAPABILITY =

@@ -28,7 +28,11 @@ import java.nio.Buffer
 import java.nio.ByteBuffer
 import java.time.Duration
 import java.time.LocalDateTime
+import java.util.Collections
+import java.util.Collections.synchronizedList
 import java.util.LinkedList
+import java.util.concurrent.BlockingQueue
+import java.util.concurrent.ConcurrentLinkedQueue
 
 enum class StreamState {
     Idle, // app waits for watch to trigger the streaming
@@ -49,6 +53,9 @@ class PhoneViewModel(application: Application) :
     private val _scope = CoroutineScope(Job() + Dispatchers.IO)
 
     private var _connectedNodeId: String = "none"
+    private var _watchMsgCount: Int = 0
+    private var _udpBroadcastCount: Int = 0
+
     private val _connectedNodeDisplayName = MutableStateFlow("none")
     val nodeName = _connectedNodeDisplayName.asStateFlow()
 
@@ -93,98 +100,86 @@ class PhoneViewModel(application: Application) :
         ) { onGyroReadout(it) }
     )
 
-    // streamed messages from the watch are stored in a queue and then processed by a separate thread
-    private var _datQueue = LinkedList<ByteArray>()
+    // to threads fill and process streamed messages from the watch via this queue
+    private var _datQueue = ConcurrentLinkedQueue<ByteArray>()
 
+    fun updateHzCounts() {
+        // set the initial variables
+        var streamTs = LocalDateTime.now()
+        while (streamState.value == StreamState.Streaming) {
+            // estimate the message frequency
+            val diff = Duration.between(streamTs, LocalDateTime.now()).toMillis()
+            if (diff >= 2000) {
+                streamTs = LocalDateTime.now()
+                _broadcastHz.value = _udpBroadcastCount.toFloat() / 2.0F
+                _watchStreamHz.value = _watchMsgCount.toFloat() / 2.0F
+                _queueSize.value = _datQueue.count()
+                _udpBroadcastCount = 0
+                _watchMsgCount = 0
+            }
+        }
+        _broadcastHz.value = 0F
+        _watchStreamHz.value = 0F
+    }
 
-    private suspend fun udpImuStream(channel: Channel) {
+    private suspend fun udpImuStream() {
         // our constants for this loop
         val port = DataSingleton.UDP_IMU_PORT
         val ip = DataSingleton.ip.value
-        val streamInterval = DataSingleton.UDP_IMU_INTERVAL
-        val udpMessageSize = DataSingleton.UDP_IMU_MSG_SIZE
+        val udpMsgSize = DataSingleton.UDP_IMU_MSG_SIZE
+        val forwardQuats = DataSingleton.watchQuat.value + DataSingleton.phoneQuat.value
 
-        try {
-            withContext(Dispatchers.IO) {
-                // open a socket
-                val udpSocket = DatagramSocket(port)
-                udpSocket.broadcast = true
-                val socketInetAddress = InetAddress.getByName(ip)
 
-                Log.v(TAG, "Opened UDP socket to $ip:$port")
+        withContext(Dispatchers.IO) {
+            // open a socket
+            val udpSocket = DatagramSocket(port)
+            udpSocket.broadcast = true
+            val socketInetAddress = InetAddress.getByName(ip)
 
-                udpSocket.use {
-                    // set the initial variables
-                    var streamTs = LocalDateTime.now()
-                    var count = 0
+            Log.v(TAG, "Opened UDP socket to $ip:$port")
 
-                    // begin the loop
-                    while (streamState.value == StreamState.Streaming) {
-                        // estimate the message frequency
-                        val diff = Duration.between(streamTs, LocalDateTime.now()).toMillis()
-                        if (diff >= 2000) {
-                            streamTs = LocalDateTime.now()
-                            _broadcastHz.value = count.toFloat() / 2.0F
-                            _queueSize.value = _datQueue.count()
-                            count = 0
+            udpSocket.use {
+                // begin the loop
+                while (streamState.value == StreamState.Streaming) {
+
+                    // get data from queue
+                    var lastDat = _datQueue.poll()
+                    while (_datQueue.isNotEmpty()) {
+                        lastDat = _datQueue.poll()
+                    }
+
+                    // if we got some data from the watch...
+                    if (lastDat != null) {
+
+                        // compose phone message data
+                        val udpData = _rotVec + // rotation quaternion [w,x,y,z]
+                                _lacc + // linear acceleration [x,y,z]
+                                _grav + // magnitude of gravity [x,y,z]
+                                _gyro + // gyro data [x,y,z]
+                                forwardQuats // from calibration
+
+                        // write phone and watch data to buffer
+                        val buffer = ByteBuffer.allocate(4 * udpMsgSize)
+                        // put smartwatch data
+                        buffer.put(lastDat)
+                        // append phone data
+                        for (v in udpData) {
+                            buffer.putFloat(v)
                         }
 
-                        // get data from queue
-                        var lastDat = _datQueue.pollFirst()
-
-//                        while (_datQueue.isNotEmpty()) {
-//                            lastDat = _datQueue.pollFirst()
-//                        }
-
-
-                        // if we got some data from the watch...
-                        if (lastDat != null) {
-
-                            val b = ByteBuffer.wrap(lastDat)
-
-                            // ... parse global watch rotation
-                            val watchRotG = floatArrayOf(
-                                b.getFloat(4), b.getFloat(8),
-                                b.getFloat(12), b.getFloat(16)
-                            )
-                            // estimate relative rotation from calibration values
-                            val watchRotR = quatDiff(DataSingleton.watchQuat.value, watchRotG)
-
-                            // also, estimate relative phone rotation
-                            val phoneRotR = quatDiff(DataSingleton.phoneQuat.value, _rotVec)
-                            // compose phone data message
-                            val udpData = phoneRotR + // rotation quaternion [w,x,y,z]
-                                    _lacc + // linear acceleration [x,y,z]
-                                    _grav + // magnitude of gravity [x,y,z]
-                                    _gyro // gyro data [x,y,z]
-
-                            // write phone and watch data to buffer
-                            val buffer = ByteBuffer.allocate(4 * 8)
-                            for (v in watchRotR) {
-                                buffer.putFloat(v)
-                            }
-                            for (v in phoneRotR) {
-                                buffer.putFloat(v)
-                            }
-
-                            val dp = DatagramPacket(
-                                buffer.array(),
-                                buffer.capacity(),
-                                socketInetAddress,
-                                port
-                            )
-
-                            // finally, send via UDP
-                            udpSocket.send(dp)
-                            count += 1
-                        }
+                        // create packet
+                        val dp = DatagramPacket(
+                            buffer.array(),
+                            buffer.capacity(),
+                            socketInetAddress,
+                            port
+                        )
+                        // finally, send via UDP
+                        udpSocket.send(dp)
+                        _udpBroadcastCount += 1 // for Hz estimation
                     }
                 }
             }
-        } catch (e: Exception) {
-            _channelClient.close(channel)
-            Log.v(TAG, "UDP Streaming error $e")
-            _streamState.value = StreamState.Error
         }
     }
 
@@ -193,43 +188,19 @@ class PhoneViewModel(application: Application) :
         // get the input stream from the opened channel
         val streamTask = _channelClient.getInputStream(channel)
         val stream = Tasks.await(streamTask)
-
-        try {
-            stream.use {
-                // set the initial variables
-                var streamTs = LocalDateTime.now()
-                var count = 0
-
-                // begin the loop
-                while (streamState.value == StreamState.Streaming) {
-
-                    // estimate the message frequency
-                    val diff = Duration.between(streamTs, LocalDateTime.now()).toMillis()
-                    if (diff >= 2000) {
-                        streamTs = LocalDateTime.now()
-                        _watchStreamHz.value = count.toFloat() / 2.0F
-                        count = 0
-                    }
-
-                    // if more than 0bytes are available
-                    if (stream.available() > 0) {
-                        // read input stream message into buffer
-                        val buffer = ByteBuffer.allocate(4 * DataSingleton.WATCH_MSG_SIZE)
-                        stream.read(buffer.array(), 0, buffer.capacity())
-                        _datQueue.add(buffer.array())
-                        count += 1
-                    }
+        stream.use {
+            // begin the loop
+            while (streamState.value == StreamState.Streaming) {
+                // if more than 0 bytes are available
+                if (stream.available() > 0) {
+                    // read input stream message into buffer
+                    val buffer = ByteBuffer.allocate(4 * DataSingleton.WATCH_MSG_SIZE)
+                    stream.read(buffer.array(), 0, buffer.capacity())
+                    _datQueue.add(buffer.array())
+                    // for Hz estimation
+                    _watchMsgCount += 1
                 }
             }
-        } catch (e: CancellationException) {
-            // In case the scope gets cancelled while still in the loop
-            _channelClient.close(channel)
-            Log.d(TAG, "Unexpected scope cancel \n" + e.message.toString())
-            _streamState.value = StreamState.Error
-        } catch (e: Exception) {
-            _channelClient.close(channel)
-            Log.v(TAG, e.message.toString())
-            _streamState.value = StreamState.Error
         }
     }
 
@@ -241,12 +212,23 @@ class PhoneViewModel(application: Application) :
 
     fun onWatchChannelOpen(channel: Channel) {
         Log.d(TAG, "Channel opened by ${channel.nodeId}")
-        // set the local state to Streaming and start two loops
+        // set the local state to Streaming and start three loops
         _streamState.value = StreamState.Streaming
-        // First, start the coroutine to fill the queue with streamed watch data
-        _scope.launch { watchInputStream(channel) }
-        // Then, start the coroutine to deal with queued data and broadcast it via UDP
-        _scope.launch { udpImuStream(channel) }
+        try {
+            // First, start the coroutine to fill the queue with streamed watch data
+            _scope.launch { watchInputStream(channel) }
+            // Then, start the coroutine to deal with queued data and broadcast it via UDP
+            _scope.launch { udpImuStream() }
+            // And one to display frequencies on the screen
+            _scope.launch { updateHzCounts() }
+        } catch (e: Exception) {
+            // e.g., in case the scope gets cancelled while streaming
+            _channelClient.close(channel)
+            Log.v(TAG, e.message.toString())
+            _streamState.value = StreamState.Error
+            _broadcastHz.value = 0F
+            _watchStreamHz.value = 0F
+        }
     }
 
     fun onWatchChannelClose(c: Channel) {
@@ -272,30 +254,32 @@ class PhoneViewModel(application: Application) :
     override fun onCapabilityChanged(capabilityInfo: CapabilityInfo) {
         val deviceCap = DataSingleton.WATCH_CAPABILITY
         val appCap = DataSingleton.WATCH_APP_ACTIVE
-        // this checks if a phone is available at all
-        if (capabilityInfo.name == deviceCap) {
-            val nodes = capabilityInfo.nodes
-            if (nodes.count() > 1) {
-                throw Exception("More than one node with $deviceCap detected: $nodes")
-            } else if (nodes.isEmpty()) {
-                _connectedNodeDisplayName.value = "No device"
-            } else {
-                _connectedNodeDisplayName.value = nodes.first().displayName
-            }
-            Log.d(TAG, "Connected phone : $nodes")
-        }
 
-        // check if the app is running and open a communication channel if so
-        if (capabilityInfo.name == appCap) {
-            val nodes = capabilityInfo.nodes
-            if (nodes.count() > 1) {
-                throw Exception("More than one node with $appCap detected: $nodes")
-            } else {
-                _connectedActiveApp.value = nodes.isNotEmpty()
-                if (nodes.isNotEmpty()) {
-                    _connectedNodeId = nodes.first().id
+        // this checks if a phone is available at all
+        when (capabilityInfo.name) {
+            deviceCap -> {
+                val nodes = capabilityInfo.nodes
+                if (nodes.count() > 1) {
+                    throw Exception("More than one node with $deviceCap detected: $nodes")
+                } else if (nodes.isEmpty()) {
+                    _connectedNodeDisplayName.value = "No device"
                 } else {
-                    _connectedNodeId = "none"
+                    _connectedNodeDisplayName.value = nodes.first().displayName
+                }
+                Log.d(TAG, "Connected phone : $nodes")
+            }
+            // check if the app is running and open a communication channel if so
+            appCap -> {
+                val nodes = capabilityInfo.nodes
+                if (nodes.count() > 1) {
+                    throw Exception("More than one node with $appCap detected: $nodes")
+                } else {
+                    _connectedActiveApp.value = nodes.isNotEmpty()
+                    _connectedNodeId = if (nodes.isNotEmpty()) {
+                        nodes.first().id
+                    } else {
+                        "none"
+                    }
                 }
             }
         }
@@ -331,17 +315,16 @@ class PhoneViewModel(application: Application) :
         _grav = newReadout
     }
 
-    private fun quatDiff(a: FloatArray, b: FloatArray): FloatArray {
-        // get the conjugate
-        val aI = floatArrayOf(a[0], -a[1], -a[2], -a[3])
-        // Hamilton product as H(A,B)
-        val hab = floatArrayOf(
-            aI[0] * b[0] - aI[1] * b[1] - aI[2] * b[2] - aI[3] * b[3],
-            aI[0] * b[1] + aI[1] * b[0] + aI[2] * b[3] - aI[3] * b[2],
-            aI[0] * b[2] - aI[1] * b[3] + aI[2] * b[0] + aI[3] * b[1],
-            aI[0] * b[3] + aI[1] * b[2] - aI[2] * b[1] + aI[3] * b[0]
-        )
-        return hab
-    }
-
+//    private fun quatDiff(a: FloatArray, b: FloatArray): FloatArray {
+//        // get the conjugate
+//        val aI = floatArrayOf(a[0], -a[1], -a[2], -a[3])
+//        // Hamilton product as H(A,B)
+//        val hab = floatArrayOf(
+//            aI[0] * b[0] - aI[1] * b[1] - aI[2] * b[2] - aI[3] * b[3],
+//            aI[0] * b[1] + aI[1] * b[0] + aI[2] * b[3] - aI[3] * b[2],
+//            aI[0] * b[2] - aI[1] * b[3] + aI[2] * b[0] + aI[3] * b[1],
+//            aI[0] * b[3] + aI[1] * b[2] - aI[2] * b[1] + aI[3] * b[0]
+//        )
+//        return hab
+//    }
 }

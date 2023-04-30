@@ -38,7 +38,7 @@ class DualViewModel(application: Application) :
 
     companion object {
         private const val TAG = "DualViewModel"  // for logging
-        private const val STREAM_INTERVAL = 10L
+        private const val STREAM_INTERVAL = DataSingleton.STREAM_INTERVAL
     }
 
     private val _capabilityClient by lazy { Wearable.getCapabilityClient(application) }
