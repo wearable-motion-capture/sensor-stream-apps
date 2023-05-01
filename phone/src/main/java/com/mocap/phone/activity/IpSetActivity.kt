@@ -39,4 +39,13 @@ class IpSetActivity : ComponentActivity() {
         Log.d(TAG, "set target IP to $ip")
         this.finish() // activity done
     }
+
+    /**
+     * The sole purpose of this activity is to set the IP in sharedPref.
+     * If the activity is paused, abandon the task.
+     */
+    override fun onPause() {
+        super.onPause()
+        this.finish()
+    }
 }

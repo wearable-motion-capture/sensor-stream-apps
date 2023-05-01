@@ -136,6 +136,8 @@ class PhoneMain : ComponentActivity(), MessageClient.OnMessageReceivedListener {
         )
         // for the watch app to detect this phone
         _capabilityClient.addLocalCapability(DataSingleton.PHONE_APP_ACTIVE)
+        // check if a phone is connected and set state flows accordingly
+        _viewModel.queryCapabilities()
         // to handle incoming data streams
         _channelClient.registerChannelCallback(_channelCallback)
     }

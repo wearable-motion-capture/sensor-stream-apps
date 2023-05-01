@@ -14,7 +14,7 @@ object DataSingleton {
     const val IP_KEY = "com.mocap.watch.ip" // shared preferences lookup
     const val IP_DEFAULT = "192.168.0.12"
     const val UDP_IMU_PORT = 50000
-    const val UDP_IMU_MSG_SIZE = WATCH_MSG_SIZE + 21 // floats
+    const val UDP_IMU_MSG_SIZE = WATCH_MSG_SIZE + 22 // floats
 
     // as state flow to update UI elements when IP changes
     private val ipStateFlow = MutableStateFlow(IP_DEFAULT)

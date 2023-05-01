@@ -11,12 +11,10 @@ import com.google.android.gms.wearable.ChannelClient.Channel
 import com.google.android.gms.wearable.Wearable
 import com.mocap.phone.DataSingleton
 import com.mocap.phone.modules.SensorListener
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -24,14 +22,9 @@ import kotlinx.coroutines.withContext
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
-import java.nio.Buffer
 import java.nio.ByteBuffer
 import java.time.Duration
 import java.time.LocalDateTime
-import java.util.Collections
-import java.util.Collections.synchronizedList
-import java.util.LinkedList
-import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentLinkedQueue
 
 enum class StreamState {
@@ -127,7 +120,9 @@ class PhoneViewModel(application: Application) :
         val port = DataSingleton.UDP_IMU_PORT
         val ip = DataSingleton.ip.value
         val udpMsgSize = DataSingleton.UDP_IMU_MSG_SIZE
-        val forwardQuats = DataSingleton.watchQuat.value + DataSingleton.phoneQuat.value
+        val calibratedDat = DataSingleton.watchQuat.value +
+                DataSingleton.phoneQuat.value +
+                floatArrayOf(DataSingleton.watchPres.value)
 
 
         withContext(Dispatchers.IO) {
@@ -144,9 +139,9 @@ class PhoneViewModel(application: Application) :
 
                     // get data from queue
                     var lastDat = _datQueue.poll()
-                    while (_datQueue.isNotEmpty()) {
-                        lastDat = _datQueue.poll()
-                    }
+//                    while (_datQueue.isNotEmpty()) {
+//                        lastDat = _datQueue.poll()
+//                    }
 
                     // if we got some data from the watch...
                     if (lastDat != null) {
@@ -156,7 +151,7 @@ class PhoneViewModel(application: Application) :
                                 _lacc + // linear acceleration [x,y,z]
                                 _grav + // magnitude of gravity [x,y,z]
                                 _gyro + // gyro data [x,y,z]
-                                forwardQuats // from calibration
+                                calibratedDat // from calibration
 
                         // write phone and watch data to buffer
                         val buffer = ByteBuffer.allocate(4 * udpMsgSize)

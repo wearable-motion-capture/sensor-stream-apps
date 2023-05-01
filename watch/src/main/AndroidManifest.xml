@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <uses-feature android:name="android.hardware.type.watch" />
 
@@ -45,7 +47,7 @@
             android:exported="true"
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
-                <action android:name="com.mocap.watch.activity.SetIP" />
+                <action android:name="com.mocap.watch.SET_IP" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -54,7 +56,7 @@
             android:exported="true"
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
-                <action android:name="com.mocap.watch.activity.STANDALONE" />
+                <action android:name="com.mocap.watch.STANDALONE" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -63,7 +65,7 @@
             android:exported="true"
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
-                <action android:name="com.mocap.watch.activity.StandaloneCalibration" />
+                <action android:name="com.mocap.watch.STANDALONE_CALIBRATION" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -72,7 +74,7 @@
             android:exported="true"
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
-                <action android:name="com.mocap.watch.activity.DUAL" />
+                <action android:name="com.mocap.watch.DUAL" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -81,25 +83,9 @@
             android:exported="true"
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
-                <action android:name="com.mocap.watch.activity.DUAL_CALIBRATION" />
+                <action android:name="com.mocap.watch.DUAL_CALIBRATION" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-
-        <!-- Listen for ping messaged from connected devices
-        <service
-            android:name=".modules.PingHandlerService"
-            android:enabled="true"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
-                <data
-                    android:host="*"
-                    android:pathPrefix="/ping"
-                    android:scheme="wear" />
-            </intent-filter>
-        </service>
-        -->
     </application>
-
 </manifest>

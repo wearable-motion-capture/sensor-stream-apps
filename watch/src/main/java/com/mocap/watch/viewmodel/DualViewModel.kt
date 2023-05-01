@@ -7,7 +7,6 @@ import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.CapabilityInfo
 import com.google.android.gms.wearable.ChannelClient.Channel
-import com.google.android.gms.wearable.ChannelIOException
 import com.google.android.gms.wearable.Wearable
 import com.mocap.watch.DataSingleton
 import kotlinx.coroutines.CancellationException
@@ -81,12 +80,10 @@ class DualViewModel(application: Application) :
         if (!checked) {
             _streamState.value = StreamState.Idle
         } else {
-
             if (streamState.value == StreamState.Streaming) {
                 throw Exception("The StreamState.Streaming should not be active on start")
             }
 
-            // otherwise, start a Channel in a coroutine
             _scope.launch {
 
                 // Open the channel

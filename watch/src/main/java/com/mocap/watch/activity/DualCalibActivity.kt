@@ -104,13 +104,20 @@ class DualCalibActivity : ComponentActivity() {
         this.finish()
     }
 
-    override fun onResume() {
-        super.onResume()
-        registerSensorListeners()
+    override fun onDestroy() {
+        super.onDestroy()
+        onComplete()
     }
 
     override fun onPause() {
         super.onPause()
         onComplete()
     }
+
+    override fun onResume() {
+        super.onResume()
+        registerSensorListeners()
+    }
+
+
 }

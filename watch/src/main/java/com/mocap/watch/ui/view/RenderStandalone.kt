@@ -13,8 +13,8 @@ import androidx.wear.compose.material.Text
 import kotlinx.coroutines.flow.StateFlow
 
 import com.mocap.watch.DataSingleton
-import com.mocap.watch.modules.SensorDataHandlerState
-import com.mocap.watch.modules.AudioModuleState
+import com.mocap.watch.modules.SensorStreamState
+import com.mocap.watch.modules.SoundStreamState
 import com.mocap.watch.ui.DefaultButton
 import com.mocap.watch.ui.DefaultText
 import com.mocap.watch.ui.RedButton
@@ -22,10 +22,9 @@ import com.mocap.watch.ui.StreamToggle
 
 @Composable
 fun RenderStandalone(
-    soundStateFlow: StateFlow<AudioModuleState>,
-    sensorStateFlow: StateFlow<SensorDataHandlerState>,
+    soundStateFlow: StateFlow<SoundStreamState>,
+    sensorStateFlow: StateFlow<SensorStreamState>,
     calibCallback: () -> Unit,
-    recordCallback: (Boolean) -> Unit,
     imuStreamCallback: (Boolean) -> Unit,
     micStreamCallback: (Boolean) -> Unit,
     ipSetCallback: () -> Unit,
@@ -51,30 +50,30 @@ fun RenderStandalone(
         }
         item {
             DefaultButton(
-                enabled = (sensorState == SensorDataHandlerState.Idle),
+                enabled = (sensorState == SensorStreamState.Idle),
                 onClick = { calibCallback() },
                 text = "Recalibrate"
             )
         }
         // Sensor data handler
-        item {
-            StreamToggle(
-                enabled = (sensorState == SensorDataHandlerState.Idle) or
-                        (sensorState == SensorDataHandlerState.Recording),
-                text = "Record Locally",
-                checked = (sensorState == SensorDataHandlerState.Recording),
-                onChecked = { recordCallback(it) }
-            )
-        }
+//        item {
+//            StreamToggle(
+//                enabled = (sensorState == SensorStreamState.Idle) or
+//                        (sensorState == SensorStreamState.Recording),
+//                text = "Record Locally",
+//                checked = (sensorState == SensorStreamState.Recording),
+//                onChecked = { recordCallback(it) }
+//            )
+//        }
         item {
             DataStateDisplay(state = sensorState, modifier = Modifier.fillMaxWidth())
         }
         item {
             StreamToggle(
-                enabled = (sensorState == SensorDataHandlerState.Idle) or
-                        (sensorState == SensorDataHandlerState.Streaming),
+                enabled = (sensorState == SensorStreamState.Idle) or
+                        (sensorState == SensorStreamState.Streaming),
                 text = "Stream to IP",
-                checked = (sensorState == SensorDataHandlerState.Streaming),
+                checked = (sensorState == SensorStreamState.Streaming),
                 onChecked = { imuStreamCallback(it) }
             )
         }
@@ -82,7 +81,7 @@ fun RenderStandalone(
             StreamToggle(
                 enabled = true,
                 text = "Stream MIC",
-                checked = (audioState == AudioModuleState.Streaming),
+                checked = (audioState == SoundStreamState.Streaming),
                 onChecked = { micStreamCallback(it) }
             )
         }
@@ -91,8 +90,8 @@ fun RenderStandalone(
         }
         item {
             DefaultButton(
-                enabled = (sensorState == SensorDataHandlerState.Idle) &&
-                        (audioState == AudioModuleState.Idle),
+                enabled = (sensorState == SensorStreamState.Idle) &&
+                        (audioState == SoundStreamState.Idle),
                 onClick = { ipSetCallback() },
                 text = "Set Target IP"
             )
@@ -111,11 +110,11 @@ fun RenderStandalone(
  * ready, recording/streaming, processing
  */
 @Composable
-fun DataStateDisplay(state: SensorDataHandlerState, modifier: Modifier = Modifier) {
+fun DataStateDisplay(state: SensorStreamState, modifier: Modifier = Modifier) {
     var color = Color.Red
-    if (state == SensorDataHandlerState.Idle) {
+    if (state == SensorStreamState.Idle) {
         color = Color.Green
-    } else if (state == SensorDataHandlerState.Processing) {
+    } else if (state == SensorStreamState.Streaming) {
         color = Color.Yellow
     }
     Text(

@@ -17,7 +17,7 @@ enum class CalibrationState {
 }
 
 
-class CalibStateModule(vibrator: Vibrator, calibDone: () -> Unit) {
+class StandaloneCalibViewModel(vibrator: Vibrator, calibDone: () -> Unit) {
 
     companion object {
         private const val TAG = "CalibrationActivity"  // for logging
@@ -36,10 +36,6 @@ class CalibStateModule(vibrator: Vibrator, calibDone: () -> Unit) {
     private var _grav: FloatArray = FloatArray(3) // gravity
     private var _pres: FloatArray = FloatArray(1) // Atmospheric pressure in hPa (millibar)
 
-
-    fun reset() {
-        _calibState.value = CalibrationState.Idle
-    }
 
     /**
      * Triggered by the calibration button. It goes through all 4 calibration stages

@@ -14,7 +14,6 @@ import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.Wearable
 import com.mocap.watch.DataSingleton
 import com.mocap.watch.modules.WatchChannelCallback
-import com.mocap.watch.ui.DefaultButton
 import com.mocap.watch.ui.theme.WatchTheme
 import com.mocap.watch.ui.view.RenderDual
 import com.mocap.watch.viewmodel.DualViewModel
@@ -29,7 +28,7 @@ class DualActivity : ComponentActivity() {
     private val _channelClient by lazy { Wearable.getChannelClient(this) }
     private val _capabilityClient by lazy { Wearable.getCapabilityClient(this) }
     private val _dualViewModel by viewModels<DualViewModel>()
-    private val _watchCallback = WatchChannelCallback(
+    private val _channelCallback = WatchChannelCallback(
         closeCallback = { _dualViewModel.onChannelClose(it) }
     )
     private lateinit var _sensorManager: SensorManager
@@ -88,7 +87,7 @@ class DualActivity : ComponentActivity() {
                     connectedNodeName = connectedNode,
                     appActiveStateFlow = appActiveStateFlow,
                     calibCallback = {
-                        startActivity(Intent("com.mocap.watch.activity.DUAL_CALIBRATION"))
+                        startActivity(Intent("com.mocap.watch.DUAL_CALIBRATION"))
                     },
                     streamStateFlow = _dualViewModel.streamState,
                     streamCallback = { _dualViewModel.streamTrigger(it) },
@@ -109,23 +108,31 @@ class DualActivity : ComponentActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        _channelClient.registerChannelCallback(_watchCallback)
+    /**
+     * To register all listeners for all used channels
+     */
+    private fun registerListeners() {
+        // to handle incoming data streams
+        _channelClient.registerChannelCallback(_channelCallback)
+        // for the phone app to detect this phone
         _capabilityClient.addLocalCapability(DataSingleton.WATCH_APP_ACTIVE)
+        // checks for a connected device with the Phone capability
         _capabilityClient.addListener(
             _dualViewModel,
             Uri.parse("wear://"),
             CapabilityClient.FILTER_REACHABLE
         )
+        // register all listeners with their assigned codes
         if (this::_sensorManager.isInitialized) {
             registerSensorListeners()
         }
     }
 
-    override fun onPause() {
-        super.onPause()
-        _channelClient.unregisterChannelCallback(_watchCallback)
+    /**
+     * clear all listeners
+     */
+    private fun unregisterListeners() {
+        _channelClient.unregisterChannelCallback(_channelCallback)
         _capabilityClient.removeListener(_dualViewModel)
         _capabilityClient.removeLocalCapability(DataSingleton.WATCH_APP_ACTIVE)
         if (this::_sensorManager.isInitialized) {
@@ -133,5 +140,21 @@ class DualActivity : ComponentActivity() {
                 _sensorManager.unregisterListener(l)
             }
         }
+    }
+
+
+    override fun onResume() {
+        super.onResume()
+        registerListeners()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        unregisterListeners()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterListeners()
     }
 }
