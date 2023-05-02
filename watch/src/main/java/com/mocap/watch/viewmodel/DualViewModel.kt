@@ -12,7 +12,6 @@ import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.CapabilityInfo
 import com.google.android.gms.wearable.ChannelClient.Channel
-import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
 import com.mocap.watch.DataSingleton
@@ -32,9 +31,7 @@ import java.time.Duration
 import java.time.LocalDateTime
 
 class DualViewModel(application: Application) :
-    AndroidViewModel(application),
-    MessageClient.OnMessageReceivedListener,
-    CapabilityClient.OnCapabilityChangedListener {
+    AndroidViewModel(application) {
 
     companion object {
         private const val TAG = "DualViewModel"  // for logging
@@ -67,7 +64,7 @@ class DualViewModel(application: Application) :
     val soundStreamState = _soundStreamState.asStateFlow()
 
     // callbacks will write to these variables
-    private var _rotVec: FloatArray = FloatArray(5) // Rotation Vector sensor or estimation
+    private var _rotVec: FloatArray = FloatArray(4) // Rotation Vector sensor or estimation
     private var _lacc: FloatArray = FloatArray(3) // linear acceleration (without gravity)
     private var _accl: FloatArray = FloatArray(3) // raw acceleration
     private var _grav: FloatArray = FloatArray(3) // gravity
@@ -79,9 +76,13 @@ class DualViewModel(application: Application) :
     override fun onCleared() {
         super.onCleared()
         _scope.cancel()
+        resetStreamStates()
+        Log.d(TAG, "Cleared")
+    }
+
+    fun resetStreamStates() {
         _sensorStreamStateSensor.value = SensorStreamState.Idle
         _soundStreamState.value = SoundStreamState.Idle
-        Log.d(TAG, "Cleared")
     }
 
     fun onChannelClose(c: Channel) {
@@ -175,27 +176,21 @@ class DualViewModel(application: Application) :
                     outputStream.use {
                         // start the stream loop
                         _sensorStreamStateSensor.value = SensorStreamState.Streaming
-                        val streamStartTimeStamp = LocalDateTime.now()
                         while (sensorStreamState.value == SensorStreamState.Streaming) {
-                            val diff =
-                                Duration.between(
-                                    streamStartTimeStamp,
-                                    LocalDateTime.now()
-                                ).toMillis()
-
                             // compose message as float array
-                            val sensorData = floatArrayOf(diff.toFloat()) +
-                                    _rotVec + // transformed rotation vector[4] is a quaternion [w,x,y,z]
-                                    _lacc + // [3] linear acceleration x,y,z
-                                    _pres + // [1] atmospheric pressure
-                                    _grav + // [3] vector indicating the direction and magnitude of gravity x,y,z
-                                    _gyro + // [3] gyro data for time series prediction
-                                    _hrRaw // [16] undocumented data from Samsung's Hr raw sensor
+                            val sensorData =
+                                _rotVec + // transformed rotation vector[4] is a quaternion [w,x,y,z]
+                                        _lacc + // [3] linear acceleration x,y,z
+                                        _pres + // [1] atmospheric pressure
+                                        _grav + // [3] vector indicating the direction and magnitude of gravity x,y,z
+                                        _gyro + // [3] gyro data for time series prediction
+                                        _hrRaw // [16] undocumented data from Samsung's Hr raw sensor
 
                             // feed into byte buffer
                             val buffer = ByteBuffer.allocate(4 * DataSingleton.WATCH_MESSAGE_SIZE)
                             for (v in sensorData) buffer.putFloat(v)
 
+                            Log.d(TAG, _rotVec[0].toString())
                             // write to output stream
                             outputStream.write(buffer.array(), 0, buffer.capacity())
                             delay(IMU_PPG_STREAM_INTERVAL)
@@ -239,7 +234,7 @@ class DualViewModel(application: Application) :
      * check for ping messages
      * This function is called by the listener registered in the PhoneMain Activity
      */
-    override fun onMessageReceived(messageEvent: MessageEvent) {
+    fun onMessageReceived(messageEvent: MessageEvent) {
         when (messageEvent.path) {
             DataSingleton.PING_REP -> {
                 _pingSuccess.value = true
@@ -248,8 +243,6 @@ class DualViewModel(application: Application) :
 
             DataSingleton.PING_REQ -> {
                 // reply to a ping request
-                _pingSuccess.value = true
-                _lastPing = LocalDateTime.now()
                 _scope.launch {
                     _messageClient.sendMessage(_connectedNodeId, DataSingleton.PING_REP, null)
                         .await()
@@ -274,7 +267,7 @@ class DualViewModel(application: Application) :
         }
     }
 
-    override fun onCapabilityChanged(capabilityInfo: CapabilityInfo) {
+    fun onCapabilityChanged(capabilityInfo: CapabilityInfo) {
         val deviceCap = DataSingleton.PHONE_CAPABILITY
         // this checks if a phone is available at all
         when (capabilityInfo.name) {

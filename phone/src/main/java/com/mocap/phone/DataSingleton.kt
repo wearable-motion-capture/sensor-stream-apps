@@ -31,7 +31,7 @@ object DataSingleton {
     const val WATCH_CAPABILITY = "watch" // if the watch app is connected (see res/values/wear.xml)
 
     // streaming parameters
-    const val WATCH_MSG_SIZE = 31 // floats
+    const val WATCH_MSG_SIZE = 30 // floats
     const val IP_KEY = "com.mocap.watch.ip" // shared preferences lookup
     const val IP_DEFAULT = "192.168.0.12"
     const val UDP_IMU_PORT = 65000

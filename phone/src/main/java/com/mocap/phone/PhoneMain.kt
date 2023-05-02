@@ -11,6 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.preference.PreferenceManager
 import com.google.android.gms.wearable.CapabilityClient
+import com.google.android.gms.wearable.CapabilityInfo
 import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
@@ -21,7 +22,9 @@ import com.mocap.phone.ui.view.RenderHome
 import java.nio.ByteBuffer
 
 
-class PhoneMain : ComponentActivity(), MessageClient.OnMessageReceivedListener {
+class PhoneMain : ComponentActivity(),
+    MessageClient.OnMessageReceivedListener,
+    CapabilityClient.OnCapabilityChangedListener {
 
     companion object {
         private const val TAG = "PhoneMainActivity"
@@ -55,8 +58,6 @@ class PhoneMain : ComponentActivity(), MessageClient.OnMessageReceivedListener {
                 storedIp = DataSingleton.IP_DEFAULT
             }
             DataSingleton.setIp(storedIp)
-
-            // starts a loop to update frequencies
             _viewModel.regularUiUpdates()
 
             PhoneTheme {
@@ -82,6 +83,10 @@ class PhoneMain : ComponentActivity(), MessageClient.OnMessageReceivedListener {
                 )
             }
         }
+    }
+
+    override fun onCapabilityChanged(capabilityInfo: CapabilityInfo) {
+        _viewModel.onCapabilityChanged(capabilityInfo)
     }
 
     /** Checks received messages for Calibration triggers */
@@ -131,10 +136,11 @@ class PhoneMain : ComponentActivity(), MessageClient.OnMessageReceivedListener {
         _messageClient.addListener(this)
         // checks for a connected device with the Watch capability
         _capabilityClient.addListener(
-            _viewModel,
+            this,
             Uri.parse("wear://"),
             CapabilityClient.FILTER_REACHABLE
         )
+        _viewModel.queryCapabilities()
         // for the watch app to detect this phone
         _capabilityClient.addLocalCapability(DataSingleton.PHONE_APP_ACTIVE)
         // check if a phone is connected and set state flows accordingly
@@ -150,8 +156,9 @@ class PhoneMain : ComponentActivity(), MessageClient.OnMessageReceivedListener {
         if (this::_sensorManager.isInitialized) {
             for (l in _viewModel.listeners) _sensorManager.unregisterListener(l)
         }
+        _viewModel.resetStreamStates()
         _messageClient.removeListener(this)
-        _capabilityClient.removeListener(_viewModel)
+        _capabilityClient.removeListener(this)
         _capabilityClient.removeLocalCapability(DataSingleton.PHONE_APP_ACTIVE)
         _channelClient.unregisterChannelCallback(_channelCallback)
     }

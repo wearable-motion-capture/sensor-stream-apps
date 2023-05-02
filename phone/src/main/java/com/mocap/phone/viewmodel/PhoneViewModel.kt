@@ -33,8 +33,7 @@ import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentLinkedQueue
 
 class PhoneViewModel(application: Application) :
-    AndroidViewModel(application),
-    CapabilityClient.OnCapabilityChangedListener {
+    AndroidViewModel(application) {
 
     companion object {
         private const val TAG = "PhoneViewModel"
@@ -304,7 +303,7 @@ class PhoneViewModel(application: Application) :
         }
     }
 
-    override fun onCapabilityChanged(capabilityInfo: CapabilityInfo) {
+    fun onCapabilityChanged(capabilityInfo: CapabilityInfo) {
         val deviceCap = DataSingleton.WATCH_CAPABILITY
         // this checks if a phone is available at all
         when (capabilityInfo.name) {
@@ -347,11 +346,8 @@ class PhoneViewModel(application: Application) :
                 _pingSuccess.value = true
                 _lastPing = LocalDateTime.now()
             }
-
             DataSingleton.PING_REQ -> {
                 // reply to a ping request
-                _pingSuccess.value = true
-                _lastPing = LocalDateTime.now()
                 _scope.launch {
                     _messageClient.sendMessage(_connectedNodeId, DataSingleton.PING_REP, null)
                         .await()
@@ -390,12 +386,16 @@ class PhoneViewModel(application: Application) :
         _grav = newReadout
     }
 
+    fun resetStreamStates() {
+        _imuPpgStreamState.value = ImuPpgStreamState.Idle
+        _soundStreamState.value = SoundStreamState.Idle
+    }
+
     /** Other callbacks */
     override fun onCleared() {
         super.onCleared()
+        resetStreamStates()
         _scope.cancel()
-        _imuPpgStreamState.value = ImuPpgStreamState.Idle
-        _soundStreamState.value = SoundStreamState.Idle
         Log.d(TAG, "Cleared")
     }
 
