@@ -1,29 +1,25 @@
 package com.mocap.watch.ui
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.material.*
-import com.mocap.watch.modules.CalibrationState
-import com.mocap.watch.modules.SensorDataHandlerState
 
 
-/**
- * The basic toggle chips to start/stop recording and streaming
- */
+/**The basic toggle chips to start/stop recording and streaming */
 @Composable
-fun SensorToggleChip(
+fun StreamToggle(
     enabled: Boolean,
     text: String,
     checked: Boolean,
-    onChecked: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    onChecked: (Boolean) -> Unit
 ) {
     ToggleChip(
         enabled = enabled,
-        modifier = modifier,
+        modifier = Modifier.fillMaxWidth(),
         checked = checked,
         toggleControl = {
             Icon(
@@ -31,7 +27,9 @@ fun SensorToggleChip(
                 contentDescription = if (checked) "On" else "Off"
             )
         },
-        onCheckedChange = onChecked,
+        onCheckedChange = {
+            onChecked(it)
+        },
         label = {
             Text(
                 text = text,
@@ -42,46 +40,33 @@ fun SensorToggleChip(
     )
 }
 
-/**
- * The simple state display when recording or streaming data. Switches between:
- * ready, recording/streaming, processing
- */
 @Composable
-fun DataStateDisplay(state: SensorDataHandlerState, modifier: Modifier = Modifier) {
-    var color = Color.Red
-    if (state == SensorDataHandlerState.Idle) {
-        color = Color.Green
-    } else if (state == SensorDataHandlerState.Processing) {
-        color = Color.Yellow
-    }
+fun DefaultText(text: String) {
     Text(
-        modifier = modifier,
-        textAlign = TextAlign.Center,
-        text = state.name,
-        style = MaterialTheme.typography.body1.copy(
-            color = color
-        )
+        text = text,
+        modifier = Modifier.fillMaxWidth(),
+        textAlign = TextAlign.Center
     )
 }
 
-/**
- * The simple state display during the calibration procedure of the watch.
- * Switches between:
- * Hold, Forward
- * Up and down are also options, which are not part of the current routine
- */
 @Composable
-fun CalibrationStateDisplay(state: CalibrationState, modifier: Modifier = Modifier) {
-    var color = Color.Red
-    if (state == CalibrationState.Forward) {
-        color = Color.Cyan
+fun DefaultButton(enabled: Boolean = true, onClick: () -> Unit, text: String) {
+    Button(
+        enabled = enabled,
+        onClick = { onClick() },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(text = text)
     }
-    Text(
-        modifier = modifier,
-        textAlign = TextAlign.Center,
-        text = state.name,
-        style = MaterialTheme.typography.body1.copy(
-            color = color
-        )
-    )
+}
+
+@Composable
+fun RedButton(onClick: () -> Unit, text: String) {
+    Button(
+        onClick = { onClick() },
+        modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red)
+    ) {
+        Text(text = text)
+    }
 }

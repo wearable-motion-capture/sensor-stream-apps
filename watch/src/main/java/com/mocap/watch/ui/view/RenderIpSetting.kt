@@ -1,6 +1,7 @@
-package com.mocap.watch.ui
+package com.mocap.watch.ui.view
 
 import android.view.MotionEvent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -20,27 +21,29 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.wear.compose.foundation.lazy.AutoCenteringParams
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.*
-import com.mocap.watch.modules.GlobalState
+import com.mocap.watch.DataSingleton
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun IpSettingUi(globalState: GlobalState) {
+fun RenderIpSetting(setIpCallback: (String) -> Unit) {
 
-
-    val ipStr = globalState.getIP().split(".")
-
+    // formatting
+    val ipStr by DataSingleton.IP.collectAsState()
+    val ipSplit = ipStr.split(".")
     var selectedColumn by remember { mutableStateOf(0) }
     val textStyle = MaterialTheme.typography.body1
 
     val firstState =
         rememberPickerState(
             initialNumberOfOptions = 1000,
-            initiallySelectedOption = ipStr[0].toInt()
+            initiallySelectedOption = ipSplit[0].toInt()
         )
     val firstContentDescription by remember {
         derivedStateOf { "${firstState.selectedOption}" }
@@ -48,7 +51,7 @@ fun IpSettingUi(globalState: GlobalState) {
     val secondState =
         rememberPickerState(
             initialNumberOfOptions = 1000,
-            initiallySelectedOption = ipStr[1].toInt()
+            initiallySelectedOption = ipSplit[1].toInt()
         )
     val secondContentDescription by remember {
         derivedStateOf { "${secondState.selectedOption}" }
@@ -56,7 +59,7 @@ fun IpSettingUi(globalState: GlobalState) {
     val thirdState =
         rememberPickerState(
             initialNumberOfOptions = 1000,
-            initiallySelectedOption = ipStr[2].toInt()
+            initiallySelectedOption = ipSplit[2].toInt()
         )
     val thirdContentDescription by remember {
         derivedStateOf { "${thirdState.selectedOption}" }
@@ -64,7 +67,7 @@ fun IpSettingUi(globalState: GlobalState) {
     val fourthState =
         rememberPickerState(
             initialNumberOfOptions = 1000,
-            initiallySelectedOption = ipStr[3].toInt()
+            initiallySelectedOption = ipSplit[3].toInt()
         )
     val fourthContentDescription by remember {
         derivedStateOf { "${fourthState.selectedOption}" }
@@ -84,7 +87,9 @@ fun IpSettingUi(globalState: GlobalState) {
                 .align(Alignment.Center)
                 .wrapContentSize()
                 .pointerInteropFilter {
-                    if (it.action == MotionEvent.ACTION_DOWN) selectedColumn = column
+                    if (it.action == MotionEvent.ACTION_DOWN) {
+                        selectedColumn = column
+                    }
                     true
                 }
         )
@@ -146,7 +151,7 @@ fun IpSettingUi(globalState: GlobalState) {
         item {
             Button(
                 onClick = {
-                    globalState.setIP(
+                    setIpCallback(
                         "${firstState.selectedOption}." +
                                 "${secondState.selectedOption}." +
                                 "${thirdState.selectedOption}." +
