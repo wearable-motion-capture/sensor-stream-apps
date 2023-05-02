@@ -25,7 +25,7 @@ class PhoneChannelCallback(
      * Simply forwards it to the viewmodel callback
      */
     override fun onChannelOpened(channel: ChannelClient.Channel) {
-        Log.d(TAG, "${channel.path} opened ${channel.nodeId}")
+        Log.d(TAG, "${channel.path} opened by ${channel.nodeId}")
         _openCallback(channel)
     }
 
@@ -39,7 +39,7 @@ class PhoneChannelCallback(
         closeReason: Int,
         appSpecificErrorCode: Int
     ) {
-        Log.d(TAG, "${channel.path} closed ${channel.nodeId}")
+        Log.d(TAG, "${channel.path} closed by ${channel.nodeId}")
         _closeCallback(channel)
     }
 }

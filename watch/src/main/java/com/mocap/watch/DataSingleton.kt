@@ -11,18 +11,21 @@ enum class SensorStreamState {
 }
 
 enum class SoundStreamState {
-    Idle, // app waits for the trigger
-    Streaming // streaming to IP and Port
+    Idle, // app waits for watch to trigger the streaming
+    Error, // error state. Stop streaming
+    Streaming // streaming to IP and Port set in StateModule
 }
 
 object DataSingleton {
 
-    const val VERSION = "0.1.6"
+    const val VERSION = "0.2.0"
 
     // message paths
     const val SENSOR_CHANNEL_PATH = "/sensor_channel"
     const val SOUND_CHANNEL_PATH = "/sound_channel"
     const val CALIBRATION_PATH = "/calibration"
+    const val PING_REQ = "/ping_request"
+    const val PING_REP = "/ping_reply"
 
     // capabilities
     const val PHONE_APP_ACTIVE = "phone_app" // indicates if the phone app is active

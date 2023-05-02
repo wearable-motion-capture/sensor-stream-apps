@@ -92,8 +92,8 @@ fun RenderStandalone(
         }
         item {
             DefaultButton(
-                enabled = (sensorState == SensorStreamState.Idle) &&
-                        (soundState == SoundStreamState.Idle),
+                enabled = (sensorState != SensorStreamState.Streaming) &&
+                        (soundState != SoundStreamState.Streaming),
                 onClick = { ipSetCallback() },
                 text = "Set Target IP"
             )
@@ -109,7 +109,7 @@ fun RenderStandalone(
 
 /**
  * The simple state display when recording or streaming data. Switches between:
- * ready, recording/streaming, processing
+ * ready, streaming, Error
  */
 @Composable
 fun SensorStateDisplay(state: SensorStreamState, modifier: Modifier = Modifier) {
@@ -132,15 +132,15 @@ fun SensorStateDisplay(state: SensorStreamState, modifier: Modifier = Modifier) 
 
 /**
  * The simple state display when recording or streaming data. Switches between:
- * ready, recording/streaming, processing
+ * ready, streaming, Error
  */
 @Composable
 fun SoundStateDisplay(state: SoundStreamState, modifier: Modifier = Modifier) {
     var color = Color.Red
     if (state == SoundStreamState.Idle) {
-        color = Color.Green
-    } else if (state == SoundStreamState.Streaming) {
         color = Color.Yellow
+    } else if (state == SoundStreamState.Streaming) {
+        color = Color.Green
     }
     Text(
         modifier = modifier,

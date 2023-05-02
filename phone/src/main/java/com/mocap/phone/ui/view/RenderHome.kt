@@ -36,7 +36,8 @@ fun RenderHome(
     imuPpgBroadcastHzSF: StateFlow<Float>,
     soundSF: StateFlow<SoundStreamState>,
     soundBroadcastHzSF: StateFlow<Float>,
-    queueSizeSF: StateFlow<Int>,
+    soundStreamQueueSF: StateFlow<Int>,
+    imuPpgQueueSizeSF: StateFlow<Int>,
     ipSetCallback: () -> Unit
 ) {
     val phoneForwardQuat by DataSingleton.phoneQuat.collectAsState()
@@ -51,7 +52,8 @@ fun RenderHome(
     val imuPpgBroadcastHz by imuPpgBroadcastHzSF.collectAsState()
     val soundSt by soundSF.collectAsState()
     val soundBroadcastHz by soundBroadcastHzSF.collectAsState()
-    val queueSize by queueSizeSF.collectAsState()
+    val soundQueueSize by soundStreamQueueSF.collectAsState()
+    val queueSize by imuPpgQueueSizeSF.collectAsState()
 
     LazyColumn(
         modifier = Modifier
@@ -66,7 +68,7 @@ fun RenderHome(
                     DefaultText(text = "BT device found:\n $nodeName")
 
                     Text(
-                        text = if (appState) "Watch Dual App Active" else "Watch Dual App Inactive",
+                        text = if (appState) "Watch Dual App Active" else "Awaiting Watch App",
                         modifier = Modifier.padding(8.dp),
                         textAlign = TextAlign.Center,
                         color = if (appState) Color.Green else Color.Red,
@@ -116,7 +118,11 @@ fun RenderHome(
                         DefaultText(text = ("IMU + PPG"))
                         DefaultHighlight(
                             text = "$imuPpgSt",
-                            color = if (imuPpgSt == ImuPpgStreamState.Streaming) Color.Green else Color.Yellow
+                            color = when (imuPpgSt) {
+                                ImuPpgStreamState.Idle -> Color.Yellow
+                                ImuPpgStreamState.Streaming -> Color.Green
+                                ImuPpgStreamState.Error -> Color.Red
+                            }
                         )
                         DefaultText(
                             text = "In: $imuPpgHz Hz\n " +
@@ -128,9 +134,16 @@ fun RenderHome(
                         DefaultText(text = ("Audio"))
                         DefaultHighlight(
                             text = "$soundSt",
-                            color = if (soundSt == SoundStreamState.Streaming) Color.Green else Color.Yellow
+                            color = when (soundSt) {
+                                SoundStreamState.Idle -> Color.Yellow
+                                SoundStreamState.Streaming -> Color.Green
+                                SoundStreamState.Error -> Color.Red
+                            }
                         )
-                        DefaultText(text = "$soundBroadcastHz Hz")
+                        DefaultText(
+                            text = "$soundBroadcastHz Hz\n" +
+                                    "Queue: $soundQueueSize"
+                        )
                     }
                 }
 

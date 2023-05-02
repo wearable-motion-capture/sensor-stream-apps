@@ -40,7 +40,7 @@ class PhoneMain : ComponentActivity(), MessageClient.OnMessageReceivedListener {
     // System services not available to Activities before onCreate()
     private lateinit var _sensorManager: SensorManager
 
-    /** Starting point of the application  */
+    /** Starting point of the application */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -57,7 +57,7 @@ class PhoneMain : ComponentActivity(), MessageClient.OnMessageReceivedListener {
             DataSingleton.setIp(storedIp)
 
             // starts a loop to update frequencies
-            _viewModel.updateHzCounts()
+            _viewModel.regularUiUpdates()
 
             PhoneTheme {
                 // keep screen on
@@ -74,7 +74,8 @@ class PhoneMain : ComponentActivity(), MessageClient.OnMessageReceivedListener {
                     imuPpgBroadcastHzSF = _viewModel.imuPpgBroadcastHz,
                     soundSF = _viewModel.soundStreamState,
                     soundBroadcastHzSF = _viewModel.soundBroadcastHz,
-                    queueSizeSF = _viewModel.queueSize,
+                    soundStreamQueueSF = _viewModel.soundStreamQueue,
+                    imuPpgQueueSizeSF = _viewModel.queueSize,
                     ipSetCallback = {
                         startActivity(Intent("com.mocap.phone.SET_IP"))
                     }
@@ -83,9 +84,7 @@ class PhoneMain : ComponentActivity(), MessageClient.OnMessageReceivedListener {
         }
     }
 
-    /**
-     * Checks received messages for Calibration triggers
-     */
+    /** Checks received messages for Calibration triggers */
     override fun onMessageReceived(messageEvent: MessageEvent) {
         Log.d(
             TAG, "Received from: ${messageEvent.sourceNodeId} " +
@@ -108,12 +107,11 @@ class PhoneMain : ComponentActivity(), MessageClient.OnMessageReceivedListener {
                 startActivity(i)
             }
         }
+        _viewModel.onMessageReceived(messageEvent)
     }
 
 
-    /**
-     * To register sensor listeners manually after onCreate
-     */
+    /** To register sensor listeners manually after onCreate */
     private fun registerSensorListeners() {
         if (this::_sensorManager.isInitialized) {
             for (l in _viewModel.listeners) {
@@ -126,9 +124,7 @@ class PhoneMain : ComponentActivity(), MessageClient.OnMessageReceivedListener {
         }
     }
 
-    /**
-     * To register all listeners for all used channels
-     */
+    /** To register all listeners for all used channels */
     private fun registerListeners() {
         // register all listeners with their assigned codes
         registerSensorListeners()

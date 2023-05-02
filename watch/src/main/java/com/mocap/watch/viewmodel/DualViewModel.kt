@@ -12,6 +12,8 @@ import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.CapabilityInfo
 import com.google.android.gms.wearable.ChannelClient.Channel
+import com.google.android.gms.wearable.MessageClient
+import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
 import com.mocap.watch.DataSingleton
 import com.mocap.watch.SensorStreamState
@@ -31,6 +33,7 @@ import java.time.LocalDateTime
 
 class DualViewModel(application: Application) :
     AndroidViewModel(application),
+    MessageClient.OnMessageReceivedListener,
     CapabilityClient.OnCapabilityChangedListener {
 
     companion object {
@@ -43,6 +46,7 @@ class DualViewModel(application: Application) :
 
     private val _capabilityClient by lazy { Wearable.getCapabilityClient(application) }
     private val _channelClient by lazy { Wearable.getChannelClient(application) }
+    private val _messageClient by lazy { Wearable.getMessageClient(application) }
     private val _scope = CoroutineScope(Job() + Dispatchers.IO)
 
 
@@ -52,14 +56,15 @@ class DualViewModel(application: Application) :
     private val _connectedNodeDisplayName = MutableStateFlow("No Device")
     val nodeName = _connectedNodeDisplayName.asStateFlow()
 
-    private val _connectedActiveApp = MutableStateFlow(false)
-    val appActive = _connectedActiveApp.asStateFlow()
+    private val _pingSuccess = MutableStateFlow(false)
+    val appActive = _pingSuccess.asStateFlow()
+    private var _lastPing = LocalDateTime.now()
 
-    private val _sensorstreamStateSensor = MutableStateFlow(SensorStreamState.Idle)
-    val sensorStreamState = _sensorstreamStateSensor.asStateFlow()
+    private val _sensorStreamStateSensor = MutableStateFlow(SensorStreamState.Idle)
+    val sensorStreamState = _sensorStreamStateSensor.asStateFlow()
 
-    private val _soundSensorStreamState = MutableStateFlow(SoundStreamState.Idle)
-    val soundStreamState = _soundSensorStreamState.asStateFlow()
+    private val _soundStreamState = MutableStateFlow(SoundStreamState.Idle)
+    val soundStreamState = _soundStreamState.asStateFlow()
 
     // callbacks will write to these variables
     private var _rotVec: FloatArray = FloatArray(5) // Rotation Vector sensor or estimation
@@ -74,18 +79,18 @@ class DualViewModel(application: Application) :
     override fun onCleared() {
         super.onCleared()
         _scope.cancel()
-        _sensorstreamStateSensor.value = SensorStreamState.Idle
-        _soundSensorStreamState.value = SoundStreamState.Idle
+        _sensorStreamStateSensor.value = SensorStreamState.Idle
+        _soundStreamState.value = SoundStreamState.Idle
         Log.d(TAG, "Cleared")
     }
 
     fun onChannelClose(c: Channel) {
         // reset the corresponding stream loop
         when (c.path) {
-            DataSingleton.SENSOR_CHANNEL_PATH -> _sensorstreamStateSensor.value =
+            DataSingleton.SENSOR_CHANNEL_PATH -> _sensorStreamStateSensor.value =
                 SensorStreamState.Idle
 
-            DataSingleton.SOUND_CHANNEL_PATH -> _soundSensorStreamState.value =
+            DataSingleton.SOUND_CHANNEL_PATH -> _soundStreamState.value =
                 SoundStreamState.Idle
         }
     }
@@ -93,9 +98,9 @@ class DualViewModel(application: Application) :
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun audioStreamTrigger(checked: Boolean) {
         if (!checked) {
-            _soundSensorStreamState.value = SoundStreamState.Idle
+            _soundStreamState.value = SoundStreamState.Idle
         } else {
-            if (_soundSensorStreamState.value == SoundStreamState.Streaming) {
+            if (_soundStreamState.value == SoundStreamState.Streaming) {
                 throw Exception("The StreamState.Streaming should not be active at start")
             }
             _scope.launch {
@@ -125,8 +130,8 @@ class DualViewModel(application: Application) :
                     val outputStream = _channelClient.getOutputStream(channel).await()
                     outputStream.use {
                         // start the stream loop
-                        _soundSensorStreamState.value = SoundStreamState.Streaming
-                        while (_soundSensorStreamState.value == SoundStreamState.Streaming) {
+                        _soundStreamState.value = SoundStreamState.Streaming
+                        while (_soundStreamState.value == SoundStreamState.Streaming) {
                             val buffer = ByteBuffer.allocate(DataSingleton.AUDIO_BUFFER_SIZE)
                             audioRecord.read(buffer.array(), 0, buffer.capacity())
                             outputStream.write(buffer.array(), 0, buffer.capacity())
@@ -136,7 +141,7 @@ class DualViewModel(application: Application) :
                     // In case the channel gets destroyed while still in the loop
                     _channelClient.close(channel)
                     Log.d(TAG, e.message.toString())
-                    _sensorstreamStateSensor.value = SensorStreamState.Error
+                    _soundStreamState.value = SoundStreamState.Error
                 } finally {
                     // if the loop ends of was disrupted, close everything and reset
                     audioRecord.release()
@@ -149,7 +154,7 @@ class DualViewModel(application: Application) :
 
     fun sensorStreamTrigger(checked: Boolean) {
         if (!checked) {
-            _sensorstreamStateSensor.value = SensorStreamState.Idle
+            _sensorStreamStateSensor.value = SensorStreamState.Idle
         } else {
             if (sensorStreamState.value == SensorStreamState.Streaming) {
                 throw Exception("The StreamState.Streaming should not be active at start")
@@ -169,7 +174,7 @@ class DualViewModel(application: Application) :
                     val outputStream = _channelClient.getOutputStream(channel).await()
                     outputStream.use {
                         // start the stream loop
-                        _sensorstreamStateSensor.value = SensorStreamState.Streaming
+                        _sensorStreamStateSensor.value = SensorStreamState.Streaming
                         val streamStartTimeStamp = LocalDateTime.now()
                         while (sensorStreamState.value == SensorStreamState.Streaming) {
                             val diff =
@@ -199,7 +204,7 @@ class DualViewModel(application: Application) :
                 } catch (e: Exception) {
                     // In case the channel gets destroyed while still in the loop
                     Log.d(TAG, e.message.toString())
-                    _sensorstreamStateSensor.value = SensorStreamState.Error
+                    _sensorStreamStateSensor.value = SensorStreamState.Error
                 } finally {
                     _channelClient.close(channel)
                 }
@@ -208,10 +213,56 @@ class DualViewModel(application: Application) :
         }
     }
 
+    /** a simple loop that ensures both apps are active */
+    fun regularConnectionCheck() {
+        _scope.launch {
+            while (true) {
+                requestPing()
+                delay(2500L)
+            }
+        }
+    }
+
+    /** send a ping request */
+    private fun requestPing() {
+        _scope.launch {
+            _messageClient.sendMessage(_connectedNodeId, DataSingleton.PING_REQ, null).await()
+            delay(1000L)
+            // reset success indicator if the response takes too long
+            if (Duration.between(_lastPing, LocalDateTime.now()).toMillis() > 1100L) {
+                _pingSuccess.value = false
+            }
+        }
+    }
+
+    /**
+     * check for ping messages
+     * This function is called by the listener registered in the PhoneMain Activity
+     */
+    override fun onMessageReceived(messageEvent: MessageEvent) {
+        when (messageEvent.path) {
+            DataSingleton.PING_REP -> {
+                _pingSuccess.value = true
+                _lastPing = LocalDateTime.now()
+            }
+
+            DataSingleton.PING_REQ -> {
+                // reply to a ping request
+                _pingSuccess.value = true
+                _lastPing = LocalDateTime.now()
+                _scope.launch {
+                    _messageClient.sendMessage(_connectedNodeId, DataSingleton.PING_REP, null)
+                        .await()
+                }
+            }
+        }
+    }
+
     fun queryCapabilities() {
         _scope.launch {
             try {
-                val task = _capabilityClient.getAllCapabilities(CapabilityClient.FILTER_REACHABLE)
+                val task =
+                    _capabilityClient.getAllCapabilities(CapabilityClient.FILTER_REACHABLE)
                 val res = Tasks.await(task)
                 // handling happens in the callback
                 for ((_, v) in res.iterator()) {
@@ -225,34 +276,23 @@ class DualViewModel(application: Application) :
 
     override fun onCapabilityChanged(capabilityInfo: CapabilityInfo) {
         val deviceCap = DataSingleton.PHONE_CAPABILITY
-        val appCap = DataSingleton.PHONE_APP_ACTIVE
         // this checks if a phone is available at all
-        if (capabilityInfo.name == deviceCap) {
-            val nodes = capabilityInfo.nodes
-            if (nodes.count() > 1) {
-                throw Exception("More than one node with $deviceCap detected: $nodes")
-            } else if (nodes.isEmpty()) {
-                _connectedNodeDisplayName.value = "No device"
-            } else {
-                _connectedNodeDisplayName.value = nodes.first().displayName
-            }
-            Log.d(TAG, "Connected phone : $nodes")
-        }
-
-        // check if the app is running and open a communication channel if so
-        if (capabilityInfo.name == appCap) {
-            val nodes = capabilityInfo.nodes
-            if (nodes.count() > 1) {
-                throw Exception("More than one node with $appCap detected: $nodes")
-            } else {
-                _connectedActiveApp.value = nodes.isNotEmpty()
-                if (nodes.isNotEmpty()) {
-                    _connectedNodeId = nodes.first().id
-                } else {
+        when (capabilityInfo.name) {
+            deviceCap -> {
+                val nodes = capabilityInfo.nodes
+                if (nodes.count() > 1) {
+                    throw Exception("More than one node with $deviceCap detected: $nodes")
+                } else if (nodes.isEmpty()) {
+                    _connectedNodeDisplayName.value = "No device"
                     _connectedNodeId = "none"
+                } else {
+                    _connectedNodeDisplayName.value = nodes.first().displayName
+                    _connectedNodeId = nodes.first().id
                 }
+                Log.d(TAG, "Connected phone : $nodes")
             }
         }
+        requestPing() // check if the app is answering to pings
     }
 
     // Events

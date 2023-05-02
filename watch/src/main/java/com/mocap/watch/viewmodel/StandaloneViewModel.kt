@@ -102,30 +102,37 @@ class StandaloneViewModel(application: Application) :
             audioRecord.startRecording()
             Log.w(TAG, "Started Recording")
 
-            // open a socket
-            val udpSocket = DatagramSocket(port)
-            udpSocket.broadcast = true
-            val socketInetAddress = InetAddress.getByName(ip)
-            Log.v(TAG, "Opened UDP socket to $ip:$port")
+            try {
+                // open a socket
+                val udpSocket = DatagramSocket(port)
+                udpSocket.broadcast = true
+                val socketInetAddress = InetAddress.getByName(ip)
+                Log.v(TAG, "Opened UDP socket to $ip:$port")
 
-            udpSocket.use {
-                // read from audioRecord stream and send through to UDP output stream
-                _soundStrState.value = SoundStreamState.Streaming
-                while (soundStrState.value == SoundStreamState.Streaming) {
-                    val buffer = ByteBuffer.allocate(AUDIO_BUFFER_SIZE)
-                    audioRecord.read(buffer.array(), 0, buffer.capacity())
-                    val dp = DatagramPacket(
-                        buffer.array(),
-                        buffer.capacity(),
-                        socketInetAddress,
-                        port
-                    )
-                    udpSocket.send(dp)
+                udpSocket.use {
+                    // read from audioRecord stream and send through to UDP output stream
+                    _soundStrState.value = SoundStreamState.Streaming
+                    while (soundStrState.value == SoundStreamState.Streaming) {
+                        val buffer = ByteBuffer.allocate(AUDIO_BUFFER_SIZE)
+                        audioRecord.read(buffer.array(), 0, buffer.capacity())
+                        val dp = DatagramPacket(
+                            buffer.array(),
+                            buffer.capacity(),
+                            socketInetAddress,
+                            port
+                        )
+                        udpSocket.send(dp)
+                    }
                 }
+            } catch (e: Exception) {
+                // if the loop ends of was disrupted, close everything and reset
+                Log.w(TAG, e.message.toString())
+                _soundStrState.value = SoundStreamState.Error
+            } finally {
+                // make sure to release the audio recorder
+                audioRecord.release()
+                Log.v(TAG, "Release")
             }
-            // make sure to release the audio recorder
-            audioRecord.release()
-            Log.v(TAG, "Release")
         }
     }
 
@@ -155,43 +162,48 @@ class StandaloneViewModel(application: Application) :
         val port = DataSingleton.UDP_IMU_PORT
         val msgSize = DataSingleton.WATCH_MESSAGE_SIZE
 
-
         // run the streaming in a thread
         withContext(Dispatchers.IO) {
-            // open a socket
-            val udpSocket = DatagramSocket(port)
-            udpSocket.broadcast = true
-            val socketInetAddress = InetAddress.getByName(ip)
-            Log.v(TAG, "Opened UDP socket to $ip:$port")
+            try {
+                // open a socket
+                val udpSocket = DatagramSocket(port)
+                udpSocket.broadcast = true
+                val socketInetAddress = InetAddress.getByName(ip)
+                Log.v(TAG, "Opened UDP socket to $ip:$port")
 
-            udpSocket.use {
-                _sensorStrState.value = SensorStreamState.Streaming
-                while (sensorStrState.value == SensorStreamState.Streaming) {
-                    // write to data
-                    val sensorData = _rotVec + // rotation vector[4]  is a quaternion [w,x,y,z]
-                            _lacc + // [3] linear acceleration x,y,z
-                            _pres + // [1] atmospheric pressure
-                            _grav + // [3] vector indicating the direction and magnitude of gravity x,y,z
-                            _gyro + // [3] gyro data for time series prediction
-                            _hrRaw + // [16] undocumented data from Samsung's Hr raw sensor
-                            floatArrayOf(
-                                press, // initial atmospheric pressure collected during calibration
-                                north // body orientation in relation to magnetic north pole collected during calibration
-                            )
-                    val buffer = ByteBuffer.allocate(4 * msgSize)
-                    for (v in sensorData) {
-                        buffer.putFloat(v)
+                udpSocket.use {
+                    _sensorStrState.value = SensorStreamState.Streaming
+                    while (sensorStrState.value == SensorStreamState.Streaming) {
+                        // write to data
+                        val sensorData = _rotVec + // rotation vector[4]  is a quaternion [w,x,y,z]
+                                _lacc + // [3] linear acceleration x,y,z
+                                _pres + // [1] atmospheric pressure
+                                _grav + // [3] vector indicating the direction and magnitude of gravity x,y,z
+                                _gyro + // [3] gyro data for time series prediction
+                                _hrRaw + // [16] undocumented data from Samsung's Hr raw sensor
+                                floatArrayOf(
+                                    press, // initial atmospheric pressure collected during calibration
+                                    north // body orientation in relation to magnetic north pole collected during calibration
+                                )
+                        val buffer = ByteBuffer.allocate(4 * msgSize)
+                        for (v in sensorData) {
+                            buffer.putFloat(v)
+                        }
+                        val dp = DatagramPacket(
+                            buffer.array(),
+                            buffer.capacity(),
+                            socketInetAddress,
+                            port
+                        )
+                        // finally, send the byte stream
+                        udpSocket.send(dp)
+                        delay(IMU_STREAM_INTERVAL)
                     }
-                    val dp = DatagramPacket(
-                        buffer.array(),
-                        buffer.capacity(),
-                        socketInetAddress,
-                        port
-                    )
-                    // finally, send the byte stream
-                    udpSocket.send(dp)
-                    delay(IMU_STREAM_INTERVAL)
                 }
+            } catch (e: Exception) {
+                // if the loop ends of was disrupted, close everything and reset
+                Log.w(TAG, e.message.toString())
+                _sensorStrState.value = SensorStreamState.Error
             }
         }
     }

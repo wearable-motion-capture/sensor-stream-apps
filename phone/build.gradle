@@ -54,6 +54,7 @@ dependencies {
     implementation "androidx.core:core-ktx:$core_version"
     implementation "androidx.preference:preference-ktx:1.2.0"
     implementation "com.google.android.gms:play-services-wearable:18.0.0"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.6.4"
     debugImplementation "androidx.compose.ui:ui-tooling:$compose_ui_version"
 
 //    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.1'
@@ -61,7 +62,6 @@ dependencies {
 //    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
 //    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 //    androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_ui_version"
-
 //    debugImplementation "androidx.compose.ui:ui-test-manifest:$compose_ui_version"
 //    implementation "androidx.compose.ui:ui:$compose_ui_version"
 }

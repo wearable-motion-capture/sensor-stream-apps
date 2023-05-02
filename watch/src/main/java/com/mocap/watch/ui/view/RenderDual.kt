@@ -43,7 +43,7 @@ fun RenderDual(
         }
         item {
             Text(
-                text = if (appState) "Phone App Ready" else "Phone App Inactive",
+                text = if (appState) "Phone App Active" else "Awaiting Phone App",
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
                 color = if (appState) Color.Green else Color.Red

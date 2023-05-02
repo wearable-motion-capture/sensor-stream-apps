@@ -8,6 +8,7 @@ import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.CapabilityInfo
 import com.google.android.gms.wearable.ChannelClient.Channel
+import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
 import com.mocap.phone.DataSingleton
 import com.mocap.phone.ImuPpgStreamState
@@ -21,6 +22,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -40,6 +42,7 @@ class PhoneViewModel(application: Application) :
 
     private val _capabilityClient by lazy { Wearable.getCapabilityClient(application) }
     private val _channelClient by lazy { Wearable.getChannelClient(application) }
+    private val _messageClient by lazy { Wearable.getMessageClient(application) }
     private val _scope = CoroutineScope(Job() + Dispatchers.IO)
 
     private var _connectedNodeId: String = "none"
@@ -51,14 +54,18 @@ class PhoneViewModel(application: Application) :
     private val _connectedNodeDisplayName = MutableStateFlow("none")
     val nodeName = _connectedNodeDisplayName.asStateFlow()
 
-    private val _connectedActiveApp = MutableStateFlow(false)
-    val appActive = _connectedActiveApp.asStateFlow()
+    private val _pingSuccess = MutableStateFlow(false)
+    val appActive = _pingSuccess.asStateFlow()
+    private var _lastPing = LocalDateTime.now()
 
     private val _soundStreamState = MutableStateFlow(SoundStreamState.Idle)
     val soundStreamState = _soundStreamState.asStateFlow()
 
     private val _soundBroadcastHz = MutableStateFlow(0.0F)
     val soundBroadcastHz = _soundBroadcastHz.asStateFlow()
+
+    private val _soundStreamQueue = MutableStateFlow(0)
+    val soundStreamQueue = _soundStreamQueue.asStateFlow()
 
     private val _imuPpgStreamState = MutableStateFlow(ImuPpgStreamState.Idle)
     val imuPpgStreamState = _imuPpgStreamState.asStateFlow()
@@ -104,23 +111,18 @@ class PhoneViewModel(application: Application) :
     /**
      * update display frequencies on the screen
      */
-    fun updateHzCounts() {
+    fun regularUiUpdates() {
         _scope.launch {
-            var streamTs = LocalDateTime.now()
             while (true) {
-                // estimate the message frequency
-                val diff = Duration.between(streamTs, LocalDateTime.now()).toMillis()
-                if (diff >= 2000) {
-                    streamTs = LocalDateTime.now()
-                    _imuPpgBroadcastHz.value = _imuPpgBroadcastCount.toFloat() / 2.0F
-                    _imuPpgStreamHz.value = _watchMsgCount.toFloat() / 2.0F
-                    _soundBroadcastHz.value = _soundBroadcastCount.toFloat() / 2.0F
-                    _queueSize.value = _imuPpgQueue.count()
-                    _imuPpgBroadcastCount = 0
-                    _watchMsgCount = 0
-                    _soundBroadcastCount = 0
-                }
-                delay(500L)
+                _imuPpgBroadcastHz.value = _imuPpgBroadcastCount.toFloat() / 2.0F
+                _imuPpgStreamHz.value = _watchMsgCount.toFloat() / 2.0F
+                _soundBroadcastHz.value = _soundBroadcastCount.toFloat() / 2.0F
+                _queueSize.value = _imuPpgQueue.count()
+                _imuPpgBroadcastCount = 0
+                _watchMsgCount = 0
+                _soundBroadcastCount = 0
+                requestPing() // confirm both apps are active
+                delay(2000L)
             }
         }
     }
@@ -128,65 +130,71 @@ class PhoneViewModel(application: Application) :
     /**
      * reads watch IMU + PPG messages from _imuPpgQueue and broadcasts them via UDP
      */
-    private suspend fun udpImuPpgBroadcast() {
-        // our constants for this loop
-        val port = DataSingleton.UDP_IMU_PORT
-        val ip = DataSingleton.ip.value
-        val udpMsgSize = DataSingleton.UDP_IMU_MSG_SIZE
-        val calibratedDat = DataSingleton.watchQuat.value +
-                DataSingleton.phoneQuat.value +
-                floatArrayOf(DataSingleton.watchPres.value)
+    private suspend fun udpImuPpgBroadcast(c: Channel) {
+        try {
+            // our constants for this loop
+            val port = DataSingleton.UDP_IMU_PORT
+            val ip = DataSingleton.ip.value
+            val udpMsgSize = DataSingleton.UDP_IMU_MSG_SIZE
+            val calibratedDat = DataSingleton.watchQuat.value +
+                    DataSingleton.phoneQuat.value +
+                    floatArrayOf(DataSingleton.watchPres.value)
 
+            withContext(Dispatchers.IO) {
+                // open a socket
+                val udpSocket = DatagramSocket(port)
+                udpSocket.broadcast = true
+                val socketInetAddress = InetAddress.getByName(ip)
+                Log.v(TAG, "Opened UDP socket to $ip:$port")
 
-        withContext(Dispatchers.IO) {
-            // open a socket
-            val udpSocket = DatagramSocket(port)
-            udpSocket.broadcast = true
-            val socketInetAddress = InetAddress.getByName(ip)
-            Log.v(TAG, "Opened UDP socket to $ip:$port")
+                udpSocket.use {
+                    // begin the loop
+                    while (imuPpgStreamState.value == ImuPpgStreamState.Streaming) {
 
-            udpSocket.use {
-                // begin the loop
-                while (imuPpgStreamState.value == ImuPpgStreamState.Streaming) {
-
-                    // get data from queue
-                    var lastDat = _imuPpgQueue.poll()
-//                    while (_datQueue.isNotEmpty()) {
-//                        lastDat = _datQueue.poll()
-//                    }
-
-                    // if we got some data from the watch...
-                    if (lastDat != null) {
-
-                        // compose phone message data
-                        val udpData = _rotVec + // rotation quaternion [w,x,y,z]
-                                _lacc + // linear acceleration [x,y,z]
-                                _grav + // magnitude of gravity [x,y,z]
-                                _gyro + // gyro data [x,y,z]
-                                calibratedDat // from calibration
-
-                        // write phone and watch data to buffer
-                        val buffer = ByteBuffer.allocate(4 * udpMsgSize)
-                        // put smartwatch data
-                        buffer.put(lastDat)
-                        // append phone data
-                        for (v in udpData) {
-                            buffer.putFloat(v)
+                        // get data from queue
+                        // skip entries that are already old
+                        var lastDat = _imuPpgQueue.poll()
+                        while (_imuPpgQueue.isNotEmpty()) {
+                            lastDat = _imuPpgQueue.poll()
                         }
 
-                        // create packet
-                        val dp = DatagramPacket(
-                            buffer.array(),
-                            buffer.capacity(),
-                            socketInetAddress,
-                            port
-                        )
-                        // finally, send via UDP
-                        udpSocket.send(dp)
-                        _imuPpgBroadcastCount += 1 // for Hz estimation
+                        // if we got some data from the watch...
+                        if (lastDat != null) {
+
+                            // compose phone message data
+                            val udpData = _rotVec + // rotation quaternion [w,x,y,z]
+                                    _lacc + // linear acceleration [x,y,z]
+                                    _grav + // magnitude of gravity [x,y,z]
+                                    _gyro + // gyro data [x,y,z]
+                                    calibratedDat // from calibration
+
+                            // write phone and watch data to buffer
+                            val buffer = ByteBuffer.allocate(4 * udpMsgSize)
+                            // put smartwatch data
+                            buffer.put(lastDat)
+                            // append phone data
+                            for (v in udpData) {
+                                buffer.putFloat(v)
+                            }
+
+                            // create packet
+                            val dp = DatagramPacket(
+                                buffer.array(),
+                                buffer.capacity(),
+                                socketInetAddress,
+                                port
+                            )
+                            // finally, send via UDP
+                            udpSocket.send(dp)
+                            _imuPpgBroadcastCount += 1 // for Hz estimation
+                        }
                     }
                 }
             }
+        } catch (e: Exception) {
+            Log.w(TAG, e.message.toString())
+            _imuPpgStreamState.value = ImuPpgStreamState.Error
+            _channelClient.close(c)
         }
     }
 
@@ -194,38 +202,41 @@ class PhoneViewModel(application: Application) :
      * Fills the _imuPpgQueue
      */
     private fun imuPpgQueueFiller(c: Channel) {
-        // get the input stream from the opened channel
-        val streamTask = _channelClient.getInputStream(c)
-        val stream = Tasks.await(streamTask)
-        stream.use {
-            // begin the loop
-            while (imuPpgStreamState.value == ImuPpgStreamState.Streaming) {
-                // if more than 0 bytes are available
-                if (stream.available() > 0) {
-                    // read input stream message into buffer
-                    val buffer = ByteBuffer.allocate(4 * DataSingleton.WATCH_MSG_SIZE)
-                    stream.read(buffer.array(), 0, buffer.capacity())
-                    _imuPpgQueue.add(buffer.array())
-                    // for Hz estimation
-                    _watchMsgCount += 1
+        try {
+            // get the input stream from the opened channel
+            val streamTask = _channelClient.getInputStream(c)
+            val stream = Tasks.await(streamTask)
+            stream.use {
+                // begin the loop
+                while (imuPpgStreamState.value == ImuPpgStreamState.Streaming) {
+                    // if more than 0 bytes are available
+                    if (stream.available() > 0) {
+                        // read input stream message into buffer
+                        val buffer = ByteBuffer.allocate(4 * DataSingleton.WATCH_MSG_SIZE)
+                        stream.read(buffer.array(), 0, buffer.capacity())
+                        _imuPpgQueue.add(buffer.array())
+                        // for Hz estimation
+                        _watchMsgCount += 1
+                    }
                 }
             }
+        } catch (e: Exception) {
+            Log.w(TAG, e.message.toString())
+            _imuPpgStreamState.value = ImuPpgStreamState.Error
+            _channelClient.close(c)
         }
     }
 
-    fun onImuPpgChannelOpened(c: Channel) {
-        Log.d(TAG, "${c.path} opened by ${c.nodeId}")
+    private fun onImuPpgChannelOpened(c: Channel) {
         // set the local state to Streaming and start three loops
         _imuPpgStreamState.value = ImuPpgStreamState.Streaming
         // First, start the coroutine to fill the queue with streamed watch data
         _scope.launch { imuPpgQueueFiller(c) }
-        // Then, start the coroutine to deal with queued data and broadcast it via UDP
-        _scope.launch { udpImuPpgBroadcast() }
+        // Also, start the coroutine to deal with queued data and broadcast it via UDP
+        _scope.launch { udpImuPpgBroadcast(c) }
     }
 
-    fun onSoundChannelOpened(c: Channel) {
-        Log.d(TAG, "${c.path} opened by ${c.nodeId}")
-
+    private fun onSoundChannelOpened(c: Channel) {
         _scope.launch {
             // our constants for this loop
             val port = DataSingleton.UDP_AUDIO_PORT
@@ -233,37 +244,45 @@ class PhoneViewModel(application: Application) :
             val msgSize = DataSingleton.AUDIO_BUFFER_SIZE
 
             withContext(Dispatchers.IO) {
+                try {
+                    // open a socket
+                    val udpSocket = DatagramSocket(port)
+                    udpSocket.broadcast = true
+                    val socketInetAddress = InetAddress.getByName(ip)
+                    Log.v(TAG, "Opened UDP socket to $ip:$port")
 
-                // open a socket
-                val udpSocket = DatagramSocket(port)
-                udpSocket.broadcast = true
-                val socketInetAddress = InetAddress.getByName(ip)
-                Log.v(TAG, "Opened UDP socket to $ip:$port")
+                    // get input stream
+                    val streamTask = _channelClient.getInputStream(c)
+                    val stream = Tasks.await(streamTask)
 
-                // get input stream
-                val streamTask = _channelClient.getInputStream(c)
-                val stream = Tasks.await(streamTask)
-
-                stream.use {
-                    udpSocket.use {
-                        // begin the loop
-                        _soundStreamState.value = SoundStreamState.Streaming
-                        while (soundStreamState.value == SoundStreamState.Streaming) {
-                            // read input stream message into buffer
-                            if (stream.available() > 0) {
-                                val buffer = ByteBuffer.allocate(msgSize)
-                                stream.read(buffer.array(), 0, buffer.capacity())
-                                // create packet
-                                val dp = DatagramPacket(
-                                    buffer.array(), buffer.capacity(),
-                                    socketInetAddress, port
-                                )
-                                // broadcast via UDP
-                                udpSocket.send(dp)
-                                _soundBroadcastCount += 1 // for Hz estimation
+                    stream.use {
+                        udpSocket.use {
+                            // begin the loop
+                            _soundStreamState.value = SoundStreamState.Streaming
+                            while (soundStreamState.value == SoundStreamState.Streaming) {
+                                // read input stream message into buffer
+                                if (stream.available() > 0) {
+                                    val buffer = ByteBuffer.allocate(msgSize)
+                                    stream.read(buffer.array(), 0, buffer.capacity())
+                                    // create packet
+                                    val dp = DatagramPacket(
+                                        buffer.array(), buffer.capacity(),
+                                        socketInetAddress, port
+                                    )
+                                    // broadcast via UDP
+                                    udpSocket.send(dp)
+                                    _soundBroadcastCount += 1 // for Hz estimation
+                                    _soundStreamQueue.value =
+                                        stream.available() // inform about stream overhead
+                                }
                             }
                         }
                     }
+                } catch (e: Exception) {
+                    Log.w(TAG, e.message.toString())
+                    _soundStreamState.value = SoundStreamState.Error
+                } finally {
+                    _channelClient.close(c)
                 }
             }
         }
@@ -287,8 +306,6 @@ class PhoneViewModel(application: Application) :
 
     override fun onCapabilityChanged(capabilityInfo: CapabilityInfo) {
         val deviceCap = DataSingleton.WATCH_CAPABILITY
-        val appCap = DataSingleton.WATCH_APP_ACTIVE
-
         // this checks if a phone is available at all
         when (capabilityInfo.name) {
             deviceCap -> {
@@ -297,23 +314,47 @@ class PhoneViewModel(application: Application) :
                     throw Exception("More than one node with $deviceCap detected: $nodes")
                 } else if (nodes.isEmpty()) {
                     _connectedNodeDisplayName.value = "No device"
+                    _connectedNodeId = "none"
                 } else {
                     _connectedNodeDisplayName.value = nodes.first().displayName
+                    _connectedNodeId = nodes.first().id
                 }
                 Log.d(TAG, "Connected phone : $nodes")
             }
-            // check if the app is running and open a communication channel if so
-            appCap -> {
-                val nodes = capabilityInfo.nodes
-                if (nodes.count() > 1) {
-                    throw Exception("More than one node with $appCap detected: $nodes")
-                } else {
-                    _connectedActiveApp.value = nodes.isNotEmpty()
-                    _connectedNodeId = if (nodes.isNotEmpty()) {
-                        nodes.first().id
-                    } else {
-                        "none"
-                    }
+        }
+        requestPing() // check if the app is answering to pings
+    }
+
+    /** send a ping request */
+    private fun requestPing() {
+        _scope.launch {
+            _messageClient.sendMessage(_connectedNodeId, DataSingleton.PING_REQ, null).await()
+            delay(1000L)
+            // reset success indicator if the response takes too long
+            if (Duration.between(_lastPing, LocalDateTime.now()).toMillis() > 1100L) {
+                _pingSuccess.value = false
+            }
+        }
+    }
+
+    /**
+     * check for ping messages
+     * This function is called by the listener registered in the PhoneMain Activity
+     */
+    fun onMessageReceived(messageEvent: MessageEvent) {
+        when (messageEvent.path) {
+            DataSingleton.PING_REP -> {
+                _pingSuccess.value = true
+                _lastPing = LocalDateTime.now()
+            }
+
+            DataSingleton.PING_REQ -> {
+                // reply to a ping request
+                _pingSuccess.value = true
+                _lastPing = LocalDateTime.now()
+                _scope.launch {
+                    _messageClient.sendMessage(_connectedNodeId, DataSingleton.PING_REP, null)
+                        .await()
                 }
             }
         }
@@ -322,11 +363,11 @@ class PhoneViewModel(application: Application) :
     // Events
     /** sensor callbacks */
     // Individual sensor reads are triggered by their onValueChanged events
-    fun onLaccReadout(newReadout: FloatArray) {
+    private fun onLaccReadout(newReadout: FloatArray) {
         _lacc = newReadout
     }
 
-    fun onRotVecReadout(newReadout: FloatArray) {
+    private fun onRotVecReadout(newReadout: FloatArray) {
         // newReadout is [x,y,z,w, confidence]
         // our preferred order system is [w,x,y,z]
         _rotVec = floatArrayOf(
@@ -337,15 +378,15 @@ class PhoneViewModel(application: Application) :
         )
     }
 
-    fun onGyroReadout(newReadout: FloatArray) {
+    private fun onGyroReadout(newReadout: FloatArray) {
         _gyro = newReadout
     }
 
-    fun onMagnReadout(newReadout: FloatArray) {
+    private fun onMagnReadout(newReadout: FloatArray) {
         _magn = newReadout
     }
 
-    fun onGravReadout(newReadout: FloatArray) {
+    private fun onGravReadout(newReadout: FloatArray) {
         _grav = newReadout
     }
 
@@ -367,8 +408,19 @@ class PhoneViewModel(application: Application) :
 
     fun onChannelClose(channel: Channel) {
         when (channel.path) {
-            DataSingleton.SENSOR_CHANNEL_PATH -> _imuPpgStreamState.value = ImuPpgStreamState.Idle
-            DataSingleton.SOUND_CHANNEL_PATH -> _soundStreamState.value = SoundStreamState.Idle
+            DataSingleton.SENSOR_CHANNEL_PATH -> _imuPpgStreamState.value =
+                when (_imuPpgStreamState.value) {
+                    ImuPpgStreamState.Idle -> ImuPpgStreamState.Idle
+                    ImuPpgStreamState.Streaming -> ImuPpgStreamState.Idle
+                    ImuPpgStreamState.Error -> ImuPpgStreamState.Error
+                }
+
+            DataSingleton.SOUND_CHANNEL_PATH -> _soundStreamState.value =
+                when (_soundStreamState.value) {
+                    SoundStreamState.Idle -> SoundStreamState.Idle
+                    SoundStreamState.Streaming -> SoundStreamState.Idle
+                    SoundStreamState.Error -> SoundStreamState.Error
+                }
         }
     }
 

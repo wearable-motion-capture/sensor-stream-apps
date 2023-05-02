@@ -29,6 +29,7 @@ class DualActivity : ComponentActivity() {
 
     private val _channelClient by lazy { Wearable.getChannelClient(this) }
     private val _capabilityClient by lazy { Wearable.getCapabilityClient(this) }
+    private val _messageClient by lazy { Wearable.getMessageClient(this) }
     private val _dualViewModel by viewModels<DualViewModel>()
     private val _channelCallback = WatchChannelCallback(
         closeCallback = { _dualViewModel.onChannelClose(it) }
@@ -65,6 +66,7 @@ class DualActivity : ComponentActivity() {
             69682 // Samsung HR Raw Sensor this is the only Galaxy5 raw sensor that worked
         ) { _dualViewModel.onHrRawReadout(it) }
     )
+
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -82,6 +84,7 @@ class DualActivity : ComponentActivity() {
 
                 // check if a phone is connected and set state flows accordingly
                 _dualViewModel.queryCapabilities()
+                _dualViewModel.regularConnectionCheck()
                 val connectedNode = _dualViewModel.nodeName
                 val appActiveStateFlow = _dualViewModel.appActive
 
@@ -116,6 +119,7 @@ class DualActivity : ComponentActivity() {
      * To register all listeners for all used channels
      */
     private fun registerListeners() {
+        _messageClient.addListener(_dualViewModel)
         // to handle incoming data streams
         _channelClient.registerChannelCallback(_channelCallback)
         // for the phone app to detect this phone
@@ -136,6 +140,7 @@ class DualActivity : ComponentActivity() {
      * clear all listeners
      */
     private fun unregisterListeners() {
+        _messageClient.removeListener(_dualViewModel)
         _channelClient.unregisterChannelCallback(_channelCallback)
         _capabilityClient.removeListener(_dualViewModel)
         _capabilityClient.removeLocalCapability(DataSingleton.WATCH_APP_ACTIVE)
