@@ -13,8 +13,8 @@ import androidx.wear.compose.material.Text
 import kotlinx.coroutines.flow.StateFlow
 
 import com.mocap.watch.DataSingleton
-import com.mocap.watch.modules.SensorStreamState
-import com.mocap.watch.modules.SoundStreamState
+import com.mocap.watch.SensorStreamState
+import com.mocap.watch.SoundStreamState
 import com.mocap.watch.ui.DefaultButton
 import com.mocap.watch.ui.DefaultText
 import com.mocap.watch.ui.RedButton
@@ -31,8 +31,8 @@ fun RenderStandalone(
     finishCallback: () -> Unit
 ) {
 
-    val audioState by soundStateFlow.collectAsState()
     val sensorState by sensorStateFlow.collectAsState()
+    val soundState by soundStateFlow.collectAsState()
     val ip by DataSingleton.IP.collectAsState()
     val north by DataSingleton.CALIB_NORTH.collectAsState()
     val press by DataSingleton.CALIB_PRESS.collectAsState()
@@ -66,22 +66,24 @@ fun RenderStandalone(
 //            )
 //        }
         item {
-            DataStateDisplay(state = sensorState, modifier = Modifier.fillMaxWidth())
+            SensorStateDisplay(state = sensorState, modifier = Modifier.fillMaxWidth())
         }
         item {
             StreamToggle(
-                enabled = (sensorState == SensorStreamState.Idle) or
-                        (sensorState == SensorStreamState.Streaming),
-                text = "Stream to IP",
+                enabled = true,
+                text = "Stream IMU + PPG",
                 checked = (sensorState == SensorStreamState.Streaming),
                 onChecked = { imuStreamCallback(it) }
             )
         }
         item {
+            SoundStateDisplay(state = soundState, modifier = Modifier.fillMaxWidth())
+        }
+        item {
             StreamToggle(
                 enabled = true,
-                text = "Stream MIC",
-                checked = (audioState == SoundStreamState.Streaming),
+                text = "Stream Audio",
+                checked = (soundState == SoundStreamState.Streaming),
                 onChecked = { micStreamCallback(it) }
             )
         }
@@ -91,7 +93,7 @@ fun RenderStandalone(
         item {
             DefaultButton(
                 enabled = (sensorState == SensorStreamState.Idle) &&
-                        (audioState == SoundStreamState.Idle),
+                        (soundState == SoundStreamState.Idle),
                 onClick = { ipSetCallback() },
                 text = "Set Target IP"
             )
@@ -110,11 +112,34 @@ fun RenderStandalone(
  * ready, recording/streaming, processing
  */
 @Composable
-fun DataStateDisplay(state: SensorStreamState, modifier: Modifier = Modifier) {
+fun SensorStateDisplay(state: SensorStreamState, modifier: Modifier = Modifier) {
     var color = Color.Red
     if (state == SensorStreamState.Idle) {
-        color = Color.Green
+        color = Color.Yellow
     } else if (state == SensorStreamState.Streaming) {
+        color = Color.Green
+    }
+    Text(
+        modifier = modifier,
+        textAlign = TextAlign.Center,
+        text = state.name,
+        style = MaterialTheme.typography.body1.copy(
+            color = color
+        )
+    )
+}
+
+
+/**
+ * The simple state display when recording or streaming data. Switches between:
+ * ready, recording/streaming, processing
+ */
+@Composable
+fun SoundStateDisplay(state: SoundStreamState, modifier: Modifier = Modifier) {
+    var color = Color.Red
+    if (state == SoundStreamState.Idle) {
+        color = Color.Green
+    } else if (state == SoundStreamState.Streaming) {
         color = Color.Yellow
     }
     Text(

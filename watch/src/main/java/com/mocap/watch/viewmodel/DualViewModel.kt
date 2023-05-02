@@ -1,7 +1,12 @@
 package com.mocap.watch.viewmodel
 
+import android.Manifest
 import android.app.Application
+import android.media.AudioFormat
+import android.media.AudioRecord
+import android.media.MediaRecorder
 import android.util.Log
+import androidx.annotation.RequiresPermission
 import androidx.lifecycle.AndroidViewModel
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.CapabilityClient
@@ -9,7 +14,8 @@ import com.google.android.gms.wearable.CapabilityInfo
 import com.google.android.gms.wearable.ChannelClient.Channel
 import com.google.android.gms.wearable.Wearable
 import com.mocap.watch.DataSingleton
-import kotlinx.coroutines.CancellationException
+import com.mocap.watch.SensorStreamState
+import com.mocap.watch.SoundStreamState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -23,21 +29,16 @@ import java.nio.ByteBuffer
 import java.time.Duration
 import java.time.LocalDateTime
 
-
-enum class StreamState {
-    Idle, // app waits for user to trigger the streaming
-    Error, // error state. Stop using the app,
-    Streaming // streaming to Phone
-}
-
-
 class DualViewModel(application: Application) :
     AndroidViewModel(application),
     CapabilityClient.OnCapabilityChangedListener {
 
     companion object {
         private const val TAG = "DualViewModel"  // for logging
-        private const val STREAM_INTERVAL = DataSingleton.STREAM_INTERVAL
+        private const val IMU_PPG_STREAM_INTERVAL = DataSingleton.STREAM_INTERVAL
+        private const val AUDIO_RATE = 16000 // can go up to 44K, if needed
+        private const val AUDIO_CHANNEL_IN = AudioFormat.CHANNEL_IN_MONO
+        private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
     }
 
     private val _capabilityClient by lazy { Wearable.getCapabilityClient(application) }
@@ -54,8 +55,11 @@ class DualViewModel(application: Application) :
     private val _connectedActiveApp = MutableStateFlow(false)
     val appActive = _connectedActiveApp.asStateFlow()
 
-    private val _streamState = MutableStateFlow(StreamState.Idle)
-    val streamState = _streamState.asStateFlow()
+    private val _sensorstreamStateSensor = MutableStateFlow(SensorStreamState.Idle)
+    val sensorStreamState = _sensorstreamStateSensor.asStateFlow()
+
+    private val _soundSensorStreamState = MutableStateFlow(SoundStreamState.Idle)
+    val soundStreamState = _soundSensorStreamState.asStateFlow()
 
     // callbacks will write to these variables
     private var _rotVec: FloatArray = FloatArray(5) // Rotation Vector sensor or estimation
@@ -68,20 +72,87 @@ class DualViewModel(application: Application) :
     private var _magn: FloatArray = FloatArray(3) // magnetic
 
     override fun onCleared() {
+        super.onCleared()
         _scope.cancel()
-        _streamState.value = StreamState.Idle
+        _sensorstreamStateSensor.value = SensorStreamState.Idle
+        _soundSensorStreamState.value = SoundStreamState.Idle
+        Log.d(TAG, "Cleared")
     }
 
     fun onChannelClose(c: Channel) {
-        _streamState.value = StreamState.Idle
+        // reset the corresponding stream loop
+        when (c.path) {
+            DataSingleton.SENSOR_CHANNEL_PATH -> _sensorstreamStateSensor.value =
+                SensorStreamState.Idle
+
+            DataSingleton.SOUND_CHANNEL_PATH -> _soundSensorStreamState.value =
+                SoundStreamState.Idle
+        }
     }
 
-    fun streamTrigger(checked: Boolean) {
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+    fun audioStreamTrigger(checked: Boolean) {
         if (!checked) {
-            _streamState.value = StreamState.Idle
+            _soundSensorStreamState.value = SoundStreamState.Idle
         } else {
-            if (streamState.value == StreamState.Streaming) {
-                throw Exception("The StreamState.Streaming should not be active on start")
+            if (_soundSensorStreamState.value == SoundStreamState.Streaming) {
+                throw Exception("The StreamState.Streaming should not be active at start")
+            }
+            _scope.launch {
+                // Open the channel
+                val channel = _channelClient.openChannel(
+                    _connectedNodeId,
+                    DataSingleton.SOUND_CHANNEL_PATH
+                ).await()
+                Log.d(TAG, "Opened ${DataSingleton.SOUND_CHANNEL_PATH} to $_connectedNodeId")
+                // Create an AudioRecord object for the streaming
+                val audioRecord = AudioRecord.Builder()
+                    .setAudioSource(MediaRecorder.AudioSource.MIC)
+                    .setAudioFormat(
+                        AudioFormat.Builder()
+                            .setSampleRate(AUDIO_RATE)
+                            .setChannelMask(AUDIO_CHANNEL_IN)
+                            .setEncoding(AUDIO_FORMAT)
+                            .build()
+                    )
+                    .setBufferSizeInBytes(DataSingleton.AUDIO_BUFFER_SIZE)
+                    .build()
+                // begin streaming the microphone
+                audioRecord.startRecording()
+                Log.d(TAG, "Initiate audio stream")
+                try {
+                    // get output stream
+                    val outputStream = _channelClient.getOutputStream(channel).await()
+                    outputStream.use {
+                        // start the stream loop
+                        _soundSensorStreamState.value = SoundStreamState.Streaming
+                        while (_soundSensorStreamState.value == SoundStreamState.Streaming) {
+                            val buffer = ByteBuffer.allocate(DataSingleton.AUDIO_BUFFER_SIZE)
+                            audioRecord.read(buffer.array(), 0, buffer.capacity())
+                            outputStream.write(buffer.array(), 0, buffer.capacity())
+                        }
+                    }
+                } catch (e: Exception) {
+                    // In case the channel gets destroyed while still in the loop
+                    _channelClient.close(channel)
+                    Log.d(TAG, e.message.toString())
+                    _sensorstreamStateSensor.value = SensorStreamState.Error
+                } finally {
+                    // if the loop ends of was disrupted, close everything and reset
+                    audioRecord.release()
+                    _channelClient.close(channel)
+                }
+                Log.d(TAG, "Audio stream complete")
+            }
+        }
+    }
+
+    fun sensorStreamTrigger(checked: Boolean) {
+        if (!checked) {
+            _sensorstreamStateSensor.value = SensorStreamState.Idle
+        } else {
+            if (sensorStreamState.value == SensorStreamState.Streaming) {
+                throw Exception("The StreamState.Streaming should not be active at start")
             }
 
             _scope.launch {
@@ -89,19 +160,18 @@ class DualViewModel(application: Application) :
                 // Open the channel
                 val channel = _channelClient.openChannel(
                     _connectedNodeId,
-                    DataSingleton.CHANNEL_PATH
+                    DataSingleton.SENSOR_CHANNEL_PATH
                 ).await()
-                Log.d(TAG, "Opened Channel to $_connectedNodeId")
+                Log.d(TAG, "Opened ${DataSingleton.SENSOR_CHANNEL_PATH} to $_connectedNodeId")
 
                 try {
                     // get output stream
                     val outputStream = _channelClient.getOutputStream(channel).await()
                     outputStream.use {
-
                         // start the stream loop
-                        _streamState.value = StreamState.Streaming
+                        _sensorstreamStateSensor.value = SensorStreamState.Streaming
                         val streamStartTimeStamp = LocalDateTime.now()
-                        while (streamState.value == StreamState.Streaming) {
+                        while (sensorStreamState.value == SensorStreamState.Streaming) {
                             val diff =
                                 Duration.between(
                                     streamStartTimeStamp,
@@ -123,25 +193,16 @@ class DualViewModel(application: Application) :
 
                             // write to output stream
                             outputStream.write(buffer.array(), 0, buffer.capacity())
-                            delay(STREAM_INTERVAL)
+                            delay(IMU_PPG_STREAM_INTERVAL)
                         }
                     }
-                } catch (e: CancellationException) {
-                    // In case the scope gets cancelled while still in the loop
-                    _channelClient.close(channel)
-                    Log.d(TAG, "Unexpected scope cancel \n" + e.message.toString())
-                    _streamState.value = StreamState.Error
-                    return@launch
                 } catch (e: Exception) {
                     // In case the channel gets destroyed while still in the loop
-                    _channelClient.close(channel)
                     Log.d(TAG, e.message.toString())
-                    _streamState.value = StreamState.Error
-                    return@launch
+                    _sensorstreamStateSensor.value = SensorStreamState.Error
+                } finally {
+                    _channelClient.close(channel)
                 }
-
-                // the while loop is done, close channel an reset stream state
-                _channelClient.close(channel)
                 Log.d(TAG, "Stream Trigger complete")
             }
         }

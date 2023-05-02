@@ -14,8 +14,8 @@ import androidx.annotation.RequiresPermission
 import androidx.preference.PreferenceManager
 import com.mocap.watch.DataSingleton
 import com.mocap.watch.modules.SensorListener
-import com.mocap.watch.modules.StandaloneViewModel
 import com.mocap.watch.ui.theme.WatchTheme
+import com.mocap.watch.viewmodel.StandaloneViewModel
 
 
 open class StandaloneActivity : ComponentActivity() {
@@ -91,7 +91,7 @@ open class StandaloneActivity : ComponentActivity() {
                     },
                     imuStreamCallback = { _standaloneViewModel.triggerImuStreamUdp(it) },
                     micStreamCallback = { _standaloneViewModel.triggerMicStream(it) },
-                    finishCallback = { this.finish() }
+                    finishCallback = ::finish
                 )
 
             }

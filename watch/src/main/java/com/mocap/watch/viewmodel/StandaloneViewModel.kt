@@ -1,4 +1,4 @@
-package com.mocap.watch.modules
+package com.mocap.watch.viewmodel
 
 import android.Manifest
 import android.app.Application
@@ -6,8 +6,11 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.util.Log
+import androidx.annotation.RequiresPermission
 import androidx.lifecycle.AndroidViewModel
 import com.mocap.watch.DataSingleton
+import com.mocap.watch.SensorStreamState
+import com.mocap.watch.SoundStreamState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -17,23 +20,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.annotation.RequiresPermission
-
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 import java.nio.ByteBuffer
 
-enum class SensorStreamState {
-    Idle, // app waits for user to trigger the recording
-    Error, // error state. Stop using the app,
-    Streaming // streaming to IP and Port set in StateModule
-}
-
-enum class SoundStreamState {
-    Idle, // app waits for the trigger
-    Streaming // streaming to IP and Port
-}
 
 class StandaloneViewModel(application: Application) :
     AndroidViewModel(application) {
@@ -45,7 +36,7 @@ class StandaloneViewModel(application: Application) :
         private const val RECORDING_RATE = 16000 // can go up to 44K, if needed
         private const val CHANNEL_IN = AudioFormat.CHANNEL_IN_MONO
         private const val FORMAT = AudioFormat.ENCODING_PCM_16BIT
-        private const val BUFFER_SIZE = 1600
+        private const val AUDIO_BUFFER_SIZE = 1600
     }
 
     private val _scope = CoroutineScope(Job() + Dispatchers.IO)
@@ -67,9 +58,10 @@ class StandaloneViewModel(application: Application) :
     private var _magn: FloatArray = FloatArray(3) // magnetic
 
     override fun onCleared() {
-        _scope.cancel()
         _sensorStrState.value = SensorStreamState.Idle
         _soundStrState.value = SoundStreamState.Idle
+        _scope.cancel()
+        Log.d(TAG, "Cleared")
     }
 
 
@@ -81,12 +73,8 @@ class StandaloneViewModel(application: Application) :
             if (_soundStrState.value == SoundStreamState.Streaming) {
                 throw Exception("The SoundStreamState.Streaming should not be active at start")
             }
-            try {
-                _scope.launch { soundStreamUdp() }
-            } catch (e: Exception) {
-                Log.v(TAG, "Sound Streaming error $e")
-                _soundStrState.value = SoundStreamState.Idle
-            }
+            // Create the tcpClient with set socket IP
+            _scope.launch { soundStreamUdp() }
         }
     }
 
@@ -94,60 +82,50 @@ class StandaloneViewModel(application: Application) :
     private suspend fun soundStreamUdp() {
         val ip = DataSingleton.IP.value
         val port = DataSingleton.UDP_AUDIO_PORT
-        // Create an AudioRecord object for the streaming
-        // val intSize = AudioRecord.getMinBufferSize(RECORDING_RATE, CHANNEL_IN, FORMAT)
-        val audioRecord = AudioRecord.Builder()
-            .setAudioSource(MediaRecorder.AudioSource.MIC)
-            .setAudioFormat(
-                AudioFormat.Builder()
-                    .setSampleRate(RECORDING_RATE)
-                    .setChannelMask(CHANNEL_IN)
-                    .setEncoding(FORMAT)
-                    .build()
-            )
-            .setBufferSizeInBytes(BUFFER_SIZE)
-            .build()
-
-//            // add noise suppression and echo cancellation
-//            if (NoiseSuppressor.isAvailable()) {
-//                NoiseSuppressor.create(audioRecord.getAudioSessionId()).setEnabled(true)
-//            }
-//            if (AcousticEchoCanceler.isAvailable()) {
-//                AcousticEchoCanceler.create(audioRecord.getAudioSessionId()).setEnabled(true)
-//            }
-
-        // begin streaming the microphone
-        audioRecord.startRecording()
-        Log.w(TAG, "Started Recording")
-        _soundStrState.value = SoundStreamState.Streaming
 
         // run the streaming in a thread
         withContext(Dispatchers.IO) {
-            try {
-                val udpSocket = DatagramSocket(port)
-                udpSocket.broadcast = true
-                Log.v(TAG, "Beginning to broadcast UDP mesage to $ip:$port")
+            // Create an AudioRecord object for the streaming
+            val audioRecord = AudioRecord.Builder()
+                .setAudioSource(MediaRecorder.AudioSource.MIC)
+                .setAudioFormat(
+                    AudioFormat.Builder()
+                        .setSampleRate(RECORDING_RATE)
+                        .setChannelMask(CHANNEL_IN)
+                        .setEncoding(FORMAT)
+                        .build()
+                )
+                .setBufferSizeInBytes(AUDIO_BUFFER_SIZE)
+                .build()
 
-                // read from audioRecord stream and send through to TCP output stream
-                val buffer = ByteArray(BUFFER_SIZE)
-                val socketInetAddress = InetAddress.getByName(ip)
+            // begin streaming the microphone
+            audioRecord.startRecording()
+            Log.w(TAG, "Started Recording")
 
-                udpSocket.use {
-                    while (soundStrState.value == SoundStreamState.Streaming) {
-                        audioRecord.read(buffer, 0, buffer.size)
-                        val dp = DatagramPacket(
-                            buffer,
-                            buffer.size,
-                            socketInetAddress,
-                            port
-                        )
-                        udpSocket.send(dp)
-                    }
+            // open a socket
+            val udpSocket = DatagramSocket(port)
+            udpSocket.broadcast = true
+            val socketInetAddress = InetAddress.getByName(ip)
+            Log.v(TAG, "Opened UDP socket to $ip:$port")
+
+            udpSocket.use {
+                // read from audioRecord stream and send through to UDP output stream
+                _soundStrState.value = SoundStreamState.Streaming
+                while (soundStrState.value == SoundStreamState.Streaming) {
+                    val buffer = ByteBuffer.allocate(AUDIO_BUFFER_SIZE)
+                    audioRecord.read(buffer.array(), 0, buffer.capacity())
+                    val dp = DatagramPacket(
+                        buffer.array(),
+                        buffer.capacity(),
+                        socketInetAddress,
+                        port
+                    )
+                    udpSocket.send(dp)
                 }
-            } finally {
-                // make sure to release the audio recorder
-                audioRecord.release()
             }
+            // make sure to release the audio recorder
+            audioRecord.release()
+            Log.v(TAG, "Release")
         }
     }
 
@@ -165,12 +143,7 @@ class StandaloneViewModel(application: Application) :
                 throw Exception("The StreamState.Streaming should not be active at start")
             }
             // Create the tcpClient with set socket IP
-            try {
-                _scope.launch { imuStreamUdp() }
-            } catch (e: Exception) {
-                Log.v(TAG, "Streaming error $e")
-                _sensorStrState.value = SensorStreamState.Idle
-            }
+            _scope.launch { imuStreamUdp() }
         }
     }
 
@@ -182,13 +155,13 @@ class StandaloneViewModel(application: Application) :
         val port = DataSingleton.UDP_IMU_PORT
         val msgSize = DataSingleton.WATCH_MESSAGE_SIZE
 
+
         // run the streaming in a thread
         withContext(Dispatchers.IO) {
             // open a socket
             val udpSocket = DatagramSocket(port)
             udpSocket.broadcast = true
             val socketInetAddress = InetAddress.getByName(ip)
-
             Log.v(TAG, "Opened UDP socket to $ip:$port")
 
             udpSocket.use {
@@ -220,9 +193,9 @@ class StandaloneViewModel(application: Application) :
                     delay(IMU_STREAM_INTERVAL)
                 }
             }
-            udpSocket.close()
         }
     }
+
 
     /** sensor callbacks */
     // Individual sensor reads are triggered by their onValueChanged events

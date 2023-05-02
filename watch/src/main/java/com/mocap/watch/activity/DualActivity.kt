@@ -1,5 +1,6 @@
 package com.mocap.watch.activity
 
+import android.Manifest
 import android.content.Intent
 import android.hardware.Sensor
 import android.hardware.SensorManager
@@ -10,6 +11,7 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.annotation.RequiresPermission
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.Wearable
 import com.mocap.watch.DataSingleton
@@ -63,7 +65,7 @@ class DualActivity : ComponentActivity() {
             69682 // Samsung HR Raw Sensor this is the only Galaxy5 raw sensor that worked
         ) { _dualViewModel.onHrRawReadout(it) }
     )
-
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -89,8 +91,10 @@ class DualActivity : ComponentActivity() {
                     calibCallback = {
                         startActivity(Intent("com.mocap.watch.DUAL_CALIBRATION"))
                     },
-                    streamStateFlow = _dualViewModel.streamState,
-                    streamCallback = { _dualViewModel.streamTrigger(it) },
+                    sensorStreamStateFlow = _dualViewModel.sensorStreamState,
+                    soundStreamStateFlow = _dualViewModel.soundStreamState,
+                    sensorStreamCallback = { _dualViewModel.sensorStreamTrigger(it) },
+                    soundStreamCallback = { _dualViewModel.audioStreamTrigger(it) },
                     finishCallback = ::finish
                 )
             }

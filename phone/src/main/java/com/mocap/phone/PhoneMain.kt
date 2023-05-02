@@ -33,8 +33,8 @@ class PhoneMain : ComponentActivity(), MessageClient.OnMessageReceivedListener {
 
     private val _viewModel by viewModels<PhoneViewModel>()
     private val _channelCallback = PhoneChannelCallback(
-        openCallback = { _viewModel.onWatchChannelOpen(it) },
-        closeCallback = { _viewModel.onWatchChannelClose(it) },
+        openCallback = { _viewModel.onChannelOpen(it) },
+        closeCallback = { _viewModel.onChannelClose(it) }
     )
 
     // System services not available to Activities before onCreate()
@@ -56,6 +56,9 @@ class PhoneMain : ComponentActivity(), MessageClient.OnMessageReceivedListener {
             }
             DataSingleton.setIp(storedIp)
 
+            // starts a loop to update frequencies
+            _viewModel.updateHzCounts()
+
             PhoneTheme {
                 // keep screen on
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -66,9 +69,11 @@ class PhoneMain : ComponentActivity(), MessageClient.OnMessageReceivedListener {
                 RenderHome(
                     connectedNodeSF = _viewModel.nodeName,
                     appActiveSF = _viewModel.appActive,
-                    streamSF = _viewModel.streamState,
-                    watchHzSF = _viewModel.watchStreamHz,
-                    imuUdpHzSF = _viewModel.broadcastHz,
+                    imuPpgSF = _viewModel.imuPpgStreamState,
+                    imuPpgHzSF = _viewModel.imuPpgStreamHz,
+                    imuPpgBroadcastHzSF = _viewModel.imuPpgBroadcastHz,
+                    soundSF = _viewModel.soundStreamState,
+                    soundBroadcastHzSF = _viewModel.soundBroadcastHz,
                     queueSizeSF = _viewModel.queueSize,
                     ipSetCallback = {
                         startActivity(Intent("com.mocap.phone.SET_IP"))

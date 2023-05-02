@@ -2,7 +2,7 @@ package com.mocap.phone.modules
 
 import android.util.Log
 import com.google.android.gms.wearable.ChannelClient
-import com.mocap.phone.DataSingleton
+
 
 /**
  * This is a forwarder registered with the channel client.
@@ -22,27 +22,24 @@ class PhoneChannelCallback(
 
     /**
      * Called when a channel is opened.
-     * Simply forwards it to the input callback
+     * Simply forwards it to the viewmodel callback
      */
     override fun onChannelOpened(channel: ChannelClient.Channel) {
-        if (channel.path == DataSingleton.CHANNEL_PATH) {
-            Log.d(TAG, "channel opened ${channel.nodeId}}")
-            _openCallback(channel)
-        }
+        Log.d(TAG, "${channel.path} opened ${channel.nodeId}")
+        _openCallback(channel)
     }
+
 
     /**
      * Called when a channel is closed.
-     * Simply forwards it to the input callback
+     * Simply forwards it to the viewmodel callback
      */
     override fun onChannelClosed(
         channel: ChannelClient.Channel,
         closeReason: Int,
         appSpecificErrorCode: Int
     ) {
-        if (channel.path == DataSingleton.CHANNEL_PATH) {
-            Log.d(TAG, "channel closed ${channel.nodeId}}")
-            _closeCallback(channel)
-        }
+        Log.d(TAG, "${channel.path} closed ${channel.nodeId}")
+        _closeCallback(channel)
     }
 }
