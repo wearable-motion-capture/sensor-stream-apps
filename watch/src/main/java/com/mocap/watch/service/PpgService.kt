@@ -35,8 +35,8 @@ class PpgService : Service() {
         69682
     ) { onHrRawReadout(it) }
 
-    // the sensor listener will fill this queue with measurements.
-    // the sensorStreamTrigger Coroutine will channel them to the phone
+    // the onHrRawReadout will fill this queue with measurements.
+    // the streamTrigger Coroutine will channel them to the phone
     private var _ppgQueue = ConcurrentLinkedQueue<FloatArray>()
 
     override fun onCreate() {

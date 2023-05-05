@@ -122,11 +122,12 @@ fun RenderHome(
 
                 SmallCard() {
                     DefaultHighlight(text = ip)
-                    DefaultButton(onClick = ipSetCallback, text = "Set target IP")
+                    DefaultButton(onClick = ipSetCallback, text = "Set Target IP")
                 }
 
                 Row() {
                     SmallCard() {
+                        DefaultHighlight(text = ":"+DataSingleton.UDP_IMU_PORT.toString())
                         DefaultText(text = ("IMU"))
                         DefaultText(
                             text = "$imuSt",
@@ -137,12 +138,13 @@ fun RenderHome(
                             }
                         )
                         DefaultText(
-                            text = "In: $imuInHz Hz\n " +
-                                    "Out: $imuOutHz Hz\n" +
+                            text = "I: $imuInHz Hz\n " +
+                                    "O: $imuOutHz Hz\n" +
                                     "Queue: $imuQueueSize"
                         )
                     }
                     SmallCard() {
+                        DefaultHighlight(text = ":"+DataSingleton.UDP_AUDIO_PORT.toString())
                         DefaultText(text = ("Audio"))
                         DefaultText(
                             text = "$audioSt",
@@ -153,11 +155,12 @@ fun RenderHome(
                             }
                         )
                         DefaultText(
-                            text = "$audioBroadcastHz Hz\n" +
+                            text = "I/O: $audioBroadcastHz Hz\n" +
                                     "Queue: $audioQueueSize"
                         )
                     }
                     SmallCard() {
+                        DefaultHighlight(text = ":"+DataSingleton.UDP_PPG_PORT.toString())
                         DefaultText(text = ("PPG"))
                         DefaultText(
                             text = "$ppgSt",
@@ -168,8 +171,8 @@ fun RenderHome(
                             }
                         )
                         DefaultText(
-                            text = "In: $ppgInHz Hz\n " +
-                                    "Out: $ppgOutHz Hz\n" +
+                            text = "I: $ppgInHz Hz\n " +
+                                    "O: $ppgOutHz Hz\n" +
                                     "Queue: $ppgQueueSize"
                         )
                     }

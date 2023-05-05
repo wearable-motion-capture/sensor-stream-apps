@@ -14,17 +14,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.nio.ByteBuffer
+import java.util.concurrent.ConcurrentLinkedQueue
 
 
 class ImuService : Service() {
 
     companion object {
         private const val TAG = "IMU Service"  // for logging
-        private const val IMU_STREAM_INTERVAL = DataSingleton.STREAM_INTERVAL
     }
 
     private lateinit var _sensorManager: SensorManager
@@ -33,13 +32,16 @@ class ImuService : Service() {
     private var _imuStreamState = false
 
     // callbacks will write to these variables
-    private var _rotVec: FloatArray = FloatArray(4) // Rotation Vector sensor or estimation
     private var _lacc: FloatArray = FloatArray(3) // linear acceleration (without gravity)
     private var _accl: FloatArray = FloatArray(3) // raw acceleration
     private var _grav: FloatArray = FloatArray(3) // gravity
     private var _pres: FloatArray = FloatArray(1) // Atmospheric pressure in hPa (millibar)
     private var _gyro: FloatArray = FloatArray(3) // gyroscope
     private var _magn: FloatArray = FloatArray(3) // magnetic
+
+    // the onRotVecReadout will fill this queue with measurements
+    // the streamTrigger Coroutine will channel them to the phone
+    private var _imuQueue = ConcurrentLinkedQueue<FloatArray>()
 
     // store listeners in this list to register and unregister them automatically
     private var _listeners = listOf(
@@ -106,21 +108,22 @@ class ImuService : Service() {
                         // start the stream loop
                         _imuStreamState = true
                         while (_imuStreamState) {
-                            // compose message as float array
-                            val sensorData =
-                                _rotVec + // transformed rotation vector[4] is a quaternion [w,x,y,z]
-                                        _lacc + // [3] linear acceleration x,y,z
-                                        _pres + // [1] atmospheric pressure
-                                        _grav + // [3] vector indicating the direction and magnitude of gravity x,y,z
-                                        _gyro // [3] gyro data for time series prediction
 
-                            // feed into byte buffer
-                            val buffer = ByteBuffer.allocate(4 * DataSingleton.IMU_MSG_SIZE)
-                            for (v in sensorData) buffer.putFloat(v)
+                            // get data from queue
+                            // skip entries that are already old. This only happens if the watch
+                            // processes incoming measurements too slowly
+                            var lastDat = _imuQueue.poll()
+                            while (_imuQueue.count() > 10) {
+                                lastDat = _imuQueue.poll()
+                            }
+                            if (lastDat != null) {
+                                // feed into byte buffer
+                                val buffer = ByteBuffer.allocate(4 * DataSingleton.IMU_MSG_SIZE)
+                                for (v in lastDat) buffer.putFloat(v)
 
-                            // write to output stream
-                            outputStream.write(buffer.array(), 0, buffer.capacity())
-                            delay(IMU_STREAM_INTERVAL)
+                                // write to output stream
+                                outputStream.write(buffer.array(), 0, buffer.capacity())
+                            }
                         }
                     }
                 } catch (e: Exception) {
@@ -178,19 +181,27 @@ class ImuService : Service() {
     // Events
     /** sensor callbacks */
     // Individual sensor reads are triggered by their onValueChanged events
-    fun onLaccReadout(newReadout: FloatArray) {
-        _lacc = newReadout
-    }
-
     fun onRotVecReadout(newReadout: FloatArray) {
         // newReadout is [x,y,z,w, confidence]
         // our preferred order system is [w,x,y,z]
-        _rotVec = floatArrayOf(
+        val rotVec = floatArrayOf(
             newReadout[3],
             newReadout[0],
             newReadout[1],
             newReadout[2]
         )
+
+        _imuQueue.add(
+            rotVec + // transformed rotation vector[4] is a quaternion [w,x,y,z]
+                    _lacc + // [3] linear acceleration x,y,z
+                    _pres + // [1] atmospheric pressure
+                    _grav + // [3] vector indicating the direction and magnitude of gravity x,y,z
+                    _gyro  // [3] gyro data for time series prediction)
+        )
+    }
+
+    fun onLaccReadout(newReadout: FloatArray) {
+        _lacc = newReadout
     }
 
     fun onAcclReadout(newReadout: FloatArray) {
