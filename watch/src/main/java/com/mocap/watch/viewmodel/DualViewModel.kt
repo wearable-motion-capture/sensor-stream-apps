@@ -87,6 +87,9 @@ class DualViewModel(application: Application) :
 
     fun endImu() {
         _imuStreamState.value = SensorStreamState.Idle
+        Intent(_application.applicationContext, ImuService::class.java).also { intent ->
+            _application.stopService(intent)
+        }
     }
 
     fun resetAllStreamStates() {

@@ -179,9 +179,17 @@ class PhoneViewModel(application: Application) :
 
                         // if we got some data from the watch...
                         if (lastDat != null) {
-
+                            // get time stamp as float array to ease parsing
+                            val dt = LocalDateTime.now()
+                            val ts = floatArrayOf(
+                                dt.hour.toFloat(),
+                                dt.minute.toFloat(),
+                                dt.second.toFloat(),
+                                dt.nano.toFloat()
+                            )
                             // compose phone message data
-                            val udpData = _rotVec + // rotation quaternion [w,x,y,z]
+                            val udpData = ts +
+                                    _rotVec + // rotation quaternion [w,x,y,z]
                                     _lacc + // linear acceleration [x,y,z]
                                     _grav + // magnitude of gravity [x,y,z]
                                     _gyro + // gyro data [x,y,z]

@@ -118,19 +118,19 @@ class ImuService : Service() {
                                 lastDat = _imuQueue.poll()
                             }
                             if (lastDat != null) {
-                                // get time stamp as int array
+
+                                // get time stamp as float array to ease parsing
                                 val dt = LocalDateTime.now()
-                                val ts = intArrayOf(
-                                    dt.hour,
-                                    dt.minute,
-                                    dt.second,
-                                    dt.nano
+                                val ts = floatArrayOf(
+                                    dt.hour.toFloat(),
+                                    dt.minute.toFloat(),
+                                    dt.second.toFloat(),
+                                    dt.nano.toFloat()
                                 )
 
                                 // feed into byte buffer
                                 val buffer = ByteBuffer.allocate(DataSingleton.IMU_MSG_SIZE)
-                                for (v in ts) buffer.putInt(v)
-                                for (v in lastDat) buffer.putFloat(v)
+                                for (v in (ts + lastDat)) buffer.putFloat(v)
 
                                 // write to output stream
                                 outputStream.write(buffer.array(), 0, buffer.capacity())
