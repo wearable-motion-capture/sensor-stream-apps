@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 import com.mocap.watch.DataSingleton
 import com.mocap.watch.SensorStreamState
-import com.mocap.watch.SoundStreamState
+import com.mocap.watch.AudioStreamState
 import com.mocap.watch.ui.DefaultButton
 import com.mocap.watch.ui.DefaultText
 import com.mocap.watch.ui.RedButton
@@ -22,7 +22,7 @@ import com.mocap.watch.ui.StreamToggle
 
 @Composable
 fun RenderStandalone(
-    soundStateFlow: StateFlow<SoundStreamState>,
+    soundStateFlow: StateFlow<AudioStreamState>,
     sensorStateFlow: StateFlow<SensorStreamState>,
     calibCallback: () -> Unit,
     imuStreamCallback: (Boolean) -> Unit,
@@ -83,7 +83,7 @@ fun RenderStandalone(
             StreamToggle(
                 enabled = true,
                 text = "Stream Audio",
-                checked = (soundState == SoundStreamState.Streaming),
+                checked = (soundState == AudioStreamState.Streaming),
                 onChecked = { micStreamCallback(it) }
             )
         }
@@ -93,7 +93,7 @@ fun RenderStandalone(
         item {
             DefaultButton(
                 enabled = (sensorState != SensorStreamState.Streaming) &&
-                        (soundState != SoundStreamState.Streaming),
+                        (soundState != AudioStreamState.Streaming),
                 onClick = { ipSetCallback() },
                 text = "Set Target IP"
             )
@@ -135,11 +135,11 @@ fun SensorStateDisplay(state: SensorStreamState, modifier: Modifier = Modifier) 
  * ready, streaming, Error
  */
 @Composable
-fun SoundStateDisplay(state: SoundStreamState, modifier: Modifier = Modifier) {
+fun SoundStateDisplay(state: AudioStreamState, modifier: Modifier = Modifier) {
     var color = Color.Red
-    if (state == SoundStreamState.Idle) {
+    if (state == AudioStreamState.Idle) {
         color = Color.Yellow
-    } else if (state == SoundStreamState.Streaming) {
+    } else if (state == AudioStreamState.Streaming) {
         color = Color.Green
     }
     Text(

@@ -14,7 +14,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.mocap.phone.DataSingleton
-import com.mocap.phone.ImuPpgStreamState
+import com.mocap.phone.ImuStreamState
+import com.mocap.phone.PpgStreamState
 import com.mocap.phone.SoundStreamState
 import com.mocap.phone.ui.DefaultButton
 import com.mocap.phone.ui.BigCard
@@ -31,13 +32,17 @@ import kotlinx.coroutines.flow.StateFlow
 fun RenderHome(
     connectedNodeSF: StateFlow<String>,
     appActiveSF: StateFlow<Boolean>,
-    imuPpgSF: StateFlow<ImuPpgStreamState>,
-    imuPpgHzSF: StateFlow<Float>,
-    imuPpgBroadcastHzSF: StateFlow<Float>,
-    soundSF: StateFlow<SoundStreamState>,
-    soundBroadcastHzSF: StateFlow<Float>,
-    soundStreamQueueSF: StateFlow<Int>,
-    imuPpgQueueSizeSF: StateFlow<Int>,
+    imuSF: StateFlow<ImuStreamState>,
+    imuInHzSF: StateFlow<Float>,
+    imuOutHzSF: StateFlow<Float>,
+    imuQueueSizeSF: StateFlow<Int>,
+    audioSF: StateFlow<SoundStreamState>,
+    audioBroadcastHzSF: StateFlow<Float>,
+    audioStreamQueueSF: StateFlow<Int>,
+    ppgSF: StateFlow<PpgStreamState>,
+    ppgInHzSF: StateFlow<Float>,
+    ppgOutHzSF: StateFlow<Float>,
+    ppgQueueSizeSF: StateFlow<Int>,
     ipSetCallback: () -> Unit
 ) {
     val phoneForwardQuat by DataSingleton.phoneQuat.collectAsState()
@@ -45,15 +50,22 @@ fun RenderHome(
     val watchPressure by DataSingleton.watchPres.collectAsState()
     val ip by DataSingleton.ip.collectAsState()
 
-    val imuPpgSt by imuPpgSF.collectAsState()
     val nodeName by connectedNodeSF.collectAsState()
     val appState by appActiveSF.collectAsState()
-    val imuPpgHz by imuPpgHzSF.collectAsState()
-    val imuPpgBroadcastHz by imuPpgBroadcastHzSF.collectAsState()
-    val soundSt by soundSF.collectAsState()
-    val soundBroadcastHz by soundBroadcastHzSF.collectAsState()
-    val soundQueueSize by soundStreamQueueSF.collectAsState()
-    val queueSize by imuPpgQueueSizeSF.collectAsState()
+
+    val imuSt by imuSF.collectAsState()
+    val imuInHz by imuInHzSF.collectAsState()
+    val imuOutHz by imuOutHzSF.collectAsState()
+    val imuQueueSize by imuQueueSizeSF.collectAsState()
+
+    val ppgSt by ppgSF.collectAsState()
+    val ppgInHz by ppgInHzSF.collectAsState()
+    val ppgOutHz by ppgOutHzSF.collectAsState()
+    val ppgQueueSize by ppgQueueSizeSF.collectAsState()
+
+    val audioSt by audioSF.collectAsState()
+    val audioBroadcastHz by audioBroadcastHzSF.collectAsState()
+    val audioQueueSize by audioStreamQueueSF.collectAsState()
 
     LazyColumn(
         modifier = Modifier
@@ -115,34 +127,50 @@ fun RenderHome(
 
                 Row() {
                     SmallCard() {
-                        DefaultText(text = ("IMU + PPG"))
-                        DefaultHighlight(
-                            text = "$imuPpgSt",
-                            color = when (imuPpgSt) {
-                                ImuPpgStreamState.Idle -> Color.Yellow
-                                ImuPpgStreamState.Streaming -> Color.Green
-                                ImuPpgStreamState.Error -> Color.Red
+                        DefaultText(text = ("IMU"))
+                        DefaultText(
+                            text = "$imuSt",
+                            color = when (imuSt) {
+                                ImuStreamState.Idle -> Color.Yellow
+                                ImuStreamState.Streaming -> Color.Green
+                                ImuStreamState.Error -> Color.Red
                             }
                         )
                         DefaultText(
-                            text = "In: $imuPpgHz Hz\n " +
-                                    "Out: $imuPpgBroadcastHz Hz\n" +
-                                    "Queue: $queueSize"
+                            text = "In: $imuInHz Hz\n " +
+                                    "Out: $imuOutHz Hz\n" +
+                                    "Queue: $imuQueueSize"
                         )
                     }
                     SmallCard() {
                         DefaultText(text = ("Audio"))
-                        DefaultHighlight(
-                            text = "$soundSt",
-                            color = when (soundSt) {
+                        DefaultText(
+                            text = "$audioSt",
+                            color = when (audioSt) {
                                 SoundStreamState.Idle -> Color.Yellow
                                 SoundStreamState.Streaming -> Color.Green
                                 SoundStreamState.Error -> Color.Red
                             }
                         )
                         DefaultText(
-                            text = "$soundBroadcastHz Hz\n" +
-                                    "Queue: $soundQueueSize"
+                            text = "$audioBroadcastHz Hz\n" +
+                                    "Queue: $audioQueueSize"
+                        )
+                    }
+                    SmallCard() {
+                        DefaultText(text = ("PPG"))
+                        DefaultText(
+                            text = "$ppgSt",
+                            color = when (ppgSt) {
+                                PpgStreamState.Idle -> Color.Yellow
+                                PpgStreamState.Streaming -> Color.Green
+                                PpgStreamState.Error -> Color.Red
+                            }
+                        )
+                        DefaultText(
+                            text = "In: $ppgInHz Hz\n " +
+                                    "Out: $ppgOutHz Hz\n" +
+                                    "Queue: $ppgQueueSize"
                         )
                     }
                 }

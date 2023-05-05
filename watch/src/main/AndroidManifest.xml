@@ -80,12 +80,25 @@
         </activity>
         <activity
             android:name=".activity.DualCalibActivity"
-            android:exported="true"
+            android:exported="false"
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
                 <action android:name="com.mocap.watch.DUAL_CALIBRATION" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+        <receiver
+            android:name=".modules.ServiceBroadcastReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="mocap.broadcast.close" />
+                <action android:name="mocap.broadcast.update" />
+            </intent-filter>
+        </receiver>
+
+        <service android:name=".service.PpgService" />
+        <service android:name=".service.AudioService" />
+        <service android:name=".service.ImuService" />
     </application>
 </manifest>

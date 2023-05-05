@@ -3,7 +3,13 @@ package com.mocap.phone
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-enum class ImuPpgStreamState {
+enum class PpgStreamState {
+    Idle, // app waits for watch to trigger the streaming
+    Error, // error state. Stop streaming
+    Streaming // streaming to IP and Port set in StateModule
+}
+
+enum class ImuStreamState {
     Idle, // app waits for watch to trigger the streaming
     Error, // error state. Stop streaming
     Streaming // streaming to IP and Port set in StateModule
@@ -19,8 +25,9 @@ object DataSingleton {
     const val VERSION = "0.1.3"
 
     // message paths
-    const val SENSOR_CHANNEL_PATH = "/sensor_channel"
-    const val SOUND_CHANNEL_PATH = "/sound_channel"
+    const val IMU_CHANNEL_PATH = "/imu_channel"
+    const val PPG_CHANNEL_PATH = "/ppg_channel"
+    const val AUDIO_CHANNEL_PATH = "/audio_channel"
     const val CALIBRATION_PATH = "/calibration" // calibration message path
     const val PING_REQ = "/ping_request"
     const val PING_REP = "/ping_reply"
@@ -31,13 +38,15 @@ object DataSingleton {
     const val WATCH_CAPABILITY = "watch" // if the watch app is connected (see res/values/wear.xml)
 
     // streaming parameters
-    const val WATCH_MSG_SIZE = 30 // floats
+    const val IMU_MSG_SIZE = 14 // floats
+    const val PPG_MSG_SIZE = 16 // floats
     const val IP_KEY = "com.mocap.watch.ip" // shared preferences lookup
     const val IP_DEFAULT = "192.168.0.12"
     const val UDP_IMU_PORT = 65000
     const val UDP_AUDIO_PORT = 65001
+    const val UDP_PPG_PORT = 65002
     const val AUDIO_BUFFER_SIZE = 800
-    const val UDP_IMU_MSG_SIZE = WATCH_MSG_SIZE + 22 // floats
+    const val UDP_IMU_MSG_SIZE = IMU_MSG_SIZE + 22 // floats
 
     // as state flow to update UI elements when IP changes
     private val ipStateFlow = MutableStateFlow(IP_DEFAULT)

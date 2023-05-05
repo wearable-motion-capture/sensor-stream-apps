@@ -10,7 +10,7 @@ import androidx.annotation.RequiresPermission
 import androidx.lifecycle.AndroidViewModel
 import com.mocap.watch.DataSingleton
 import com.mocap.watch.SensorStreamState
-import com.mocap.watch.SoundStreamState
+import com.mocap.watch.AudioStreamState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -44,7 +44,7 @@ class StandaloneViewModel(application: Application) :
     private val _sensorStrState = MutableStateFlow(SensorStreamState.Idle)
     val sensorStrState = _sensorStrState.asStateFlow()
 
-    private val _soundStrState = MutableStateFlow(SoundStreamState.Idle)
+    private val _soundStrState = MutableStateFlow(AudioStreamState.Idle)
     val soundStrState = _soundStrState.asStateFlow()
 
     // callbacks will write to these variables
@@ -59,7 +59,7 @@ class StandaloneViewModel(application: Application) :
 
     override fun onCleared() {
         _sensorStrState.value = SensorStreamState.Idle
-        _soundStrState.value = SoundStreamState.Idle
+        _soundStrState.value = AudioStreamState.Idle
         _scope.cancel()
         Log.d(TAG, "Cleared")
     }
@@ -68,9 +68,9 @@ class StandaloneViewModel(application: Application) :
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun triggerMicStream(checked: Boolean) {
         if (!checked) {
-            _soundStrState.value = SoundStreamState.Idle
+            _soundStrState.value = AudioStreamState.Idle
         } else {
-            if (_soundStrState.value == SoundStreamState.Streaming) {
+            if (_soundStrState.value == AudioStreamState.Streaming) {
                 throw Exception("The SoundStreamState.Streaming should not be active at start")
             }
             // Create the tcpClient with set socket IP
@@ -111,8 +111,8 @@ class StandaloneViewModel(application: Application) :
 
                 udpSocket.use {
                     // read from audioRecord stream and send through to UDP output stream
-                    _soundStrState.value = SoundStreamState.Streaming
-                    while (soundStrState.value == SoundStreamState.Streaming) {
+                    _soundStrState.value = AudioStreamState.Streaming
+                    while (soundStrState.value == AudioStreamState.Streaming) {
                         val buffer = ByteBuffer.allocate(AUDIO_BUFFER_SIZE)
                         audioRecord.read(buffer.array(), 0, buffer.capacity())
                         val dp = DatagramPacket(
@@ -127,7 +127,7 @@ class StandaloneViewModel(application: Application) :
             } catch (e: Exception) {
                 // if the loop ends of was disrupted, close everything and reset
                 Log.w(TAG, e.message.toString())
-                _soundStrState.value = SoundStreamState.Error
+                _soundStrState.value = AudioStreamState.Error
             } finally {
                 // make sure to release the audio recorder
                 audioRecord.release()
@@ -160,7 +160,7 @@ class StandaloneViewModel(application: Application) :
         val north = DataSingleton.CALIB_NORTH.value.toFloat()
         val ip = DataSingleton.IP.value
         val port = DataSingleton.UDP_IMU_PORT
-        val msgSize = DataSingleton.WATCH_MESSAGE_SIZE
+        val msgSize = DataSingleton.IMU_MSG_SIZE
 
         // run the streaming in a thread
         withContext(Dispatchers.IO) {
