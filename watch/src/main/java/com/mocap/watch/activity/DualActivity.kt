@@ -2,29 +2,29 @@ package com.mocap.watch.activity
 
 import android.Manifest
 import android.content.Intent
-import android.hardware.Sensor
-import android.hardware.SensorManager
+import android.content.IntentFilter
 import android.net.Uri
-import com.mocap.watch.modules.SensorListener
 import android.os.*
 import android.view.WindowManager
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.annotation.RequiresPermission
+import androidx.fragment.app.FragmentActivity
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.CapabilityInfo
 import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
 import com.mocap.watch.DataSingleton
+import com.mocap.watch.modules.ServiceBroadcastReceiver
 import com.mocap.watch.modules.WatchChannelCallback
 import com.mocap.watch.ui.theme.WatchTheme
 import com.mocap.watch.ui.view.RenderDual
 import com.mocap.watch.viewmodel.DualViewModel
 
 
-class DualActivity : ComponentActivity(),
+class DualActivity : FragmentActivity(),
     MessageClient.OnMessageReceivedListener,
     CapabilityClient.OnCapabilityChangedListener {
 
@@ -39,38 +39,12 @@ class DualActivity : ComponentActivity(),
     private val _channelCallback = WatchChannelCallback(
         closeCallback = { _dualViewModel.onChannelClose(it) }
     )
-    private lateinit var _sensorManager: SensorManager
+    private val _br =
+        ServiceBroadcastReceiver(
+            onServiceClose = { _dualViewModel.onServiceClose(it) },
+            onServiceUpdate = { _dualViewModel.onServiceUpdate(it) }
+        )
 
-    // store listeners in this list to register and unregister them automatically
-    private var _listeners = listOf(
-        SensorListener(
-            Sensor.TYPE_PRESSURE
-        ) { _dualViewModel.onPressureReadout(it) },
-        SensorListener(
-            Sensor.TYPE_LINEAR_ACCELERATION
-        ) { _dualViewModel.onLaccReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), excluding the force of gravity.
-        SensorListener(
-            Sensor.TYPE_ACCELEROMETER
-        ) { _dualViewModel.onAcclReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), including the force of gravity.
-        SensorListener(
-            Sensor.TYPE_ROTATION_VECTOR
-        ) { _dualViewModel.onRotVecReadout(it) },
-        SensorListener(
-            Sensor.TYPE_MAGNETIC_FIELD // All values are in micro-Tesla (uT) and measure the ambient magnetic field in the X, Y and Z axis.
-        ) { _dualViewModel.onMagnReadout(it) },
-        SensorListener(
-            Sensor.TYPE_GRAVITY
-        ) { _dualViewModel.onGravReadout(it) },
-        SensorListener(
-            Sensor.TYPE_GYROSCOPE
-        ) { _dualViewModel.onGyroReadout(it) },
-//        SensorListener(
-//            Sensor.TYPE_HEART_RATE
-//        ) { globalState.onHrReadout(it) },
-        SensorListener(
-            69682 // Samsung HR Raw Sensor this is the only Galaxy5 raw sensor that worked
-        ) { _dualViewModel.onHrRawReadout(it) }
-    )
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,19 +53,15 @@ class DualActivity : ComponentActivity(),
         setContent {
             // for colours
             WatchTheme {
-
-                // access and observe sensors
-                _sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
-                registerSensorListeners()
-
                 // keep screen on
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
                 // check if a phone is connected and set state flows accordingly
                 _dualViewModel.queryCapabilities()
                 _dualViewModel.regularConnectionCheck()
+
                 val connectedNode = _dualViewModel.nodeName
-                val appActiveStateFlow = _dualViewModel.appActive
+                val appActiveStateFlow = _dualViewModel.pingSuccessState
 
                 RenderDual(
                     connectedNodeName = connectedNode,
@@ -100,9 +70,11 @@ class DualActivity : ComponentActivity(),
                         startActivity(Intent("com.mocap.watch.DUAL_CALIBRATION"))
                     },
                     sensorStreamStateFlow = _dualViewModel.sensorStreamState,
-                    soundStreamStateFlow = _dualViewModel.soundStreamState,
-                    sensorStreamCallback = { _dualViewModel.sensorStreamTrigger(it) },
+                    audioStreamStateFlow = _dualViewModel.soundStreamState,
+                    ppgStreamStateFlow = _dualViewModel.ppgStreamState,
+                    sensorStreamCallback = { _dualViewModel.imuStreamTrigger(it) },
                     soundStreamCallback = { _dualViewModel.audioStreamTrigger(it) },
+                    ppgStreamCallback = { _dualViewModel.ppgStreamTrigger(it) },
                     finishCallback = ::finish
                 )
             }
@@ -117,25 +89,16 @@ class DualActivity : ComponentActivity(),
         _dualViewModel.onCapabilityChanged(capabilityInfo)
     }
 
-    private fun registerSensorListeners() {
-        // register all listeners with their assigned codes
-        for (l in _listeners) {
-            _sensorManager.registerListener(
-                l,
-                _sensorManager.getDefaultSensor(l.code),
-                SensorManager.SENSOR_DELAY_FASTEST
-            )
-        }
-    }
-
     /**
      * To register all listeners for all used channels
      */
     private fun registerListeners() {
-        // register all listeners with their assigned codes
-        if (this::_sensorManager.isInitialized) {
-            registerSensorListeners()
-        }
+        // broadcasts inform about stopped services
+        val filter = IntentFilter()
+        filter.addAction(DataSingleton.BROADCAST_CLOSE)
+        filter.addAction(DataSingleton.BROADCAST_UPDATE)
+        LocalBroadcastManager.getInstance(applicationContext).registerReceiver(_br, filter)
+
         // listen for ping messages
         _messageClient.addListener(this)
         // to handle incoming data streams
@@ -155,19 +118,13 @@ class DualActivity : ComponentActivity(),
      * clear all listeners
      */
     private fun unregisterListeners() {
-        _dualViewModel.resetStreamStates()
+        LocalBroadcastManager.getInstance(applicationContext).unregisterReceiver(_br)
+        _dualViewModel.resetAllStreamStates()
         _messageClient.removeListener(this)
         _channelClient.unregisterChannelCallback(_channelCallback)
         _capabilityClient.removeListener(this)
         _capabilityClient.removeLocalCapability(DataSingleton.WATCH_APP_ACTIVE)
-        if (this::_sensorManager.isInitialized) {
-            for (l in _listeners) {
-                _sensorManager.unregisterListener(l)
-            }
-        }
-
     }
-
 
     override fun onResume() {
         super.onResume()

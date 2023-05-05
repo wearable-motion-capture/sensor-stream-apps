@@ -15,11 +15,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun DefaultText(text: String) {
+fun DefaultText(text: String, color: Color = MaterialTheme.colors.onBackground) {
     Text(
         text = text,
         textAlign = TextAlign.Center,
-        color = MaterialTheme.colors.onBackground,
+        color = color,
         style = MaterialTheme.typography.body1
     )
 }
@@ -51,7 +51,9 @@ fun DefaultButton(enabled: Boolean = true, onClick: () -> Unit, text: String) {
     Button(
         enabled = enabled,
         onClick = { onClick() },
-        modifier = Modifier.fillMaxWidth().padding(8.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
     ) {
         Text(text = text)
     }
@@ -63,7 +65,13 @@ fun BigCard(
     color: Color = Color.Transparent,
     content: @Composable () -> Unit
 ) {
-    Card(modifier = modifier.padding(8.dp).fillMaxWidth(), elevation = 4.dp, backgroundColor = color) {
+    Card(
+        modifier = modifier
+            .padding(8.dp)
+            .fillMaxWidth(),
+        elevation = 4.dp,
+        backgroundColor = color
+    ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = modifier.padding(8.dp)

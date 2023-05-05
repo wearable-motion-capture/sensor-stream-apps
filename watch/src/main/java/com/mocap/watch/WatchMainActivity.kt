@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.*
 import android.util.Log
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 
@@ -39,6 +40,9 @@ class WatchMainActivity : ComponentActivity() {
             } else {
                 Log.d(TAG, "body sensor and audio recording permissions already granted")
             }
+
+            // keep screen on
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
 
             WatchTheme {

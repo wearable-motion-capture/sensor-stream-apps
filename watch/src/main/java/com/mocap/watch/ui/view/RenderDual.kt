@@ -10,8 +10,9 @@ import androidx.compose.ui.text.style.TextAlign
 
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.Text
+import com.mocap.watch.PpgStreamState
 import com.mocap.watch.SensorStreamState
-import com.mocap.watch.SoundStreamState
+import com.mocap.watch.AudioStreamState
 import com.mocap.watch.ui.DefaultButton
 import com.mocap.watch.ui.DefaultText
 import com.mocap.watch.ui.RedButton
@@ -24,15 +25,18 @@ fun RenderDual(
     appActiveStateFlow: StateFlow<Boolean>,
     calibCallback: () -> Unit,
     sensorStreamStateFlow: StateFlow<SensorStreamState>,
-    soundStreamStateFlow: StateFlow<SoundStreamState>,
+    audioStreamStateFlow: StateFlow<AudioStreamState>,
+    ppgStreamStateFlow: StateFlow<PpgStreamState>,
     sensorStreamCallback: (Boolean) -> Unit,
     soundStreamCallback: (Boolean) -> Unit,
+    ppgStreamCallback: (Boolean) -> Unit,
     finishCallback: () -> Unit
 ) {
     val nodeName by connectedNodeName.collectAsState()
     val appState by appActiveStateFlow.collectAsState()
     val streamSt by sensorStreamStateFlow.collectAsState()
-    val soundSt by soundStreamStateFlow.collectAsState()
+    val soundSt by audioStreamStateFlow.collectAsState()
+    val ppgSt by ppgStreamStateFlow.collectAsState()
 
     // display information in a column
     ScalingLazyColumn(
@@ -59,7 +63,7 @@ fun RenderDual(
         item {
             StreamToggle(
                 enabled = appState,
-                text = "Stream IMU + PPG",
+                text = "Stream IMU",
                 checked = (streamSt == SensorStreamState.Streaming),
                 onChecked = { sensorStreamCallback(it) }
             )
@@ -68,8 +72,16 @@ fun RenderDual(
             StreamToggle(
                 enabled = appState,
                 text = "Stream Audio",
-                checked = (soundSt == SoundStreamState.Streaming),
+                checked = (soundSt == AudioStreamState.Streaming),
                 onChecked = { soundStreamCallback(it) }
+            )
+        }
+        item {
+            StreamToggle(
+                enabled = appState,
+                text = "Stream PPG",
+                checked = (ppgSt == PpgStreamState.Streaming),
+                onChecked = { ppgStreamCallback(it) }
             )
         }
         item {

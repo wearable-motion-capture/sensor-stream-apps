@@ -10,7 +10,12 @@ enum class SensorStreamState {
     Streaming // streaming to Phone
 }
 
-enum class SoundStreamState {
+enum class PpgStreamState {
+    Idle,
+    Streaming
+}
+
+enum class AudioStreamState {
     Idle, // app waits for watch to trigger the streaming
     Error, // error state. Stop streaming
     Streaming // streaming to IP and Port set in StateModule
@@ -18,14 +23,22 @@ enum class SoundStreamState {
 
 object DataSingleton {
 
-    const val VERSION = "0.2.0"
+    const val VERSION = "0.2.2"
 
-    // message paths
-    const val SENSOR_CHANNEL_PATH = "/sensor_channel"
-    const val SOUND_CHANNEL_PATH = "/sound_channel"
+    // dual mode communication paths
+    const val IMU_CHANNEL_PATH = "/imu_channel"
+    const val PPG_CHANNEL_PATH = "/ppg_channel"
+    const val AUDIO_CHANNEL_PATH = "/audio_channel"
     const val CALIBRATION_PATH = "/calibration"
     const val PING_REQ = "/ping_request"
     const val PING_REP = "/ping_reply"
+    const val BROADCAST_CLOSE = "mocap.broadcast.close"
+    const val BROADCAST_SERVICE_KEY = "service.id"
+
+    // TODO: implement frequency outputs on watch
+    const val BROADCAST_UPDATE = "mocap.broadcast.update"
+    const val BROADCAST_SERVICE_HZ = "service.hz"
+    const val BROADCAST_SERVICE_QUEUE = "service.queue"
 
     // capabilities
     const val PHONE_APP_ACTIVE = "phone_app" // indicates if the phone app is active
@@ -33,13 +46,15 @@ object DataSingleton {
     const val PHONE_CAPABILITY = "phone" // if the phone app is connected (see res/values/wear.xml)
 
     // streaming parameters
-    const val IP_KEY = "com.mocap.watch.ip" // shared preferences lookup
-    const val IP_DEFAULT = "192.168.0.12"
-    const val WATCH_MESSAGE_SIZE = 30 // floats
-    const val STREAM_INTERVAL = 10L // floats
+    const val IMU_MSG_SIZE = (4 + 14) * 4 // timestamp(4) + data (14 float)
+    const val PPG_MSG_SIZE = (4 + 16) * 4 // timestamp(4) + data (16 float)
+    const val AUDIO_BUFFER_SIZE = 800 // bytes
+
+    // standalone mode
     const val UDP_IMU_PORT = 46000
-    const val AUDIO_BUFFER_SIZE = 800
     const val UDP_AUDIO_PORT = 46001
+    const val IP_DEFAULT = "192.168.0.12"
+    const val IP_KEY = "com.mocap.watch.ip" // shared preferences lookup
 
     // as state flow to update UI elements when IP changes
     private val ipStateFlow = MutableStateFlow(IP_DEFAULT)
