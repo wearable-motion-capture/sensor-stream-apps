@@ -155,7 +155,6 @@ class PhoneViewModel(application: Application) :
             // our constants for this loop
             val port = DataSingleton.UDP_IMU_PORT
             val ip = DataSingleton.ip.value
-            val udpMsgSize = DataSingleton.UDP_IMU_MSG_SIZE
             val calibratedDat = DataSingleton.watchQuat.value +
                     DataSingleton.phoneQuat.value +
                     floatArrayOf(DataSingleton.watchPres.value)
@@ -189,7 +188,7 @@ class PhoneViewModel(application: Application) :
                                     calibratedDat // from calibration
 
                             // write phone and watch data to buffer
-                            val buffer = ByteBuffer.allocate(4 * udpMsgSize)
+                            val buffer = ByteBuffer.allocate(DataSingleton.DUAL_IMU_MSG_SIZE)
                             // put smartwatch data
                             buffer.put(lastDat)
                             // append phone data
@@ -226,7 +225,6 @@ class PhoneViewModel(application: Application) :
             // our constants for this loop
             val port = DataSingleton.UDP_PPG_PORT
             val ip = DataSingleton.ip.value
-            val udpMsgSize = DataSingleton.PPG_MSG_SIZE
 
             withContext(Dispatchers.IO) {
                 // open a socket
@@ -249,7 +247,7 @@ class PhoneViewModel(application: Application) :
                         // if we got some data from the watch...
                         if (lastDat != null) {
                             // write phone and watch data to buffer
-                            val buffer = ByteBuffer.allocate(4 * udpMsgSize)
+                            val buffer = ByteBuffer.allocate(DataSingleton.PPG_MSG_SIZE)
                             // put smartwatch data
                             buffer.put(lastDat)
 
@@ -286,7 +284,7 @@ class PhoneViewModel(application: Application) :
                     // if more than 0 bytes are available
                     if (stream.available() > 0) {
                         // read input stream message into buffer
-                        val buffer = ByteBuffer.allocate(4 * DataSingleton.PPG_MSG_SIZE)
+                        val buffer = ByteBuffer.allocate(DataSingleton.PPG_MSG_SIZE)
                         stream.read(buffer.array(), 0, buffer.capacity())
                         _ppgQueue.add(buffer.array())
                         // for Hz estimation
@@ -312,7 +310,7 @@ class PhoneViewModel(application: Application) :
                     // if more than 0 bytes are available
                     if (stream.available() > 0) {
                         // read input stream message into buffer
-                        val buffer = ByteBuffer.allocate(4 * DataSingleton.IMU_MSG_SIZE)
+                        val buffer = ByteBuffer.allocate(DataSingleton.IMU_MSG_SIZE)
                         stream.read(buffer.array(), 0, buffer.capacity())
                         _imuQueue.add(buffer.array())
                         // for Hz estimation
@@ -350,7 +348,6 @@ class PhoneViewModel(application: Application) :
             // our constants for this loop
             val port = DataSingleton.UDP_AUDIO_PORT
             val ip = DataSingleton.ip.value
-            val msgSize = DataSingleton.AUDIO_BUFFER_SIZE
 
             withContext(Dispatchers.IO) {
                 try {
@@ -371,7 +368,8 @@ class PhoneViewModel(application: Application) :
                             while (audioStreamState.value == SoundStreamState.Streaming) {
                                 // read input stream message into buffer
                                 if (stream.available() > 0) {
-                                    val buffer = ByteBuffer.allocate(msgSize)
+                                    val buffer =
+                                        ByteBuffer.allocate(DataSingleton.AUDIO_BUFFER_SIZE)
                                     stream.read(buffer.array(), 0, buffer.capacity())
                                     // create packet
                                     val dp = DatagramPacket(

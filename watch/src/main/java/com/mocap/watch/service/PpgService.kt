@@ -16,6 +16,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.nio.ByteBuffer
+import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentLinkedQueue
 
 
@@ -86,8 +87,20 @@ class PpgService : Service() {
 
                             // if we got some data from the watch...
                             if (lastDat != null) {
+
+                                // get time stamp as int array
+                                val dt = LocalDateTime.now()
+                                val ts = intArrayOf(
+                                    dt.hour,
+                                    dt.minute,
+                                    dt.second,
+                                    dt.nano
+                                )
+
+                                val buffer = ByteBuffer.allocate(DataSingleton.PPG_MSG_SIZE)
+
                                 // feed into byte buffer
-                                val buffer = ByteBuffer.allocate(4 * DataSingleton.PPG_MSG_SIZE)
+                                for (v in ts) buffer.putInt(v)
                                 for (v in lastDat) buffer.putFloat(v)
 
                                 // write to output stream
@@ -97,7 +110,7 @@ class PpgService : Service() {
                     }
                 } catch (e: Exception) {
                     // In case the channel gets destroyed while still in the loop
-                    Log.d(TAG, e.message.toString())
+                    Log.d(TAG, e.toString())
                 } finally {
                     _ppgStreamState = false
                     _sensorManager.unregisterListener(_ppgListener)     // remove listener again

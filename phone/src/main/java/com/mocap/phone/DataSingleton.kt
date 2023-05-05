@@ -22,7 +22,7 @@ enum class SoundStreamState {
 }
 
 object DataSingleton {
-    const val VERSION = "0.1.5"
+    const val VERSION = "0.1.6"
 
     // message paths
     const val IMU_CHANNEL_PATH = "/imu_channel"
@@ -38,15 +38,16 @@ object DataSingleton {
     const val WATCH_CAPABILITY = "watch" // if the watch app is connected (see res/values/wear.xml)
 
     // streaming parameters
-    const val IMU_MSG_SIZE = 14 // floats
-    const val PPG_MSG_SIZE = 16 // floats
+    const val IMU_MSG_SIZE = 4 * 4 + 14 * 4 // timestamp(4 int) + data (14 float)
+    const val PPG_MSG_SIZE = 4 * 4 + 16 * 4 // timestamp(4 int) + data (16 float)
     const val IP_KEY = "com.mocap.watch.ip" // shared preferences lookup
     const val IP_DEFAULT = "192.168.0.12"
     const val UDP_IMU_PORT = 65000
     const val UDP_AUDIO_PORT = 65001
     const val UDP_PPG_PORT = 65002
     const val AUDIO_BUFFER_SIZE = 800
-    const val UDP_IMU_MSG_SIZE = IMU_MSG_SIZE + 22 // floats
+    const val DUAL_IMU_MSG_SIZE =
+        IMU_MSG_SIZE + 4 * 4 + 22 * 4 // timestamp(4 int) + data (22 float)
 
     // as state flow to update UI elements when IP changes
     private val ipStateFlow = MutableStateFlow(IP_DEFAULT)

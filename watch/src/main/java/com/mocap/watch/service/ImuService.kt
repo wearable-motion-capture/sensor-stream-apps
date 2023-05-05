@@ -17,6 +17,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.nio.ByteBuffer
+import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentLinkedQueue
 
 
@@ -117,8 +118,18 @@ class ImuService : Service() {
                                 lastDat = _imuQueue.poll()
                             }
                             if (lastDat != null) {
+                                // get time stamp as int array
+                                val dt = LocalDateTime.now()
+                                val ts = intArrayOf(
+                                    dt.hour,
+                                    dt.minute,
+                                    dt.second,
+                                    dt.nano
+                                )
+
                                 // feed into byte buffer
-                                val buffer = ByteBuffer.allocate(4 * DataSingleton.IMU_MSG_SIZE)
+                                val buffer = ByteBuffer.allocate(DataSingleton.IMU_MSG_SIZE)
+                                for (v in ts) buffer.putInt(v)
                                 for (v in lastDat) buffer.putFloat(v)
 
                                 // write to output stream
