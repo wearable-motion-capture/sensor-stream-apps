@@ -16,9 +16,9 @@ import com.mocap.watch.DataSingleton
 import com.mocap.watch.PpgStreamState
 import com.mocap.watch.SensorStreamState
 import com.mocap.watch.AudioStreamState
-import com.mocap.watch.service.AudioService
-import com.mocap.watch.service.ImuService
-import com.mocap.watch.service.PpgService
+import com.mocap.watch.service.ChannelAudioService
+import com.mocap.watch.service.ChannelImuService
+import com.mocap.watch.service.ChannelPpgService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -72,7 +72,7 @@ class DualViewModel(application: Application) :
     fun endPpg() {
         _ppgStreamState.value = PpgStreamState.Idle
         // stop an eventually running service
-        Intent(_application.applicationContext, PpgService::class.java).also { intent ->
+        Intent(_application.applicationContext, ChannelPpgService::class.java).also { intent ->
             _application.stopService(intent)
         }
     }
@@ -80,14 +80,14 @@ class DualViewModel(application: Application) :
     fun endAudio() {
         _audioStreamState.value = AudioStreamState.Idle
         // stop an eventually running service
-        Intent(_application.applicationContext, AudioService::class.java).also { intent ->
+        Intent(_application.applicationContext, ChannelAudioService::class.java).also { intent ->
             _application.stopService(intent)
         }
     }
 
     fun endImu() {
         _imuStreamState.value = SensorStreamState.Idle
-        Intent(_application.applicationContext, ImuService::class.java).also { intent ->
+        Intent(_application.applicationContext, ChannelImuService::class.java).also { intent ->
             _application.stopService(intent)
         }
     }
@@ -126,11 +126,11 @@ class DualViewModel(application: Application) :
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun audioStreamTrigger(checked: Boolean) {
         if (!checked) {
-            Intent(_application.applicationContext, AudioService::class.java).also { intent ->
+            Intent(_application.applicationContext, ChannelAudioService::class.java).also { intent ->
                 _application.stopService(intent)
             }
         } else {
-            val intent = Intent(_application.applicationContext, AudioService::class.java)
+            val intent = Intent(_application.applicationContext, ChannelAudioService::class.java)
             intent.putExtra("sourceNodeId", connectedNodeId)
             _application.startService(intent)
             _audioStreamState.value = AudioStreamState.Streaming
@@ -139,11 +139,11 @@ class DualViewModel(application: Application) :
 
     fun ppgStreamTrigger(checked: Boolean) {
         if (!checked) {
-            Intent(_application.applicationContext, PpgService::class.java).also { intent ->
+            Intent(_application.applicationContext, ChannelPpgService::class.java).also { intent ->
                 _application.stopService(intent)
             }
         } else {
-            val intent = Intent(_application.applicationContext, PpgService::class.java)
+            val intent = Intent(_application.applicationContext, ChannelPpgService::class.java)
             intent.putExtra("sourceNodeId", connectedNodeId)
             _application.startService(intent)
             _ppgStreamState.value = PpgStreamState.Streaming
@@ -152,11 +152,11 @@ class DualViewModel(application: Application) :
 
     fun imuStreamTrigger(checked: Boolean) {
         if (!checked) {
-            Intent(_application.applicationContext, ImuService::class.java).also { intent ->
+            Intent(_application.applicationContext, ChannelImuService::class.java).also { intent ->
                 _application.stopService(intent)
             }
         } else {
-            val intent = Intent(_application.applicationContext, ImuService::class.java)
+            val intent = Intent(_application.applicationContext, ChannelImuService::class.java)
             intent.putExtra("sourceNodeId", connectedNodeId)
             _application.startService(intent)
             _imuStreamState.value = SensorStreamState.Streaming
@@ -175,14 +175,14 @@ class DualViewModel(application: Application) :
 
     /** send a ping request */
     private fun requestPing() {
-        _scope.launch {
-            _messageClient.sendMessage(connectedNodeId, DataSingleton.PING_REQ, null).await()
-            delay(1000L)
-            // reset success indicator if the response takes too long
-            if (Duration.between(_lastPing, LocalDateTime.now()).toMillis() > 1100L) {
-                _pingSuccess.value = false
-            }
-        }
+//        _scope.launch {
+//            _messageClient.sendMessage(connectedNodeId, DataSingleton.PING_REQ, null).await()
+//            delay(1000L)
+//            // reset success indicator if the response takes too long
+//            if (Duration.between(_lastPing, LocalDateTime.now()).toMillis() > 1100L) {
+//                _pingSuccess.value = false
+//            }
+//        }
     }
 
     /**

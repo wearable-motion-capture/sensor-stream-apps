@@ -97,8 +97,8 @@
             </intent-filter>
         </receiver>
 
-        <service android:name=".service.PpgService" />
-        <service android:name=".service.AudioService" />
-        <service android:name=".service.ImuService" />
+        <service android:name=".service.ChannelPpgService" />
+        <service android:name=".service.ChannelAudioService" />
+        <service android:name=".service.ChannelImuService" />
     </application>
 </manifest>

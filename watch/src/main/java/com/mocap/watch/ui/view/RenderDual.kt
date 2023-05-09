@@ -33,7 +33,7 @@ fun RenderDual(
     finishCallback: () -> Unit
 ) {
     val nodeName by connectedNodeName.collectAsState()
-    val appState by appActiveStateFlow.collectAsState()
+    val appState = true //by appActiveStateFlow.collectAsState()
     val streamSt by sensorStreamStateFlow.collectAsState()
     val soundSt by audioStreamStateFlow.collectAsState()
     val ppgSt by ppgStreamStateFlow.collectAsState()
