@@ -126,7 +126,10 @@ class DualViewModel(application: Application) :
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun audioStreamTrigger(checked: Boolean) {
         if (!checked) {
-            Intent(_application.applicationContext, ChannelAudioService::class.java).also { intent ->
+            Intent(
+                _application.applicationContext,
+                ChannelAudioService::class.java
+            ).also { intent ->
                 _application.stopService(intent)
             }
         } else {
@@ -175,14 +178,18 @@ class DualViewModel(application: Application) :
 
     /** send a ping request */
     private fun requestPing() {
-//        _scope.launch {
-//            _messageClient.sendMessage(connectedNodeId, DataSingleton.PING_REQ, null).await()
-//            delay(1000L)
-//            // reset success indicator if the response takes too long
-//            if (Duration.between(_lastPing, LocalDateTime.now()).toMillis() > 1100L) {
-//                _pingSuccess.value = false
-//            }
-//        }
+        _scope.launch {
+            try {
+                _messageClient.sendMessage(connectedNodeId, DataSingleton.PING_REQ, null).await()
+                delay(1000L)
+                // reset success indicator if the response takes too long
+                if (Duration.between(_lastPing, LocalDateTime.now()).toMillis() > 1100L) {
+                    _pingSuccess.value = false
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Ping message to nodeID: $connectedNodeId failed")
+            }
+        }
     }
 
     /**
