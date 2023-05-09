@@ -21,7 +21,7 @@ import kotlinx.coroutines.tasks.await
 import java.nio.ByteBuffer
 
 
-class AudioService : Service() {
+class ChannelAudioService : Service() {
 
     companion object {
         private const val TAG = "Audio Service"  // for logging

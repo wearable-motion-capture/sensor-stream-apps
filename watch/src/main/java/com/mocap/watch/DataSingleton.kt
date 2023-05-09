@@ -23,7 +23,7 @@ enum class AudioStreamState {
 
 object DataSingleton {
 
-    const val VERSION = "0.2.2"
+    const val VERSION = "0.2.3"
 
     // dual mode communication paths
     const val IMU_CHANNEL_PATH = "/imu_channel"

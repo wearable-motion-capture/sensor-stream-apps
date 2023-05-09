@@ -21,7 +21,7 @@ import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentLinkedQueue
 
 
-class ImuService : Service() {
+class ChannelImuService : Service() {
 
     companion object {
         private const val TAG = "IMU Service"  // for logging

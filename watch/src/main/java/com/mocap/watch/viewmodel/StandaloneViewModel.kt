@@ -48,7 +48,7 @@ class StandaloneViewModel(application: Application) :
     val soundStrState = _soundStrState.asStateFlow()
 
     // callbacks will write to these variables
-    private var _rotVec: FloatArray = FloatArray(5) // Rotation Vector sensor or estimation
+    private var _rotVec: FloatArray = FloatArray(4) // Rotation Vector sensor or estimation
     private var _lacc: FloatArray = FloatArray(3) // linear acceleration (without gravity)
     private var _accl: FloatArray = FloatArray(3) // raw acceleration
     private var _grav: FloatArray = FloatArray(3) // gravity
@@ -160,7 +160,6 @@ class StandaloneViewModel(application: Application) :
         val north = DataSingleton.CALIB_NORTH.value.toFloat()
         val ip = DataSingleton.IP.value
         val port = DataSingleton.UDP_IMU_PORT
-        val msgSize = DataSingleton.IMU_MSG_SIZE
 
         // run the streaming in a thread
         withContext(Dispatchers.IO) {
@@ -185,7 +184,7 @@ class StandaloneViewModel(application: Application) :
                                     press, // initial atmospheric pressure collected during calibration
                                     north // body orientation in relation to magnetic north pole collected during calibration
                                 )
-                        val buffer = ByteBuffer.allocate(4 * msgSize)
+                        val buffer = ByteBuffer.allocate(4 * sensorData.count())
                         for (v in sensorData) {
                             buffer.putFloat(v)
                         }

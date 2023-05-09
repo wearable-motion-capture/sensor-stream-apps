@@ -20,7 +20,7 @@ import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentLinkedQueue
 
 
-class PpgService : Service() {
+class ChannelPpgService : Service() {
 
     companion object {
         private const val TAG = "PPG Service"  // for logging
