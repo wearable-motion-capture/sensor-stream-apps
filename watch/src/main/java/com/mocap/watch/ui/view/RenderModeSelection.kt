@@ -31,7 +31,7 @@ fun RenderModeSelection(
         }
         item {
             DefaultButton(
-                enabled = !standalone,
+                enabled = true,
                 onClick = { dualCallback() },
                 text = "Dual"
             )
@@ -39,7 +39,7 @@ fun RenderModeSelection(
         item { DefaultText(text = if (standalone) "No phone connected" else "Found connected phone") }
         item {
             DefaultButton(
-                enabled = standalone,
+                enabled = true,
                 onClick = { standaloneCallback() },
                 text = "Standalone"
             )

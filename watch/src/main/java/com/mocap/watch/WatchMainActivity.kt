@@ -33,7 +33,7 @@ class WatchMainActivity : ComponentActivity(),
     }
 
     private val _capabilityClient by lazy { Wearable.getCapabilityClient(this) }
-    private val _standalone = MutableStateFlow(false) // whether standalone mode is available
+    private val _standalone = MutableStateFlow(true) // whether standalone mode is available
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
