@@ -33,6 +33,7 @@ import java.time.Duration
 import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentLinkedQueue
 
+//TODO: Move broadcast and streaming into Services as in Dual-Mode app
 class PhoneViewModel(application: Application) :
     AndroidViewModel(application) {
 

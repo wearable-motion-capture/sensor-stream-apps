@@ -33,7 +33,7 @@ class WatchMainActivity : ComponentActivity(),
     }
 
     private val _capabilityClient by lazy { Wearable.getCapabilityClient(this) }
-    private val _standalone = MutableStateFlow(false) // whether standalone mode is available
+    private val _standalone = MutableStateFlow(true) // whether standalone mode is available
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -87,9 +87,7 @@ class WatchMainActivity : ComponentActivity(),
                 val nodes = capabilityInfo.nodes
                 if (nodes.count() > 1) {
                     throw Exception("More than one node with $deviceCap detected: $nodes")
-                } else {
-                    _standalone.value = nodes.isEmpty() // standalone if no device connected
-                }
+                } else _standalone.value = nodes.isEmpty()
             }
         }
     }
