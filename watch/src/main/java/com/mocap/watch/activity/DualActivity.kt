@@ -6,10 +6,10 @@ import android.content.IntentFilter
 import android.net.Uri
 import android.os.*
 import android.view.WindowManager
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.annotation.RequiresPermission
-import androidx.fragment.app.FragmentActivity
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.CapabilityInfo
@@ -24,7 +24,7 @@ import com.mocap.watch.ui.view.RenderDual
 import com.mocap.watch.viewmodel.DualViewModel
 
 
-class DualActivity : FragmentActivity(),
+class DualActivity : ComponentActivity(),
     MessageClient.OnMessageReceivedListener,
     CapabilityClient.OnCapabilityChangedListener {
 

@@ -87,9 +87,7 @@ class WatchMainActivity : ComponentActivity(),
                 val nodes = capabilityInfo.nodes
                 if (nodes.count() > 1) {
                     throw Exception("More than one node with $deviceCap detected: $nodes")
-                } else {
-                    _standalone.value = nodes.isEmpty() // standalone if no device connected
-                }
+                } else _standalone.value = nodes.isEmpty()
             }
         }
     }
