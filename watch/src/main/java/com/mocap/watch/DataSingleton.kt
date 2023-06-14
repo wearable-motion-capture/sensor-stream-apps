@@ -4,9 +4,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 
-enum class SensorStreamState {
+enum class ImuStreamState {
     Idle, // app waits for user to trigger the streaming
-    Error, // error state. Stop using the app,
     Streaming // streaming to Phone
 }
 
@@ -17,18 +16,19 @@ enum class PpgStreamState {
 
 enum class AudioStreamState {
     Idle, // app waits for watch to trigger the streaming
-    Error, // error state. Stop streaming
     Streaming // streaming to IP and Port set in StateModule
 }
 
 object DataSingleton {
 
-    const val VERSION = "0.2.3"
+    const val VERSION = "0.2.4"
 
     // dual mode communication paths
     const val IMU_CHANNEL_PATH = "/imu_channel"
+    const val IMU_UDP_PATH = "/imu_udp"
     const val PPG_CHANNEL_PATH = "/ppg_channel"
     const val AUDIO_CHANNEL_PATH = "/audio_channel"
+    const val AUDIO_UDP_PATH = "/audio_udp"
     const val CALIBRATION_PATH = "/calibration"
     const val PING_REQ = "/ping_request"
     const val PING_REP = "/ping_reply"
@@ -46,7 +46,8 @@ object DataSingleton {
     const val PHONE_CAPABILITY = "phone" // if the phone app is connected (see res/values/wear.xml)
 
     // streaming parameters
-    const val IMU_MSG_SIZE = (4 + 14) * 4 // timestamp(4) + data (14 float)
+    const val IMU_CHANNEL_MSG_SIZE = (4 + 14) * 4 // timestamp(4) + data (14 float)
+    const val IMU_UDP_MSG_SIZE = (4 + 16) * 4 // timestamp(4) + data (16 float) (calibration)
     const val PPG_MSG_SIZE = (4 + 16) * 4 // timestamp(4) + data (16 float)
     const val AUDIO_BUFFER_SIZE = 800 // bytes
 

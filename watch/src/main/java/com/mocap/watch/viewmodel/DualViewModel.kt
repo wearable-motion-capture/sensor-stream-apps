@@ -14,7 +14,7 @@ import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
 import com.mocap.watch.DataSingleton
 import com.mocap.watch.PpgStreamState
-import com.mocap.watch.SensorStreamState
+import com.mocap.watch.ImuStreamState
 import com.mocap.watch.AudioStreamState
 import com.mocap.watch.service.ChannelAudioService
 import com.mocap.watch.service.ChannelImuService
@@ -52,7 +52,7 @@ class DualViewModel(application: Application) :
     val pingSuccessState = _pingSuccess.asStateFlow()
     private var _lastPing = LocalDateTime.now()
 
-    private val _imuStreamState = MutableStateFlow(SensorStreamState.Idle)
+    private val _imuStreamState = MutableStateFlow(ImuStreamState.Idle)
     val sensorStreamState = _imuStreamState.asStateFlow()
 
     private val _audioStreamState = MutableStateFlow(AudioStreamState.Idle)
@@ -86,7 +86,7 @@ class DualViewModel(application: Application) :
     }
 
     fun endImu() {
-        _imuStreamState.value = SensorStreamState.Idle
+        _imuStreamState.value = ImuStreamState.Idle
         Intent(_application.applicationContext, ChannelImuService::class.java).also { intent ->
             _application.stopService(intent)
         }
@@ -162,7 +162,7 @@ class DualViewModel(application: Application) :
             val intent = Intent(_application.applicationContext, ChannelImuService::class.java)
             intent.putExtra("sourceNodeId", connectedNodeId)
             _application.startService(intent)
-            _imuStreamState.value = SensorStreamState.Streaming
+            _imuStreamState.value = ImuStreamState.Streaming
         }
     }
 

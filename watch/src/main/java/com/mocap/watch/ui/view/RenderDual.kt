@@ -11,7 +11,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.Text
 import com.mocap.watch.PpgStreamState
-import com.mocap.watch.SensorStreamState
+import com.mocap.watch.ImuStreamState
 import com.mocap.watch.AudioStreamState
 import com.mocap.watch.ui.DefaultButton
 import com.mocap.watch.ui.DefaultText
@@ -24,7 +24,7 @@ fun RenderDual(
     connectedNodeName: StateFlow<String>,
     appActiveStateFlow: StateFlow<Boolean>,
     calibCallback: () -> Unit,
-    sensorStreamStateFlow: StateFlow<SensorStreamState>,
+    imuStreamStateFlow: StateFlow<ImuStreamState>,
     audioStreamStateFlow: StateFlow<AudioStreamState>,
     ppgStreamStateFlow: StateFlow<PpgStreamState>,
     sensorStreamCallback: (Boolean) -> Unit,
@@ -34,7 +34,7 @@ fun RenderDual(
 ) {
     val nodeName by connectedNodeName.collectAsState()
     val appState by appActiveStateFlow.collectAsState()
-    val streamSt by sensorStreamStateFlow.collectAsState()
+    val streamSt by imuStreamStateFlow.collectAsState()
     val soundSt by audioStreamStateFlow.collectAsState()
     val ppgSt by ppgStreamStateFlow.collectAsState()
 
@@ -64,7 +64,7 @@ fun RenderDual(
             StreamToggle(
                 enabled = appState,
                 text = "Stream IMU",
-                checked = (streamSt == SensorStreamState.Streaming),
+                checked = (streamSt == ImuStreamState.Streaming),
                 onChecked = { sensorStreamCallback(it) }
             )
         }
