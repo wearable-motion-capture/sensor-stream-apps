@@ -7,7 +7,6 @@ import android.hardware.SensorManager
 import android.os.IBinder
 import android.util.Log
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import com.google.android.gms.wearable.Wearable
 import com.mocap.watch.DataSingleton
 import com.mocap.watch.modules.SensorListener
 import kotlinx.coroutines.CoroutineScope
@@ -15,13 +14,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
 import java.nio.ByteBuffer
 import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentLinkedQueue
 
 
-class ChannelImuService : Service() {
+class UdpImuService : Service() {
 
     companion object {
         private const val TAG = "IMU Service"  // for logging
@@ -29,7 +31,6 @@ class ChannelImuService : Service() {
 
     private lateinit var _sensorManager: SensorManager
     private val _scope = CoroutineScope(Job() + Dispatchers.IO)
-    private val _channelClient by lazy { Wearable.getChannelClient(application) }
     private var _imuStreamState = false
 
     // callbacks will write to these variables
@@ -66,10 +67,7 @@ class ChannelImuService : Service() {
         ) { onGravReadout(it) },
         SensorListener(
             Sensor.TYPE_GYROSCOPE
-        ) { onGyroReadout(it) },
-//        SensorListener(
-//            Sensor.TYPE_HEART_RATE
-//        ) { globalState.onHrReadout(it) }
+        ) { onGyroReadout(it) }
     )
 
     override fun onCreate() {
@@ -77,81 +75,86 @@ class ChannelImuService : Service() {
         _sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
     }
 
-    private fun streamTrigger(nodeId: String) {
+    private fun streamTrigger() {
         if (_imuStreamState) {
             Log.w(TAG, "stream already started")
             stopSelf()
             return
+        } else {
+            _scope.launch {
+                susStreamTrigger()
+            }
         }
-        _scope.launch {
+    }
+
+    private suspend fun susStreamTrigger() {
+        val ip = DataSingleton.IP.value
+        val port = DataSingleton.UDP_IMU_PORT
+
+        withContext(Dispatchers.IO) {
             try {
-                // Open the channel
-                val channel = _channelClient.openChannel(
-                    nodeId,
-                    DataSingleton.IMU_CHANNEL_PATH
-                ).await()
-                Log.d(TAG, "Opened ${DataSingleton.IMU_CHANNEL_PATH} to $nodeId")
+                // open a socket
+                val udpSocket = DatagramSocket(port)
+                udpSocket.broadcast = true
+                val socketInetAddress = InetAddress.getByName(ip)
+                Log.v(TAG, "Opened UDP socket to $ip:$port")
 
-                try {
-                    // get output stream
-                    val outputStream = _channelClient.getOutputStream(channel).await()
-                    // get output stream
-                    outputStream.use {
-                        // register all listeners with their assigned codes
-                        for (l in _listeners) {
-                            _sensorManager.registerListener(
-                                l,
-                                _sensorManager.getDefaultSensor(l.code),
-                                SensorManager.SENSOR_DELAY_FASTEST
-                            )
-                        }
+                udpSocket.use {
 
-                        // start the stream loop
-                        _imuStreamState = true
-                        while (_imuStreamState) {
-
-                            // get data from queue
-                            // skip entries that are already old. This only happens if the watch
-                            // processes incoming measurements too slowly
-                            var lastDat = _imuQueue.poll()
-                            while (_imuQueue.count() > 10) {
-                                lastDat = _imuQueue.poll()
-                            }
-                            if (lastDat != null) {
-
-                                // get time stamp as float array to ease parsing
-                                val dt = LocalDateTime.now()
-                                val ts = floatArrayOf(
-                                    dt.hour.toFloat(),
-                                    dt.minute.toFloat(),
-                                    dt.second.toFloat(),
-                                    dt.nano.toFloat()
-                                )
-
-                                // feed into byte buffer
-                                val buffer = ByteBuffer.allocate(DataSingleton.IMU_CHANNEL_MSG_SIZE)
-                                for (v in (ts + lastDat)) buffer.putFloat(v)
-
-                                // write to output stream
-                                outputStream.write(buffer.array(), 0, buffer.capacity())
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    // In case the channel gets destroyed while still in the loop
-                    Log.d(TAG, e.message.toString())
-                } finally {
-                    _imuStreamState = false
                     for (l in _listeners) {
-                        _sensorManager.unregisterListener(l)
+                        _sensorManager.registerListener(
+                            l,
+                            _sensorManager.getDefaultSensor(l.code),
+                            SensorManager.SENSOR_DELAY_FASTEST
+                        )
                     }
-                    Log.d(TAG, "IMU stream stopped")
-                    _channelClient.close(channel)
-                    stopSelf() // stop service
+
+                    // start the stream loop
+                    _imuStreamState = true
+                    while (_imuStreamState) {
+
+                        // get data from queue
+                        // skip entries that are already old. This only happens if the watch
+                        // processes incoming measurements too slowly
+                        var lastDat = _imuQueue.poll()
+                        while (_imuQueue.count() > 10) {
+                            lastDat = _imuQueue.poll()
+                        }
+                        if (lastDat != null) {
+
+                            // get time stamp as float array to ease parsing
+                            val dt = LocalDateTime.now()
+                            val ts = floatArrayOf(
+                                dt.hour.toFloat(),
+                                dt.minute.toFloat(),
+                                dt.second.toFloat(),
+                                dt.nano.toFloat()
+                            )
+
+                            // feed into byte buffer
+                            val buffer = ByteBuffer.allocate(DataSingleton.IMU_UDP_MSG_SIZE)
+                            for (v in (ts + lastDat)) buffer.putFloat(v)
+
+                            val dp = DatagramPacket(
+                                buffer.array(),
+                                buffer.capacity(),
+                                socketInetAddress,
+                                port
+                            )
+                            // finally, send the byte stream
+                            udpSocket.send(dp)
+                        }
+                    }
                 }
             } catch (e: Exception) {
-                // In case the channel gets destroyed while still in the loop
-                Log.w(TAG, "Channel failed" + e.message.toString())
+                // if the loop ends of was disrupted, close everything and reset
+                Log.w(TAG, e.message.toString())
+            } finally {
+                _imuStreamState = false
+                for (l in _listeners) {
+                    _sensorManager.unregisterListener(l)
+                }
+                Log.d(TAG, "IMU stream stopped")
                 stopSelf() // stop service
             }
         }
@@ -160,13 +163,7 @@ class ChannelImuService : Service() {
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         Log.i(TAG, "Received start id $startId: $intent")
         // check if a source node ID was sent with the application
-        val sourceId = intent.extras?.getString("sourceNodeId")
-        if (sourceId == null) {
-            Log.w(TAG, "no Node ID given")
-            stopSelf()
-            return START_NOT_STICKY
-        }
-        streamTrigger(sourceId)
+        streamTrigger()
         return START_NOT_STICKY
     }
 
@@ -180,7 +177,7 @@ class ChannelImuService : Service() {
             }
         }
         val intent = Intent(DataSingleton.BROADCAST_CLOSE)
-        intent.putExtra(DataSingleton.BROADCAST_SERVICE_KEY, DataSingleton.IMU_CHANNEL_PATH)
+        intent.putExtra(DataSingleton.BROADCAST_SERVICE_KEY, DataSingleton.IMU_UDP_PATH)
         LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
     }
 
@@ -193,6 +190,10 @@ class ChannelImuService : Service() {
     /** sensor callbacks */
     // Individual sensor reads are triggered by their onValueChanged events
     fun onRotVecReadout(newReadout: FloatArray) {
+
+        val press = DataSingleton.CALIB_PRESS.value
+        val north = DataSingleton.CALIB_NORTH.value.toFloat()
+
         // newReadout is [x,y,z,w, confidence]
         // our preferred order system is [w,x,y,z]
         val rotVec = floatArrayOf(
@@ -207,7 +208,11 @@ class ChannelImuService : Service() {
                     _lacc + // [3] linear acceleration x,y,z
                     _pres + // [1] atmospheric pressure
                     _grav + // [3] vector indicating the direction and magnitude of gravity x,y,z
-                    _gyro  // [3] gyro data for time series prediction)
+                    _gyro + // [3] gyro data for time series prediction)
+                    floatArrayOf(
+                        press, // initial atmospheric pressure collected during calibration
+                        north // body orientation in relation to magnetic north pole collected during calibration
+                    )
         )
     }
 

@@ -13,7 +13,7 @@ import androidx.wear.compose.material.Text
 import kotlinx.coroutines.flow.StateFlow
 
 import com.mocap.watch.DataSingleton
-import com.mocap.watch.SensorStreamState
+import com.mocap.watch.ImuStreamState
 import com.mocap.watch.AudioStreamState
 import com.mocap.watch.ui.DefaultButton
 import com.mocap.watch.ui.DefaultText
@@ -23,7 +23,7 @@ import com.mocap.watch.ui.StreamToggle
 @Composable
 fun RenderStandalone(
     soundStateFlow: StateFlow<AudioStreamState>,
-    sensorStateFlow: StateFlow<SensorStreamState>,
+    sensorStateFlow: StateFlow<ImuStreamState>,
     calibCallback: () -> Unit,
     imuStreamCallback: (Boolean) -> Unit,
     micStreamCallback: (Boolean) -> Unit,
@@ -50,7 +50,7 @@ fun RenderStandalone(
         }
         item {
             DefaultButton(
-                enabled = (sensorState == SensorStreamState.Idle),
+                enabled = (sensorState == ImuStreamState.Idle),
                 onClick = { calibCallback() },
                 text = "Recalibrate"
             )
@@ -71,8 +71,8 @@ fun RenderStandalone(
         item {
             StreamToggle(
                 enabled = true,
-                text = "Stream IMU + PPG",
-                checked = (sensorState == SensorStreamState.Streaming),
+                text = "Stream IMU",
+                checked = (sensorState == ImuStreamState.Streaming),
                 onChecked = { imuStreamCallback(it) }
             )
         }
@@ -92,7 +92,7 @@ fun RenderStandalone(
         }
         item {
             DefaultButton(
-                enabled = (sensorState != SensorStreamState.Streaming) &&
+                enabled = (sensorState != ImuStreamState.Streaming) &&
                         (soundState != AudioStreamState.Streaming),
                 onClick = { ipSetCallback() },
                 text = "Set Target IP"
@@ -112,11 +112,11 @@ fun RenderStandalone(
  * ready, streaming, Error
  */
 @Composable
-fun SensorStateDisplay(state: SensorStreamState, modifier: Modifier = Modifier) {
+fun SensorStateDisplay(state: ImuStreamState, modifier: Modifier = Modifier) {
     var color = Color.Red
-    if (state == SensorStreamState.Idle) {
+    if (state == ImuStreamState.Idle) {
         color = Color.Yellow
-    } else if (state == SensorStreamState.Streaming) {
+    } else if (state == ImuStreamState.Streaming) {
         color = Color.Green
     }
     Text(

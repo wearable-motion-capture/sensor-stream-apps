@@ -100,5 +100,7 @@
         <service android:name=".service.ChannelPpgService" />
         <service android:name=".service.ChannelAudioService" />
         <service android:name=".service.ChannelImuService" />
+        <service android:name=".service.UdpAudioService" />
+        <service android:name=".service.UdpImuService" />
     </application>
 </manifest>

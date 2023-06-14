@@ -69,7 +69,7 @@ class DualActivity : ComponentActivity(),
                     calibCallback = {
                         startActivity(Intent("com.mocap.watch.DUAL_CALIBRATION"))
                     },
-                    sensorStreamStateFlow = _dualViewModel.sensorStreamState,
+                    imuStreamStateFlow = _dualViewModel.sensorStreamState,
                     audioStreamStateFlow = _dualViewModel.soundStreamState,
                     ppgStreamStateFlow = _dualViewModel.ppgStreamState,
                     sensorStreamCallback = { _dualViewModel.imuStreamTrigger(it) },
