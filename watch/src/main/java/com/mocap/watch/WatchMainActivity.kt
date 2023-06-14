@@ -92,8 +92,8 @@ class WatchMainActivity : ComponentActivity(),
         }
     }
 
-    override fun onResume() {
-        super.onResume()
+    private fun register() {
+        _capabilityClient.addLocalCapability(DataSingleton.WATCH_CAPABILITY)
         _capabilityClient.addListener(
             this,
             Uri.parse("wear://"),
@@ -101,13 +101,23 @@ class WatchMainActivity : ComponentActivity(),
         )
     }
 
+    private fun unregister() {
+        _capabilityClient.removeLocalCapability(DataSingleton.WATCH_CAPABILITY)
+        _capabilityClient.removeListener(this)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        register()
+    }
+
     override fun onPause() {
         super.onPause()
-        _capabilityClient.removeListener(this)
+        unregister()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        _capabilityClient.removeListener(this)
+        unregister()
     }
 }
