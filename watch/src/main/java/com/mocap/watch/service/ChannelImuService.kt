@@ -3,6 +3,7 @@ package com.mocap.watch.service
 import android.app.Service
 import android.content.Intent
 import android.hardware.Sensor
+import android.hardware.SensorEvent
 import android.hardware.SensorManager
 import android.os.IBinder
 import android.util.Log
@@ -192,15 +193,11 @@ class ChannelImuService : Service() {
     // Events
     /** sensor callbacks */
     // Individual sensor reads are triggered by their onValueChanged events
-    fun onRotVecReadout(newReadout: FloatArray) {
+    fun onRotVecReadout(newReadout: SensorEvent) {
+        val vals = newReadout.values
         // newReadout is [x,y,z,w, confidence]
         // our preferred order system is [w,x,y,z]
-        val rotVec = floatArrayOf(
-            newReadout[3],
-            newReadout[0],
-            newReadout[1],
-            newReadout[2]
-        )
+        val rotVec = floatArrayOf(vals[3], vals[0], vals[1], vals[2])
 
         _imuQueue.add(
             rotVec + // transformed rotation vector[4] is a quaternion [w,x,y,z]
@@ -211,27 +208,27 @@ class ChannelImuService : Service() {
         )
     }
 
-    fun onLaccReadout(newReadout: FloatArray) {
-        _lacc = newReadout
+    fun onLaccReadout(newReadout: SensorEvent) {
+        _lacc = newReadout.values
     }
 
-    fun onAcclReadout(newReadout: FloatArray) {
-        _accl = newReadout
+    fun onAcclReadout(newReadout: SensorEvent) {
+        _accl = newReadout.values
     }
 
-    fun onGyroReadout(newReadout: FloatArray) {
-        _gyro = newReadout
+    fun onGyroReadout(newReadout: SensorEvent) {
+        _gyro = newReadout.values
     }
 
-    fun onMagnReadout(newReadout: FloatArray) {
-        _magn = newReadout
+    fun onMagnReadout(newReadout: SensorEvent) {
+        _magn = newReadout.values
     }
 
-    fun onPressureReadout(newReadout: FloatArray) {
-        _pres = newReadout
+    fun onPressureReadout(newReadout: SensorEvent) {
+        _pres = newReadout.values
     }
 
-    fun onGravReadout(newReadout: FloatArray) {
-        _grav = newReadout
+    fun onGravReadout(newReadout: SensorEvent) {
+        _grav = newReadout.values
     }
 }

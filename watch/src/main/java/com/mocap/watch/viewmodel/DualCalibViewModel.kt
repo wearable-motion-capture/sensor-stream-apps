@@ -1,6 +1,7 @@
 package com.mocap.watch.viewmodel
 
 import android.app.Application
+import android.hardware.SensorEvent
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
@@ -11,7 +12,6 @@ import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
 import com.mocap.watch.DataSingleton
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -265,22 +265,18 @@ class DualCalibViewModel(
     }
 
     /** sensor callbacks */
-    fun onPressureReadout(newReadout: FloatArray) {
-        _pres = newReadout
+    fun onPressureReadout(newReadout: SensorEvent) {
+        _pres = newReadout.values
     }
 
-    fun onGravReadout(newReadout: FloatArray) {
-        _grav = newReadout
+    fun onGravReadout(newReadout: SensorEvent) {
+        _grav = newReadout.values
     }
 
-    fun onRotVecReadout(newReadout: FloatArray) {
+    fun onRotVecReadout(newReadout: SensorEvent) {
+        val vals = newReadout.values
         // newReadout is [x,y,z,w, confidence]
         // our preferred order system is [w,x,y,z]
-        _rotVec = floatArrayOf(
-            newReadout[3],
-            newReadout[0],
-            newReadout[1],
-            newReadout[2]
-        )
+        _rotVec = floatArrayOf(vals[3], vals[0], vals[1], vals[2])
     }
 }

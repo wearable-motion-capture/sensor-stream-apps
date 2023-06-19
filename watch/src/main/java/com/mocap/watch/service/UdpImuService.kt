@@ -3,6 +3,7 @@ package com.mocap.watch.service
 import android.app.Service
 import android.content.Intent
 import android.hardware.Sensor
+import android.hardware.SensorEvent
 import android.hardware.SensorManager
 import android.os.IBinder
 import android.util.Log
@@ -27,67 +28,62 @@ class UdpImuService : Service() {
 
     companion object {
         private const val TAG = "IMU Service"  // for logging
+        private const val NS2S = 1.0f / 1000000000.0f //Nano second to second
     }
 
-    private lateinit var _sensorManager: SensorManager
+    private lateinit var _sensorManager: SensorManager // to be set in onCreate
     private val _scope = CoroutineScope(Job() + Dispatchers.IO)
     private var _imuStreamState = false
 
+
     // callbacks will write to these variables
-    private var _lacc: FloatArray = FloatArray(3) // linear acceleration (without gravity)
-    private var _accl: FloatArray = FloatArray(3) // raw acceleration
+    private var _dpLacc: FloatArray = floatArrayOf(0f, 0f, 0f) // linear acceleration (no gravity)
+    private var _tsLacc: Long = 0 // in nano seconds
+
+    //    private var _accl: FloatArray = floatArrayOf(0f, 0f, 0f) // raw acceleration
+//    private var _tsAcc = LocalDateTime.now() // time stamp to measure delta t
     private var _grav: FloatArray = FloatArray(3) // gravity
     private var _pres: FloatArray = FloatArray(1) // Atmospheric pressure in hPa (millibar)
-    private var _gyro: FloatArray = FloatArray(3) // gyroscope
+
+    // delta quat from gyro as [w,x,y,z] initialized as identity quat
+    private var _dqGyro: FloatArray = floatArrayOf(1f, 0f, 0f, 0f)
+    private var _tsGyro: Long = 0
     private var _magn: FloatArray = FloatArray(3) // magnetic
 
     // the onRotVecReadout will fill this queue with measurements
-    // the streamTrigger Coroutine will channel them to the phone
+    // the susStreamData Coroutine will stream them
     private var _imuQueue = ConcurrentLinkedQueue<FloatArray>()
 
-    // store listeners in this list to register and unregister them automatically
+    // listeners to register and unregister them automatically on service start and stop
     private var _listeners = listOf(
         SensorListener(
             Sensor.TYPE_PRESSURE
-        ) { onPressureReadout(it) },
-        SensorListener(
+        ) { onPressureReadout(it) }, SensorListener(
             Sensor.TYPE_LINEAR_ACCELERATION
         ) { onLaccReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), excluding the force of gravity.
-        SensorListener(
-            Sensor.TYPE_ACCELEROMETER
-        ) { onAcclReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), including the force of gravity.
+//        SensorListener(
+//            Sensor.TYPE_ACCELEROMETER
+//        ) { onAcclReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), including the force of gravity.
         SensorListener(
             Sensor.TYPE_ROTATION_VECTOR
-        ) { onRotVecReadout(it) },
-        SensorListener(
+        ) { onRotVecReadout(it) }, SensorListener(
             Sensor.TYPE_MAGNETIC_FIELD // All values are in micro-Tesla (uT) and measure the ambient magnetic field in the X, Y and Z axis.
-        ) { onMagnReadout(it) },
-        SensorListener(
+        ) { onMagnReadout(it) }, SensorListener(
             Sensor.TYPE_GRAVITY
-        ) { onGravReadout(it) },
-        SensorListener(
+        ) { onGravReadout(it) }, SensorListener(
             Sensor.TYPE_GYROSCOPE
-        ) { onGyroReadout(it) }
-    )
+        ) { onGyroReadout(it) })
 
     override fun onCreate() {
-        // access and observe sensors
         _sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
     }
 
-    private fun streamTrigger() {
-        if (_imuStreamState) {
-            Log.w(TAG, "stream already started")
-            stopSelf()
-            return
-        } else {
-            _scope.launch {
-                susStreamTrigger()
-            }
-        }
-    }
-
-    private suspend fun susStreamTrigger() {
+    /**
+     * Stream IMU data in a while loop.
+     * This function is suspendible to be able to kill the loop by stopping or pausing
+     * the scope it was started from.
+     */
+    private suspend fun susStreamData() {
         val ip = DataSingleton.IP.value
         val port = DataSingleton.UDP_IMU_PORT
 
@@ -101,6 +97,7 @@ class UdpImuService : Service() {
 
                 udpSocket.use {
 
+                    // register all sensor listeners
                     for (l in _listeners) {
                         _sensorManager.registerListener(
                             l,
@@ -110,36 +107,25 @@ class UdpImuService : Service() {
                     }
 
                     // start the stream loop
-                    _imuStreamState = true
+                    _imuStreamState = true // this value may get changed elsewhere to stop
+                    // the loop
                     while (_imuStreamState) {
 
                         // get data from queue
-                        // skip entries that are already old. This only happens if the watch
-                        // processes incoming measurements too slowly
                         var lastDat = _imuQueue.poll()
+                        // skip entries that are already old. This only a lifeline to handle cases
+                        // where the watch becomes too slow and processes incoming measurements
+                        // too slowly
                         while (_imuQueue.count() > 10) {
                             lastDat = _imuQueue.poll()
                         }
                         if (lastDat != null) {
-
-                            // get time stamp as float array to ease parsing
-                            val dt = LocalDateTime.now()
-                            val ts = floatArrayOf(
-                                dt.hour.toFloat(),
-                                dt.minute.toFloat(),
-                                dt.second.toFloat(),
-                                dt.nano.toFloat()
-                            )
-
                             // feed into byte buffer
                             val buffer = ByteBuffer.allocate(DataSingleton.IMU_UDP_MSG_SIZE)
-                            for (v in (ts + lastDat)) buffer.putFloat(v)
+                            for (v in lastDat) buffer.putFloat(v)
 
                             val dp = DatagramPacket(
-                                buffer.array(),
-                                buffer.capacity(),
-                                socketInetAddress,
-                                port
+                                buffer.array(), buffer.capacity(), socketInetAddress, port
                             )
                             // finally, send the byte stream
                             udpSocket.send(dp)
@@ -160,10 +146,21 @@ class UdpImuService : Service() {
         }
     }
 
+
+    /**
+     * Triggers the streaming of IMU data as a service
+     * or (if already running) stops the service.
+     */
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         Log.i(TAG, "Received start id $startId: $intent")
         // check if a source node ID was sent with the application
-        streamTrigger()
+        if (_imuStreamState) {
+            Log.w(TAG, "stream already started")
+            stopSelf()
+            return START_NOT_STICKY
+        } else {
+            _scope.launch { susStreamData() }
+        }
         return START_NOT_STICKY
     }
 
@@ -187,56 +184,140 @@ class UdpImuService : Service() {
     }
 
     // Events
-    /** sensor callbacks */
-    // Individual sensor reads are triggered by their onValueChanged events
-    fun onRotVecReadout(newReadout: FloatArray) {
-
+    /** sensor callbacks
+     * Individual sensor reads are triggered by their onValueChanged events. The onRotVecReadout is
+     * the main trigger, which then collects delta rotation an translation values estimated through
+     * gyro and lacc readouts.
+     */
+    fun onRotVecReadout(newReadout: SensorEvent) {
+        val values = newReadout.values
         val press = DataSingleton.CALIB_PRESS.value
         val north = DataSingleton.CALIB_NORTH.value.toFloat()
+
+        // get time stamp as float array to ease parsing
+        val tsNow = LocalDateTime.now()
+        val ts = floatArrayOf(
+            tsNow.hour.toFloat(),
+            tsNow.minute.toFloat(),
+            tsNow.second.toFloat(),
+            tsNow.nano.toFloat()
+        )
 
         // newReadout is [x,y,z,w, confidence]
         // our preferred order system is [w,x,y,z]
         val rotVec = floatArrayOf(
-            newReadout[3],
-            newReadout[0],
-            newReadout[1],
-            newReadout[2]
+            values[3], values[0], values[1], values[2]
         )
 
         _imuQueue.add(
-            rotVec + // transformed rotation vector[4] is a quaternion [w,x,y,z]
-                    _lacc + // [3] linear acceleration x,y,z
+            ts +
+                    rotVec + // transformed rotation vector[4] is a quaternion [w,x,y,z]
+                    _dpLacc + // [3] linear acceleration x,y,z
                     _pres + // [1] atmospheric pressure
                     _grav + // [3] vector indicating the direction and magnitude of gravity x,y,z
-                    _gyro + // [3] gyro data for time series prediction)
+                    _dqGyro + // [4] rotation difference as quaternion taken from gyro
                     floatArrayOf(
                         press, // initial atmospheric pressure collected during calibration
                         north // body orientation in relation to magnetic north pole collected during calibration
                     )
         )
+        // now that the time step is stored, reset the deltas
+        _dqGyro = floatArrayOf(1f, 0f, 0f, 0f) // rotation
+        _dpLacc = floatArrayOf(0f, 0f, 0f) // translation
     }
 
-    fun onLaccReadout(newReadout: FloatArray) {
-        _lacc = newReadout
+    fun onLaccReadout(newReadout: SensorEvent) {
+        if (_tsLacc != 0L) {
+            // get time difference in seconds
+            var dT: Float = (newReadout.timestamp - _tsGyro) * NS2S
+
+            // avoid over-amplifying. If the time difference is larger than a second,
+            // something in the pipeline must be on pause
+            if (dT > 1f) {
+                dT = 1f
+            }
+            // integrate twice and add to the displacement
+            _dpLacc[0] += newReadout.values[0] * dT * dT
+            _dpLacc[1] += newReadout.values[1] * dT * dT
+            _dpLacc[2] += newReadout.values[2] * dT * dT
+        }
+        _tsLacc = newReadout.timestamp
     }
 
-    fun onAcclReadout(newReadout: FloatArray) {
-        _accl = newReadout
+    fun onGyroReadout(newReadout: SensorEvent) {
+        // This time step's delta rotation to be multiplied by the current rotation
+        // after computing it from the gyro sample data.
+        if (_tsGyro != 0L) {
+            // get time difference in seconds
+            var dT: Float = (newReadout.timestamp - _tsGyro) * NS2S
+
+            // avoid over-amplifying. If the time difference is larger than a second,
+            // something in the pipeline must be on pause
+            if (dT > 1f) {
+                dT = 1f
+            }
+
+            // Axis of the rotation sample, not normalized yet.
+            var axisX: Float = newReadout.values[0]
+            var axisY: Float = newReadout.values[1]
+            var axisZ: Float = newReadout.values[2]
+
+            // Calculate the angular speed of the sample
+            val omegaMagnitude: Float = kotlin.math.sqrt(
+                axisX * axisX + axisY * axisY + axisZ * axisZ
+            )
+
+            // Normalize the rotation vector if it's big enough to get the axis
+            if (omegaMagnitude > kotlin.math.E) {
+                axisX /= omegaMagnitude
+                axisY /= omegaMagnitude
+                axisZ /= omegaMagnitude
+            }
+
+            // Integrate around this axis with the angular speed by the time step
+            // in order to get a delta rotation from this sample over the time step
+            // We will convert this axis-angle representation of the delta rotation
+            // into a quaternion
+            val thetaOverTwo = omegaMagnitude * dT / 2.0f
+            val sinThetaOverTwo: Float = kotlin.math.sin(thetaOverTwo)
+            val deltaVec = floatArrayOf(
+                kotlin.math.cos(thetaOverTwo), // w
+                sinThetaOverTwo * axisX, // x
+                sinThetaOverTwo * axisY, // y
+                sinThetaOverTwo * axisZ  // z
+            )
+            _dqGyro = hamiltonProd(_dqGyro, deltaVec)
+        }
+        _tsGyro = newReadout.timestamp
+
     }
 
-    fun onGyroReadout(newReadout: FloatArray) {
-        _gyro = newReadout
+    fun onMagnReadout(newReadout: SensorEvent) {
+        _magn = newReadout.values
     }
 
-    fun onMagnReadout(newReadout: FloatArray) {
-        _magn = newReadout
+    fun onPressureReadout(newReadout: SensorEvent) {
+        _pres = newReadout.values
     }
 
-    fun onPressureReadout(newReadout: FloatArray) {
-        _pres = newReadout
+    fun onGravReadout(newReadout: SensorEvent) {
+        _grav = newReadout.values
     }
 
-    fun onGravReadout(newReadout: FloatArray) {
-        _grav = newReadout
+//    fun onAcclReadout(newReadout: SensorEvent) {
+//        _accl = newReadout.values
+//    }
+
+    /**
+     * Hamilton product to multiply two quaternions
+     */
+    fun hamiltonProd(a: FloatArray, b: FloatArray): FloatArray {
+        // this is the result of H(a,b)
+        return floatArrayOf(
+            a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3],
+            a[0] * b[1] + a[1] * b[0] + a[2] * b[3] - a[3] * b[2],
+            a[0] * b[2] - a[1] * b[3] + a[2] * b[0] + a[3] * b[1],
+            a[0] * b[3] + a[1] * b[2] - a[2] * b[1] + a[3] * b[0]
+        )
     }
 }

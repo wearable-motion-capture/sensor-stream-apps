@@ -1,5 +1,6 @@
 package com.mocap.watch.modules
 
+import android.hardware.SensorEvent
 import android.os.VibrationEffect
 import android.os.Vibrator
 import com.mocap.watch.DataSingleton
@@ -141,18 +142,18 @@ class StandaloneCalibViewModel(vibrator: Vibrator, calibDone: () -> Unit) {
     }
 
     /** sensor callback */
-    fun onPressureReadout(newReadout: FloatArray) {
-        _pres = newReadout
+    fun onPressureReadout(newReadout: SensorEvent) {
+        _pres = newReadout.values
     }
 
     /** sensor callback */
-    fun onGravReadout(newReadout: FloatArray) {
-        _grav = newReadout
+    fun onGravReadout(newReadout: SensorEvent) {
+        _grav = newReadout.values
     }
 
     /** sensor callback */
-    fun onRotVecReadout(newReadout: FloatArray) {
-        _rotVec = newReadout // [x,y,z,w]
+    fun onRotVecReadout(newReadout: SensorEvent) {
+        _rotVec = newReadout.values // [x,y,z,w]
     }
 
     /**
