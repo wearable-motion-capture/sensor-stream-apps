@@ -37,7 +37,8 @@ class UdpImuService : Service() {
 
 
     // callbacks will write to these variables
-    private var _dpLacc: FloatArray = floatArrayOf(0f, 0f, 0f) // linear acceleration (no gravity)
+    private var _dpLvel: FloatArray = floatArrayOf(0f, 0f, 0f) // integrated linear acc (no gravity)
+    private var _dpLpos: FloatArray = floatArrayOf(0f, 0f, 0f) // 2x integrated linear acc
     private var _tsLacc: Long = 0 // in nano seconds
 
     //    private var _accl: FloatArray = floatArrayOf(0f, 0f, 0f) // raw acceleration
@@ -212,10 +213,11 @@ class UdpImuService : Service() {
         _imuQueue.add(
             ts +
                     rotVec + // transformed rotation vector[4] is a quaternion [w,x,y,z]
-                    _dpLacc + // [3] linear acceleration x,y,z
+                    _dpLvel + // [3] integrated linear acc x,y,z
+                    _dpLpos + // [3] 2x integrated linear acc x,y,z
+                    _dqGyro + // [4] rotation difference as quaternion taken from gyro
                     _pres + // [1] atmospheric pressure
                     _grav + // [3] vector indicating the direction and magnitude of gravity x,y,z
-                    _dqGyro + // [4] rotation difference as quaternion taken from gyro
                     floatArrayOf(
                         press, // initial atmospheric pressure collected during calibration
                         north // body orientation in relation to magnetic north pole collected during calibration
@@ -223,7 +225,8 @@ class UdpImuService : Service() {
         )
         // now that the time step is stored, reset the deltas
         _dqGyro = floatArrayOf(1f, 0f, 0f, 0f) // rotation
-        _dpLacc = floatArrayOf(0f, 0f, 0f) // translation
+        _dpLpos = floatArrayOf(0f, 0f, 0f) // translation
+        _dpLvel = floatArrayOf(0f, 0f, 0f)
     }
 
     fun onLaccReadout(newReadout: SensorEvent) {
@@ -236,10 +239,14 @@ class UdpImuService : Service() {
             if (dT > 1f) {
                 dT = 1f
             }
-            // integrate twice and add to the displacement
-            _dpLacc[0] += newReadout.values[0] * dT * dT
-            _dpLacc[1] += newReadout.values[1] * dT * dT
-            _dpLacc[2] += newReadout.values[2] * dT * dT
+            // integrate twice. first obtain velocity
+            _dpLvel[0] += newReadout.values[0] * dT
+            _dpLvel[1] += newReadout.values[1] * dT
+            _dpLvel[2] += newReadout.values[2] * dT
+            // then position
+            _dpLpos[0] += _dpLvel[0] * dT
+            _dpLpos[1] += _dpLvel[1] * dT
+            _dpLpos[2] += _dpLvel[2] * dT
         }
         _tsLacc = newReadout.timestamp
     }
