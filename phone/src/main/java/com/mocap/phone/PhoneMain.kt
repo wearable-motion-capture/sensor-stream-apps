@@ -147,6 +147,7 @@ class PhoneMain : ComponentActivity(),
         _viewModel.queryCapabilities()
         // for the watch app to detect this phone
         _capabilityClient.addLocalCapability(DataSingleton.PHONE_APP_ACTIVE)
+        _capabilityClient.addLocalCapability(DataSingleton.PHONE_CAPABILITY)
         // check if a phone is connected and set state flows accordingly
         _viewModel.queryCapabilities()
         // to handle incoming data streams
@@ -164,6 +165,7 @@ class PhoneMain : ComponentActivity(),
         _messageClient.removeListener(this)
         _capabilityClient.removeListener(this)
         _capabilityClient.removeLocalCapability(DataSingleton.PHONE_APP_ACTIVE)
+        _capabilityClient.removeLocalCapability(DataSingleton.PHONE_CAPABILITY)
         _channelClient.unregisterChannelCallback(_channelCallback)
     }
 
