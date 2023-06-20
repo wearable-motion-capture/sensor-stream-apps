@@ -2,6 +2,7 @@ package com.mocap.watch.service
 
 import android.app.Service
 import android.content.Intent
+import android.hardware.SensorEvent
 import android.hardware.SensorManager
 import android.os.IBinder
 import android.util.Log
@@ -138,8 +139,8 @@ class ChannelPpgService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun onHrRawReadout(newReadout: FloatArray) {
-        _ppgQueue.add(newReadout)
+    private fun onHrRawReadout(newReadout: SensorEvent) {
+        _ppgQueue.add(newReadout.values)
     }
 
     override fun onDestroy() {
