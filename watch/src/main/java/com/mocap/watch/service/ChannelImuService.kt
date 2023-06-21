@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.nio.ByteBuffer
@@ -25,7 +26,9 @@ import java.util.concurrent.ConcurrentLinkedQueue
 class ChannelImuService : Service() {
 
     companion object {
-        private const val TAG = "IMU Service"  // for logging
+        private const val TAG = "Channel IMU Service"  // for logging
+        private const val NS2S = 1.0f / 1000000000.0f //Nano second to second
+        private const val MSGBREAK = 5L
     }
 
     private lateinit var _sensorManager: SensorManager
@@ -34,16 +37,21 @@ class ChannelImuService : Service() {
     private var _imuStreamState = false
 
     // callbacks will write to these variables
-    private var _lacc: FloatArray = FloatArray(3) // linear acceleration (without gravity)
-    private var _accl: FloatArray = FloatArray(3) // raw acceleration
+    private var _dpLvel: FloatArray = floatArrayOf(0f, 0f, 0f) // integrated linear acc
+    private var _tsLacc: Long = 0 // time step of acc update in nano seconds
+    private var _tsDLacc: Float = 0f // time since last update
+
+    // gyroscope
+    private var _dGyro: FloatArray = floatArrayOf(0f, 0f, 0f)
+    private var _tsGyro: Long = 0
+    private var _tsDGyro: Float = 0f
+
+    // other modalities
     private var _grav: FloatArray = FloatArray(3) // gravity
     private var _pres: FloatArray = FloatArray(1) // Atmospheric pressure in hPa (millibar)
-    private var _gyro: FloatArray = FloatArray(3) // gyroscope
-    private var _magn: FloatArray = FloatArray(3) // magnetic
+    private var _rotvec: FloatArray = floatArrayOf(1f, 0f, 0f, 0f) // rot vector as [w,x,y,z] quat
 
-    // the onRotVecReadout will fill this queue with measurements
-    // the streamTrigger Coroutine will channel them to the phone
-    private var _imuQueue = ConcurrentLinkedQueue<FloatArray>()
+
 
     // store listeners in this list to register and unregister them automatically
     private var _listeners = listOf(
@@ -52,25 +60,16 @@ class ChannelImuService : Service() {
         ) { onPressureReadout(it) },
         SensorListener(
             Sensor.TYPE_LINEAR_ACCELERATION
-        ) { onLaccReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), excluding the force of gravity.
-        SensorListener(
-            Sensor.TYPE_ACCELEROMETER
-        ) { onAcclReadout(it) }, // Measures the acceleration force in m/s2 that is applied to a device on all three physical axes (x, y, and z), including the force of gravity.
+        ) { onLaccReadout(it) },
         SensorListener(
             Sensor.TYPE_ROTATION_VECTOR
         ) { onRotVecReadout(it) },
-        SensorListener(
-            Sensor.TYPE_MAGNETIC_FIELD // All values are in micro-Tesla (uT) and measure the ambient magnetic field in the X, Y and Z axis.
-        ) { onMagnReadout(it) },
         SensorListener(
             Sensor.TYPE_GRAVITY
         ) { onGravReadout(it) },
         SensorListener(
             Sensor.TYPE_GYROSCOPE
-        ) { onGyroReadout(it) },
-//        SensorListener(
-//            Sensor.TYPE_HEART_RATE
-//        ) { globalState.onHrReadout(it) }
+        ) { onGyroReadout(it) }
     )
 
     override fun onCreate() {
@@ -110,32 +109,18 @@ class ChannelImuService : Service() {
                         // start the stream loop
                         _imuStreamState = true
                         while (_imuStreamState) {
-
-                            // get data from queue
-                            // skip entries that are already old. This only happens if the watch
-                            // processes incoming measurements too slowly
-                            var lastDat = _imuQueue.poll()
-                            while (_imuQueue.count() > 10) {
-                                lastDat = _imuQueue.poll()
-                            }
+                            // compose message
+                            val lastDat = composeImuMessage()
+                            // only process if a message was composed successfully
                             if (lastDat != null) {
-
-                                // get time stamp as float array to ease parsing
-                                val dt = LocalDateTime.now()
-                                val ts = floatArrayOf(
-                                    dt.hour.toFloat(),
-                                    dt.minute.toFloat(),
-                                    dt.second.toFloat(),
-                                    dt.nano.toFloat()
-                                )
-
                                 // feed into byte buffer
                                 val buffer = ByteBuffer.allocate(DataSingleton.IMU_CHANNEL_MSG_SIZE)
-                                for (v in (ts + lastDat)) buffer.putFloat(v)
-
+                                for (v in lastDat) buffer.putFloat(v)
                                 // write to output stream
                                 outputStream.write(buffer.array(), 0, buffer.capacity())
                             }
+                            // avoid sending too fast. Delay coroutine for milliseconds
+                            delay(MSGBREAK)
                         }
                     }
                 } catch (e: Exception) {
@@ -165,9 +150,9 @@ class ChannelImuService : Service() {
         if (sourceId == null) {
             Log.w(TAG, "no Node ID given")
             stopSelf()
-            return START_NOT_STICKY
+        } else {
+            streamTrigger(sourceId)
         }
-        streamTrigger(sourceId)
         return START_NOT_STICKY
     }
 
@@ -192,36 +177,114 @@ class ChannelImuService : Service() {
 
     // Events
     /** sensor callbacks */
-    // Individual sensor reads are triggered by their onValueChanged events
-    fun onRotVecReadout(newReadout: SensorEvent) {
-        val vals = newReadout.values
-        // newReadout is [x,y,z,w, confidence]
-        // our preferred order system is [w,x,y,z]
-        val rotVec = floatArrayOf(vals[3], vals[0], vals[1], vals[2])
+    private fun composeImuMessage(): FloatArray? {
+        // avoid composing a new message before receiving new data
+        // also, this prevents division by 0 when averaging below
+        if (
+            (_tsDLacc == 0f) ||
+            (_tsDGyro == 0f) ||
+            _rotvec.contentEquals(
+                floatArrayOf(1f, 0f, 0f, 0f)
+            )
+        ) {
+            return null
+        }
 
-        _imuQueue.add(
-            rotVec + // transformed rotation vector[4] is a quaternion [w,x,y,z]
-                    _lacc + // [3] linear acceleration x,y,z
-                    _pres + // [1] atmospheric pressure
-                    _grav + // [3] vector indicating the direction and magnitude of gravity x,y,z
-                    _gyro  // [3] gyro data for time series prediction)
+        // get time stamp as float array to ease parsing
+        val tsNow = LocalDateTime.now()
+        val ts = floatArrayOf(
+            tsNow.hour.toFloat(),
+            tsNow.minute.toFloat(),
+            tsNow.second.toFloat(),
+            tsNow.nano.toFloat()
         )
+
+        // average gyro velocities
+        val tgyro = floatArrayOf(
+            _dGyro[0] / _tsDGyro,
+            _dGyro[1] / _tsDGyro,
+            _dGyro[2] / _tsDGyro
+        )
+
+        // average accelerations
+        val tLacc = floatArrayOf(
+            _dpLvel[0] / _tsDLacc,
+            _dpLvel[1] / _tsDLacc,
+            _dpLvel[2] / _tsDLacc
+        )
+
+        // compose the message as a float array
+        val message = ts +
+                _rotvec + // transformed rotation vector[4] is a quaternion [w,x,y,z]
+                tgyro + // mean gyro
+                _dpLvel + // [3] integrated linear acc x,y,z
+                tLacc + // mean acc
+                _pres + // [1] atmospheric pressure
+                _grav // [3] vector indicating the direction of gravity x,y,z
+
+        // now that the message is stored, reset the deltas
+        // translation vel
+        _dpLvel = floatArrayOf(0f, 0f, 0f)
+        _tsDLacc = 0f
+
+        // rotation vel
+        _dGyro = floatArrayOf(0f, 0f, 0f)
+        _tsDGyro = 0f
+
+        // replace rot vec with default to be overwritten when new value comes in
+        _rotvec = floatArrayOf(1f, 0f, 0f, 0f)
+
+        return message
     }
 
+    /** sensor callbacks (Events) */
     fun onLaccReadout(newReadout: SensorEvent) {
-        _lacc = newReadout.values
-    }
-
-    fun onAcclReadout(newReadout: SensorEvent) {
-        _accl = newReadout.values
+        if (_tsLacc != 0L) {
+            // get time difference in seconds
+            val dT: Float = (newReadout.timestamp - _tsGyro) * NS2S
+            // avoid over-amplifying. If the time difference is larger than a second,
+            // something in the pipeline must be on pause
+            if (dT > 1f) {
+                _dpLvel = newReadout.values
+                _tsDLacc = 1f
+            } else {
+                // integrate
+                _dpLvel[0] += newReadout.values[0] * dT
+                _dpLvel[1] += newReadout.values[1] * dT
+                _dpLvel[2] += newReadout.values[2] * dT
+                // also keep total time to estimate simple mean by division
+                _tsDLacc += dT
+            }
+        }
+        _tsLacc = newReadout.timestamp
     }
 
     fun onGyroReadout(newReadout: SensorEvent) {
-        _gyro = newReadout.values
+        // see above documentation in Lacc readout for the rationale of individual code lines
+        if (_tsGyro != 0L) {
+            val dT: Float = (newReadout.timestamp - _tsGyro) * NS2S
+            if (dT > 1f) {
+                _dGyro = newReadout.values
+                _tsDGyro = 1f
+            } else {
+                _dGyro[0] += newReadout.values[0] * dT
+                _dGyro[1] += newReadout.values[1] * dT
+                _dGyro[2] += newReadout.values[2] * dT
+                _tsDGyro += dT
+            }
+        }
+        _tsGyro = newReadout.timestamp
     }
 
-    fun onMagnReadout(newReadout: SensorEvent) {
-        _magn = newReadout.values
+    fun onRotVecReadout(newReadout: SensorEvent) {
+        // newReadout is [x,y,z,w, confidence]
+        // our preferred order is [w,x,y,z]
+        // This is not important for state transition.
+        // No averaging over time needed, because we are only interested in the most
+        // recent observation
+        _rotvec = floatArrayOf(
+            newReadout.values[3], newReadout.values[0], newReadout.values[1], newReadout.values[2]
+        )
     }
 
     fun onPressureReadout(newReadout: SensorEvent) {

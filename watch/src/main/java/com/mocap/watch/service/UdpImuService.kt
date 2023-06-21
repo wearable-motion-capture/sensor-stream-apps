@@ -80,6 +80,7 @@ class UdpImuService : Service() {
      * the scope it was started from.
      */
     private suspend fun susStreamData() {
+
         val ip = DataSingleton.IP.value
         val port = DataSingleton.UDP_IMU_PORT
 
@@ -104,7 +105,6 @@ class UdpImuService : Service() {
 
                     // start the stream loop
                     _imuStreamState = true // this value may get changed elsewhere to stop
-                    // the loop
                     while (_imuStreamState) {
                         // compose message
                         val lastDat = composeImuMessage()

@@ -554,17 +554,4 @@ class PhoneViewModel(application: Application) :
                 }
         }
     }
-
-    //    private fun quatDiff(a: FloatArray, b: FloatArray): FloatArray {
-//        // get the conjugate
-//        val aI = floatArrayOf(a[0], -a[1], -a[2], -a[3])
-//        // Hamilton product as H(A,B)
-//        val hab = floatArrayOf(
-//            aI[0] * b[0] - aI[1] * b[1] - aI[2] * b[2] - aI[3] * b[3],
-//            aI[0] * b[1] + aI[1] * b[0] + aI[2] * b[3] - aI[3] * b[2],
-//            aI[0] * b[2] - aI[1] * b[3] + aI[2] * b[0] + aI[3] * b[1],
-//            aI[0] * b[3] + aI[1] * b[2] - aI[2] * b[1] + aI[3] * b[0]
-//        )
-//        return hab
-//    }
 }

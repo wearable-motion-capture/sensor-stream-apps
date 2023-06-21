@@ -8,8 +8,8 @@ import kotlin.math.sqrt
  * in between +pi and -pi.
  */
 fun getGlobalYRotation(rotVec : FloatArray): Double {
-    // smartwatch rotation to [-w,x,z,y]
-    val r = floatArrayOf(-rotVec[0], rotVec[1], rotVec[2], rotVec[3])
+    // smartwatch rotation to [w,x,z,y]
+    val r = floatArrayOf(-rotVec[0], rotVec[1], rotVec[3], rotVec[2])
     val p = floatArrayOf(0f, 0f, 0f, 1f) // forward vector with [0,x,y,z]
 
     // this is the result of H(R,P)
@@ -20,16 +20,16 @@ fun getGlobalYRotation(rotVec : FloatArray): Double {
         r[0] * p[3] + r[1] * p[2] - r[2] * p[1] + r[3] * p[0]
     )
 
-    val r_p = floatArrayOf(r[0], -r[1], -r[2], -r[3]) // this is R'
+    val rp = floatArrayOf(r[0], -r[1], -r[2], -r[3]) // this is R'
     // the final H(H(R,P),R')
-    val p_p = floatArrayOf(
-        hrp[0] * r_p[0] - hrp[1] * r_p[1] - hrp[2] * r_p[2] - hrp[3] * r_p[3],
-        hrp[0] * r_p[1] + hrp[1] * r_p[0] + hrp[2] * r_p[3] - hrp[3] * r_p[2],
-        hrp[0] * r_p[2] - hrp[1] * r_p[3] + hrp[2] * r_p[0] + hrp[3] * r_p[1],
-        hrp[0] * r_p[3] + hrp[1] * r_p[2] - hrp[2] * r_p[1] + hrp[3] * r_p[0]
+    val pp = floatArrayOf(
+        hrp[0] * rp[0] - hrp[1] * rp[1] - hrp[2] * rp[2] - hrp[3] * rp[3],
+        hrp[0] * rp[1] + hrp[1] * rp[0] + hrp[2] * rp[3] - hrp[3] * rp[2],
+        hrp[0] * rp[2] - hrp[1] * rp[3] + hrp[2] * rp[0] + hrp[3] * rp[1],
+        hrp[0] * rp[3] + hrp[1] * rp[2] - hrp[2] * rp[1] + hrp[3] * rp[0]
     )
     // get angle with atan2
-    val yRot = kotlin.math.atan2(p_p[1], p_p[3])
+    val yRot = kotlin.math.atan2(pp[1], pp[3])
 
     return yRot * 57.29578
 }
@@ -64,3 +64,16 @@ fun quatAverage(quats: List<FloatArray>): FloatArray {
     for (i in qavg.indices) qavg[i] /= l2norm
     return qavg
 }
+
+//    private fun quatDiff(a: FloatArray, b: FloatArray): FloatArray {
+//        // get the conjugate
+//        val aI = floatArrayOf(a[0], -a[1], -a[2], -a[3])
+//        // Hamilton product as H(A,B)
+//        val hab = floatArrayOf(
+//            aI[0] * b[0] - aI[1] * b[1] - aI[2] * b[2] - aI[3] * b[3],
+//            aI[0] * b[1] + aI[1] * b[0] + aI[2] * b[3] - aI[3] * b[2],
+//            aI[0] * b[2] - aI[1] * b[3] + aI[2] * b[0] + aI[3] * b[1],
+//            aI[0] * b[3] + aI[1] * b[2] - aI[2] * b[1] + aI[3] * b[0]
+//        )
+//        return hab
+//    }

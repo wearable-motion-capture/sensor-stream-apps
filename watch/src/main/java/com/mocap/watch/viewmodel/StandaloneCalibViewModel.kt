@@ -92,6 +92,7 @@ class StandaloneCalibViewModel(
                 // the "Hold" calibration position is greater than 45 deg
                 val curYRot = getGlobalYRotation(_rotVec)
                 if ((abs(holdYRot - curYRot) < 67.5f) || (_grav[2] < 9.75)) {
+                    delay(10L)
                     start = LocalDateTime.now()
                     northDegrees.clear()
                     if (!vibrating) {
@@ -107,8 +108,10 @@ class StandaloneCalibViewModel(
                     northDegrees.add(curYRot)
                     diff = Duration.between(start, LocalDateTime.now()).toMillis()
                     // and stop vibrating pulse
-                    vibrating = false
-                    _vibrator.cancel()
+                    if (vibrating) {
+                        vibrating = false
+                        _vibrator.cancel()
+                    }
                     delay(COROUTINE_SLEEP)
                 }
             }
