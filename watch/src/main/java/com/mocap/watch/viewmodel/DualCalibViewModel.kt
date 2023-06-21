@@ -189,7 +189,6 @@ class DualCalibViewModel(
                         // complete calibration and close everything
                         _onCompleteCallback()
                     }
-
                 }
             }
         }

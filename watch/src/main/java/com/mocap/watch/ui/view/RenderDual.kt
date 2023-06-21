@@ -29,14 +29,14 @@ fun RenderDual(
     ppgStreamStateFlow: StateFlow<PpgStreamState>,
     sensorStreamCallback: (Boolean) -> Unit,
     soundStreamCallback: (Boolean) -> Unit,
-    ppgStreamCallback: (Boolean) -> Unit,
+    // ppgStreamCallback: (Boolean) -> Unit,
     finishCallback: () -> Unit
 ) {
     val nodeName by connectedNodeName.collectAsState()
     val appState by appActiveStateFlow.collectAsState()
     val streamSt by imuStreamStateFlow.collectAsState()
     val soundSt by audioStreamStateFlow.collectAsState()
-    val ppgSt by ppgStreamStateFlow.collectAsState()
+    // val ppgSt by ppgStreamStateFlow.collectAsState()
 
     // display information in a column
     ScalingLazyColumn(
@@ -76,14 +76,14 @@ fun RenderDual(
                 onChecked = { soundStreamCallback(it) }
             )
         }
-        item {
-            StreamToggle(
-                enabled = appState,
-                text = "Stream PPG",
-                checked = (ppgSt == PpgStreamState.Streaming),
-                onChecked = { ppgStreamCallback(it) }
-            )
-        }
+//        item {
+//            StreamToggle(
+//                enabled = appState,
+//                text = "Stream PPG",
+//                checked = (ppgSt == PpgStreamState.Streaming),
+//                onChecked = { ppgStreamCallback(it) }
+//            )
+//        }
         item {
             RedButton(
                 onClick = finishCallback,

@@ -74,7 +74,7 @@ class DualActivity : ComponentActivity(),
                     ppgStreamStateFlow = _dualViewModel.ppgStreamState,
                     sensorStreamCallback = { _dualViewModel.imuStreamTrigger(it) },
                     soundStreamCallback = { _dualViewModel.audioStreamTrigger(it) },
-                    ppgStreamCallback = { _dualViewModel.ppgStreamTrigger(it) },
+                    // ppgStreamCallback = { _dualViewModel.ppgStreamTrigger(it) }, // PPG is only for specific watches
                     finishCallback = ::finish
                 )
             }
