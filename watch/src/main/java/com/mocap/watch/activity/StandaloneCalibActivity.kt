@@ -40,8 +40,9 @@ class StandaloneCalibActivity : ComponentActivity() {
 
             // create the view model class
             _viewModel = StandaloneCalibViewModel(
+                application = this.application,
                 vibrator = _vibrator,
-                calibDone = this::onComplete
+                onCompleteCallback = this::onComplete
             )
 
             // add Sensor Listeners with our calibrator callbacks

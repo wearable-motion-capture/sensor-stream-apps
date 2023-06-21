@@ -1,14 +1,22 @@
 package com.mocap.watch.modules
 
+import android.app.Application
 import android.hardware.SensorEvent
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.util.Log
+import androidx.lifecycle.AndroidViewModel
 import com.mocap.watch.DataSingleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.LocalDateTime
-import kotlin.concurrent.thread
 import kotlin.math.abs
 
 enum class CalibrationState {
@@ -18,21 +26,26 @@ enum class CalibrationState {
 }
 
 
-class StandaloneCalibViewModel(vibrator: Vibrator, calibDone: () -> Unit) {
+class StandaloneCalibViewModel(
+    application: Application,
+    vibrator: Vibrator,
+    onCompleteCallback: () -> Unit
+) :
+    AndroidViewModel(application) {
 
     companion object {
-        private const val TAG = "CalibrationActivity"  // for logging
+        private const val TAG = "StandaloneCalibViewModel"  // for logging
         private const val CALIBRATION_WAIT = 3000 // wait time in one calibration position
+        private const val COROUTINE_SLEEP = 10L
     }
 
-    private val _calibDone = calibDone // callback to close the activity after calibration is done
     private val _vibrator = vibrator
+    private val _onCompleteCallback = onCompleteCallback
+    private val _scope = CoroutineScope(Job() + Dispatchers.IO)
 
     private val _calibState = MutableStateFlow(CalibrationState.Idle)
     val calibState = _calibState.asStateFlow()
 
-
-    private var _holdYRot = 0.0 // intermediate rotation between hold and forward calibration step
     private var _rotVec: FloatArray = FloatArray(5) // Rotation Vector sensor or estimation
     private var _grav: FloatArray = FloatArray(3) // gravity
     private var _pres: FloatArray = FloatArray(1) // Atmospheric pressure in hPa (millibar)
@@ -43,24 +56,19 @@ class StandaloneCalibViewModel(vibrator: Vibrator, calibDone: () -> Unit) {
      * to set required normalization parameters
      */
     fun calibrationTrigger() {
+        // update calibration state
+        Log.v(TAG, "Calibration Triggered")
+
 
         // verify that app is in a state that allows to start the calibration
         if (calibState.value != CalibrationState.Idle) {
             return
         }
 
-        // the hold-step is the start of the calibration procedure
-        holdStep()
-    }
-
-    /**
-     *  begin with atmospheric pressure in initial hold position after pressing "start"
-     */
-    private fun holdStep() {
-        // update calibration state
-        _calibState.value = CalibrationState.Hold
-        thread {
-            val start = LocalDateTime.now()
+        _scope.launch {
+            // begin with pressure reading
+            _calibState.value = CalibrationState.Hold
+            var start = LocalDateTime.now()
             var diff = 0L
 
             // collect pressure and y angle for CALIBRATION_WAIT time
@@ -73,42 +81,27 @@ class StandaloneCalibViewModel(vibrator: Vibrator, calibDone: () -> Unit) {
             }
 
             // first calibration step done. Save the averages
-            DataSingleton.setCalibPress(pressures.average().toFloat())
-            _holdYRot = holdDegrees.average()
+            val relPres = pressures.average()
+            val holdYRot = holdDegrees.average()
+            DataSingleton.setCalibPress(relPres.toFloat())
 
-            // signal with vibration
-            _vibrator.vibrate(
-                VibrationEffect.createOneShot(
-                    500L, VibrationEffect.DEFAULT_AMPLITUDE
-                )
-            )
-
-            // continue with second step and pass current y-rotation
-            forwardStep()
-        }
-    }
-
-    /**
-     * Get body orientation from when the participant extends
-     * the watch-arm forward perpendicular to the hip
-     */
-    private fun forwardStep() {
-        // update calibration state
-        _calibState.value = CalibrationState.Forward
-        thread {
-            var startTime = LocalDateTime.now()
-            var diff = 0L
+            // next step: forward orientation reading
+            // reset start and diff
+            _calibState.value = CalibrationState.Forward
+            start = LocalDateTime.now()
+            diff = 0L
             var vibrating = false
-            val northDegrees = mutableListOf(getGlobalYRotation())
+            val northDegrees = mutableListOf<Double>()
 
+            // collect for CALIBRATION_WAIT time
             while (diff < CALIBRATION_WAIT) {
 
                 // the watch held horizontally if gravity in z direction is positive
                 // only start considering these values if the y-rotation from
                 // the "Hold" calibration position is greater than 45 deg
                 val curYRot = getGlobalYRotation()
-                if ((abs(_holdYRot - curYRot) < 67.5f) || (_grav[2] < 9.75)) {
-                    startTime = LocalDateTime.now()
+                if ((abs(holdYRot - curYRot) < 67.5f) || (_grav[2] < 9.75)) {
+                    start = LocalDateTime.now()
                     northDegrees.clear()
                     if (!vibrating) {
                         vibrating = true
@@ -121,25 +114,38 @@ class StandaloneCalibViewModel(vibrator: Vibrator, calibDone: () -> Unit) {
                 } else {
                     // if all is good, store to list of vales
                     northDegrees.add(curYRot)
-                    diff = Duration.between(startTime, LocalDateTime.now()).toMillis()
+                    diff = Duration.between(start, LocalDateTime.now()).toMillis()
+                    // and stop vibrating pulse
                     vibrating = false
                     _vibrator.cancel()
+                    delay(COROUTINE_SLEEP)
                 }
             }
-            // final vibration pulse to confirm
-            _vibrator.vibrate(
-                VibrationEffect.createOneShot(
-                    500L, VibrationEffect.DEFAULT_AMPLITUDE
-                )
-            )
+
+            // Second step done. Save the average to the data singleton
             // add 90 degrees for forward orientation of arm and hip
             DataSingleton.setCalibNorth(northDegrees.average() + 90)
 
-            // last calibration step completed
+            // final vibration pulse to confirm
+            _vibrator.vibrate(
+                VibrationEffect.createOneShot(
+                    200L, VibrationEffect.DEFAULT_AMPLITUDE
+                )
+            )
+            delay(200L)
+            // complete calibration and close everything
             _calibState.value = CalibrationState.Idle
-            _calibDone()
+            _onCompleteCallback()
         }
     }
+
+    /**
+     * kill the calibration procedure if activity finishes unexpectedly
+     */
+    override fun onCleared() {
+        _scope.cancel()
+    }
+
 
     /** sensor callback */
     fun onPressureReadout(newReadout: SensorEvent) {
