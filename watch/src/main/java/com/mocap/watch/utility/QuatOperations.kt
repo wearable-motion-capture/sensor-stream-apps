@@ -7,8 +7,8 @@ import kotlin.math.sqrt
  * This corresponds to the azimuth in polar coordinates. It the angle from the z-axis (forward)
  * in between +pi and -pi.
  */
-fun getGlobalYRotation(rotVec : FloatArray): Double {
-    // smartwatch rotation to [w,x,z,y]
+fun getGlobalYRotation(rotVec: FloatArray): Double {
+    // smartwatch rotation to global coordinates, which are [-w,x,Z,Y]
     val r = floatArrayOf(-rotVec[0], rotVec[1], rotVec[3], rotVec[2])
     val p = floatArrayOf(0f, 0f, 0f, 1f) // forward vector with [0,x,y,z]
 

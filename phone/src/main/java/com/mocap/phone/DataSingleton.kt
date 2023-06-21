@@ -9,12 +9,6 @@ enum class PpgStreamState {
     Streaming // streaming to IP and Port set in StateModule
 }
 
-enum class ImuStreamState {
-    Idle, // app waits for watch to trigger the streaming
-    Error, // error state. Stop streaming
-    Streaming // streaming to IP and Port set in StateModule
-}
-
 enum class SoundStreamState {
     Idle, // app waits for watch to trigger the streaming
     Error, // error state. Stop streaming
@@ -32,9 +26,15 @@ object DataSingleton {
     const val PING_REQ = "/ping_request"
     const val PING_REP = "/ping_reply"
 
+    const val BROADCAST_UPDATE = "mocap.broadcast.update"
+    const val BROADCAST_SERVICE_KEY = "service.id"
+    const val BROADCAST_SERVICE_STATE = "service.state"
+    const val BROADCAST_SERVICE_HZ_IN = "service.hz.in"
+    const val BROADCAST_SERVICE_HZ_OUT = "service.hz.out"
+    const val BROADCAST_SERVICE_QUEUE = "service.queue"
+
     // capabilities
     const val PHONE_APP_ACTIVE = "phone_app" // indicates if the phone app is active
-    const val WATCH_APP_ACTIVE = "watch_app" // indicates if the watch app is active
     const val WATCH_CAPABILITY = "watch" // if the watch app is connected (see res/values/wear.xml)
 
     // streaming parameters
@@ -46,7 +46,7 @@ object DataSingleton {
     const val UDP_AUDIO_PORT = 65001
     const val UDP_PPG_PORT = 65002
     const val AUDIO_BUFFER_SIZE = 800
-    const val DUAL_IMU_MSG_SIZE = IMU_MSG_SIZE + (4 + 22) * 4 // timestamp(4) + data (22 float)
+    const val DUAL_IMU_MSG_SIZE = IMU_MSG_SIZE + (4 + 26) * 4 // timestamp(4) + data (22 float)
 
     // as state flow to update UI elements when IP changes
     private val ipStateFlow = MutableStateFlow(IP_DEFAULT)

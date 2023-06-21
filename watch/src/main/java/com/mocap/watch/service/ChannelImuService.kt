@@ -20,7 +20,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.nio.ByteBuffer
 import java.time.LocalDateTime
-import java.util.concurrent.ConcurrentLinkedQueue
 
 
 class ChannelImuService : Service() {
@@ -170,11 +169,6 @@ class ChannelImuService : Service() {
         LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
     }
 
-    /** not intended to be bound **/
-    override fun onBind(intent: Intent?): IBinder? {
-        return null
-    }
-
     // Events
     /** sensor callbacks */
     private fun composeImuMessage(): FloatArray? {
@@ -293,5 +287,10 @@ class ChannelImuService : Service() {
 
     fun onGravReadout(newReadout: SensorEvent) {
         _grav = newReadout.values
+    }
+
+    override fun onBind(intent: Intent?): IBinder? {
+        // not intended to be bound
+        return null
     }
 }
