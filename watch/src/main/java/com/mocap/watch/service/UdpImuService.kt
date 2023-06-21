@@ -231,7 +231,7 @@ class UdpImuService : Service() {
         _tsDLacc = 0f
 
         // rotation vel
-        _dGyro = floatArrayOf(1f, 0f, 0f, 0f)
+        _dGyro = floatArrayOf(0f, 0f, 0f)
         _tsDGyro = 0f
 
         // replace rot vec with default to be overwritten when new value comes in
