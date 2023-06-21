@@ -47,7 +47,7 @@ object DataSingleton {
 
     // streaming parameters
     const val IMU_CHANNEL_MSG_SIZE = (4 + 14) * 4 // timestamp(4) + data (14 float)
-    const val IMU_UDP_MSG_SIZE = (4 + 16) * 4 // timestamp(4) + data (16 float) (calibration)
+    const val IMU_UDP_MSG_SIZE = (4 + 19) * 4 // timestamp(4) + data (16 float) (calibration)
     const val PPG_MSG_SIZE = (4 + 16) * 4 // timestamp(4) + data (16 float)
     const val AUDIO_BUFFER_SIZE = 800 // bytes
 
