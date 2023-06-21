@@ -27,8 +27,8 @@ class StandaloneViewModel(application: Application) :
         private const val TAG = "StandaloneModule"  // for logging
     }
 
-    private val _application = application
     private val _scope = CoroutineScope(Job() + Dispatchers.IO)
+    private val _application = application
 
     private val _imuStrState = MutableStateFlow(ImuStreamState.Idle)
     val sensorStrState = _imuStrState.asStateFlow()

@@ -7,15 +7,15 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.mocap.watch.modules.SensorListener
-import com.mocap.watch.modules.StandaloneCalibViewModel
 import com.mocap.watch.ui.theme.WatchTheme
 import com.mocap.watch.ui.view.RenderStandaloneCalib
+import com.mocap.watch.viewmodel.StandaloneCalibViewModel
 
 
 class StandaloneCalibActivity : ComponentActivity() {
 
     companion object {
-        private const val TAG = "Calibration"  // for logging
+        private const val TAG = "StandaloneCalibration"  // for logging
     }
 
     private lateinit var _viewModel: StandaloneCalibViewModel
@@ -109,5 +109,10 @@ class StandaloneCalibActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         onComplete()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        registerSensorListeners()
     }
 }

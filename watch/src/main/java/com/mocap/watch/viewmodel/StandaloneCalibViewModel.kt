@@ -1,4 +1,4 @@
-package com.mocap.watch.modules
+package com.mocap.watch.viewmodel
 
 import android.app.Application
 import android.hardware.SensorEvent
@@ -43,27 +43,17 @@ class StandaloneCalibViewModel(
     private val _onCompleteCallback = onCompleteCallback
     private val _scope = CoroutineScope(Job() + Dispatchers.IO)
 
-    private val _calibState = MutableStateFlow(CalibrationState.Idle)
-    val calibState = _calibState.asStateFlow()
-
-    private var _rotVec: FloatArray = FloatArray(5) // Rotation Vector sensor or estimation
+    private var _rotVec: FloatArray = FloatArray(4) // Rotation Vector sensor or estimation
     private var _grav: FloatArray = FloatArray(3) // gravity
     private var _pres: FloatArray = FloatArray(1) // Atmospheric pressure in hPa (millibar)
 
+    private val _calibState = MutableStateFlow(CalibrationState.Idle)
+    val calibState = _calibState.asStateFlow()
 
-    /**
-     * Triggered by the calibration button. It goes through all 4 calibration stages
-     * to set required normalization parameters
-     */
     fun calibrationTrigger() {
         // update calibration state
         Log.v(TAG, "Calibration Triggered")
 
-
-        // verify that app is in a state that allows to start the calibration
-        if (calibState.value != CalibrationState.Idle) {
-            return
-        }
 
         _scope.launch {
             // begin with pressure reading

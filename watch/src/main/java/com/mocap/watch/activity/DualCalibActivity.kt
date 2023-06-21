@@ -118,6 +118,4 @@ class DualCalibActivity : ComponentActivity() {
         super.onResume()
         registerSensorListeners()
     }
-
-
 }

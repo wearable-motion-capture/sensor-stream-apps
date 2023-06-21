@@ -41,7 +41,6 @@ class DualViewModel(application: Application) :
     private val _capabilityClient by lazy { Wearable.getCapabilityClient(application) }
     private val _messageClient by lazy { Wearable.getMessageClient(application) }
     private val _scope = CoroutineScope(Job() + Dispatchers.IO)
-
     private val _application = application
 
     private val _connectedNodeDisplayName = MutableStateFlow("No Device")

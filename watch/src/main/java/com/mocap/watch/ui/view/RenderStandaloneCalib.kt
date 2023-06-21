@@ -8,9 +8,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
-import com.mocap.watch.modules.CalibrationState
 import com.mocap.watch.ui.DefaultButton
 import com.mocap.watch.ui.RedButton
+import com.mocap.watch.viewmodel.CalibrationState
 import kotlinx.coroutines.flow.StateFlow
 
 @Composable
