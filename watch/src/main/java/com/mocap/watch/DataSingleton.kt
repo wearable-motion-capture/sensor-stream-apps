@@ -44,6 +44,7 @@ object DataSingleton {
     const val PHONE_APP_ACTIVE = "phone_app" // indicates if the phone app is active
     const val WATCH_APP_ACTIVE = "watch_app" // indicates if the watch app is active
     const val PHONE_CAPABILITY = "phone" // if the phone app is connected (see res/values/wear.xml)
+    const val WATCH_CAPABILITY = "watch"
 
     // streaming parameters
     const val IMU_CHANNEL_MSG_SIZE = (4 + 17) * 4 // timestamp(4) + data (17 float)
