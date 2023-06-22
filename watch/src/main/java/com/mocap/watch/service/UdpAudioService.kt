@@ -40,7 +40,7 @@ class UdpAudioService : Service() {
     private fun streamTrigger() {
         if (_audioStreamState) {
             Log.w(TAG, "stream already started")
-            stopSelf()
+            onDestroy() // stop service
             return
         }
         _scope.launch {
@@ -95,7 +95,7 @@ class UdpAudioService : Service() {
                     _audioStreamState = false
                     Log.d(TAG, "Audio stream stopped")
                     audioRecord.release()
-                    stopSelf() // stop service
+                    onDestroy() // stop service
                 }
             }
         }

@@ -103,7 +103,7 @@ class ImuService : Service() {
         _channelClient.registerChannelCallback(_channelCallback)
         _scope.launch {
             while (true) {
-                broadcastUpdate()
+                broadcastUiUpdate()
                 delay(2000L)
             }
         }
@@ -112,7 +112,7 @@ class ImuService : Service() {
     }
 
     /** Broadcasts service status values to view model to update the UI */
-    private fun broadcastUpdate() {
+    private fun broadcastUiUpdate() {
         // duration estimate in seconds for Hz
         val now = LocalDateTime.now()
         val diff = Duration.between(_lastBroadcast, now)
@@ -252,8 +252,8 @@ class ImuService : Service() {
             }
         } catch (e: Exception) {
             Log.w(TAG, e)
-        } finally {
             _imuStreamState = false
+        } finally {
             _channelClient.close(c)
             _swQueue.clear()
         }
@@ -267,16 +267,14 @@ class ImuService : Service() {
             _scope.launch { swQueueFiller(c) }
             // Also, start the coroutine to deal with queued data and broadcast it via UDP
             _scope.launch { sendUdpImuMessages(c) }
-            broadcastUpdate()
+            broadcastUiUpdate()
         }
     }
 
     private fun onChannelClose(c: ChannelClient.Channel) {
         if (c.path == DataSingleton.IMU_CHANNEL_PATH) {
-            if (_imuStreamState) {
-                _imuStreamState = false
-            }
-            broadcastUpdate()
+            _imuStreamState = false
+            broadcastUiUpdate()
         }
     }
 

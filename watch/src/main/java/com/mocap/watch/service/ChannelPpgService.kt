@@ -49,7 +49,7 @@ class ChannelPpgService : Service() {
     private fun streamTrigger(nodeId: String) {
         if (_ppgStreamState) {
             Log.w(TAG, "stream already started")
-            stopSelf()
+            onDestroy() // stop service
             return
         }
         _scope.launch {
@@ -116,12 +116,12 @@ class ChannelPpgService : Service() {
                     _sensorManager.unregisterListener(_ppgListener)     // remove listener again
                     Log.d(TAG, "PPG stream stopped")
                     _channelClient.close(channel)
-                    stopSelf() // stop service
+                    onDestroy() // stop service
                 }
             } catch (e: Exception) {
                 // In case the channel gets destroyed while still in the loop
                 Log.w(TAG, "Channel failed" + e.message.toString())
-                stopSelf() // stop service
+                onDestroy() // stop service
             }
         }
     }
@@ -132,7 +132,7 @@ class ChannelPpgService : Service() {
         val sourceId = intent.extras?.getString("sourceNodeId")
         if (sourceId == null) {
             Log.w(TAG, "no Node ID given")
-            stopSelf()
+            onDestroy() // stop service
             return START_NOT_STICKY
         }
         streamTrigger(sourceId)

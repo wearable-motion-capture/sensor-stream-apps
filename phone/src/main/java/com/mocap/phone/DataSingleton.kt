@@ -3,20 +3,8 @@ package com.mocap.phone
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-enum class PpgStreamState {
-    Idle, // app waits for watch to trigger the streaming
-    Error, // error state. Stop streaming
-    Streaming // streaming to IP and Port set in StateModule
-}
-
-enum class SoundStreamState {
-    Idle, // app waits for watch to trigger the streaming
-    Error, // error state. Stop streaming
-    Streaming // streaming to IP and Port set in StateModule
-}
-
 object DataSingleton {
-    const val VERSION = "0.1.8"
+    const val VERSION = "0.2.0"
 
     // message paths
     const val IMU_CHANNEL_PATH = "/imu_channel"

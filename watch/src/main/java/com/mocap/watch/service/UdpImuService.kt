@@ -131,7 +131,7 @@ class UdpImuService : Service() {
                     _sensorManager.unregisterListener(l)
                 }
                 Log.d(TAG, "IMU stream stopped")
-                stopSelf() // stop service
+                onDestroy() // stop service
             }
         }
     }
@@ -146,7 +146,8 @@ class UdpImuService : Service() {
         // check if a source node ID was sent with the application
         if (_imuStreamState) {
             Log.w(TAG, "stream already started")
-            stopSelf()
+            _imuStreamState = false
+            onDestroy() // stop service
         } else {
             _scope.launch { susStreamData() }
         }

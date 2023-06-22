@@ -14,8 +14,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.mocap.phone.DataSingleton
-import com.mocap.phone.PpgStreamState
-import com.mocap.phone.SoundStreamState
 import com.mocap.phone.ui.DefaultButton
 import com.mocap.phone.ui.BigCard
 import com.mocap.phone.ui.DefaultHeadline
@@ -35,10 +33,10 @@ fun RenderHome(
     imuInHzSF: StateFlow<Float>,
     imuOutHzSF: StateFlow<Float>,
     imuQueueSizeSF: StateFlow<Int>,
-    audioSF: StateFlow<SoundStreamState>,
+    audioSF: StateFlow<Boolean>,
     audioBroadcastHzSF: StateFlow<Float>,
     audioStreamQueueSF: StateFlow<Int>,
-    ppgSF: StateFlow<PpgStreamState>,
+    ppgSF: StateFlow<Boolean>,
     ppgInHzSF: StateFlow<Float>,
     ppgOutHzSF: StateFlow<Float>,
     ppgQueueSizeSF: StateFlow<Int>,
@@ -142,35 +140,27 @@ fun RenderHome(
                         DefaultHighlight(text = ":" + DataSingleton.UDP_AUDIO_PORT.toString())
                         DefaultText(text = ("Audio"))
                         DefaultText(
-                            text = "$audioSt",
-                            color = when (audioSt) {
-                                SoundStreamState.Idle -> Color.Yellow
-                                SoundStreamState.Streaming -> Color.Green
-                                SoundStreamState.Error -> Color.Red
-                            }
+                            text = if (audioSt) "streaming" else "idle",
+                            color = if (audioSt) Color.Green else Color.Yellow
                         )
                         DefaultText(
                             text = "I/O: $audioBroadcastHz Hz\n" +
                                     "Queue: $audioQueueSize"
                         )
                     }
-//                    SmallCard() {
-//                        DefaultHighlight(text = ":"+DataSingleton.UDP_PPG_PORT.toString())
-//                        DefaultText(text = ("PPG"))
-//                        DefaultText(
-//                            text = "$ppgSt",
-//                            color = when (ppgSt) {
-//                                PpgStreamState.Idle -> Color.Yellow
-//                                PpgStreamState.Streaming -> Color.Green
-//                                PpgStreamState.Error -> Color.Red
-//                            }
-//                        )
-//                        DefaultText(
-//                            text = "I: $ppgInHz Hz\n " +
-//                                    "O: $ppgOutHz Hz\n" +
-//                                    "Queue: $ppgQueueSize"
-//                        )
-//                    }
+                    SmallCard() {
+                        DefaultHighlight(text = ":" + DataSingleton.UDP_PPG_PORT.toString())
+                        DefaultText(text = ("PPG"))
+                        DefaultText(
+                            text = if (ppgSt) "streaming" else "idle",
+                            color = if (ppgSt) Color.Green else Color.Yellow
+                        )
+                        DefaultText(
+                            text = "I: $ppgInHz Hz\n " +
+                                    "O: $ppgOutHz Hz\n" +
+                                    "Queue: $ppgQueueSize"
+                        )
+                    }
                 }
 
             }

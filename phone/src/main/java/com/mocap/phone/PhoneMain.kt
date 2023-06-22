@@ -17,7 +17,9 @@ import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
 import com.mocap.phone.modules.ServiceBroadcastReceiver
+import com.mocap.phone.service.AudioService
 import com.mocap.phone.service.ImuService
+import com.mocap.phone.service.PpgService
 import com.mocap.phone.viewmodel.PhoneViewModel
 import com.mocap.phone.ui.theme.PhoneTheme
 import com.mocap.phone.ui.view.RenderHome
@@ -132,8 +134,12 @@ class PhoneMain : ComponentActivity(),
         // check if a phone is connected and set state flows accordingly
         _viewModel.queryCapabilities()
 
-        val intent = Intent(this, ImuService::class.java)
-        this.startService(intent)
+        val imuIntent = Intent(this, ImuService::class.java)
+        this.startService(imuIntent)
+        val ppgIntent = Intent(this, PpgService::class.java)
+        this.startService(ppgIntent)
+        val audioIntent = Intent(this, AudioService::class.java)
+        this.startService(audioIntent)
     }
 
     /**
@@ -141,13 +147,16 @@ class PhoneMain : ComponentActivity(),
      */
     private fun unregisterListeners() {
         LocalBroadcastManager.getInstance(applicationContext).unregisterReceiver(_br)
-        _viewModel.resetStreamStates()
         _messageClient.removeListener(this)
         _capabilityClient.removeListener(this)
         _capabilityClient.removeLocalCapability(DataSingleton.PHONE_APP_ACTIVE)
 
-        val intent = Intent(this, ImuService::class.java)
-        this.stopService(intent)
+        val imuIntent = Intent(this, ImuService::class.java)
+        this.stopService(imuIntent)
+        val ppgIntent = Intent(this, PpgService::class.java)
+        this.stopService(ppgIntent)
+        val audioIntent = Intent(this, AudioService::class.java)
+        this.stopService(audioIntent)
     }
 
     override fun onResume() {
