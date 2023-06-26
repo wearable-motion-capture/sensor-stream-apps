@@ -27,7 +27,7 @@ class ChannelImuService : Service() {
     companion object {
         private const val TAG = "Channel IMU Service"  // for logging
         private const val NS2S = 1.0f / 1000000000.0f //Nano second to second
-        private const val MSGBREAK = 5L
+        private const val MSGBREAK = 1L
     }
 
     private lateinit var _sensorManager: SensorManager
@@ -49,7 +49,7 @@ class ChannelImuService : Service() {
     private var _grav: FloatArray = FloatArray(3) // gravity
     private var _pres: FloatArray = FloatArray(1) // Atmospheric pressure in hPa (millibar)
     private var _rotvec: FloatArray = floatArrayOf(1f, 0f, 0f, 0f) // rot vector as [w,x,y,z] quat
-
+    //private var _rotvecQueue = mutableListOf<FloatArray>()
 
 
     // store listeners in this list to register and unregister them automatically
@@ -108,18 +108,20 @@ class ChannelImuService : Service() {
                         // start the stream loop
                         _imuStreamState = true
                         while (_imuStreamState) {
+
                             // compose message
-                            val lastDat = composeImuMessage()
-                            // only process if a message was composed successfully
-                            if (lastDat != null) {
-                                // feed into byte buffer
-                                val buffer = ByteBuffer.allocate(DataSingleton.IMU_CHANNEL_MSG_SIZE)
-                                for (v in lastDat) buffer.putFloat(v)
-                                // write to output stream
-                                outputStream.write(buffer.array(), 0, buffer.capacity())
+                            var lastDat = composeImuMessage()
+                            while (lastDat == null){
+                                delay(MSGBREAK)
+                                lastDat = composeImuMessage()
                             }
-                            // avoid sending too fast. Delay coroutine for milliseconds
-                            delay(MSGBREAK)
+
+                            // only process if a message was composed successfully
+                            // feed into byte buffer
+                            val buffer = ByteBuffer.allocate(DataSingleton.IMU_CHANNEL_MSG_SIZE)
+                            for (v in lastDat) buffer.putFloat(v)
+                            // write to output stream
+                            outputStream.write(buffer.array(), 0, buffer.capacity())
                         }
                     }
                 } catch (e: Exception) {
@@ -273,12 +275,13 @@ class ChannelImuService : Service() {
     fun onRotVecReadout(newReadout: SensorEvent) {
         // newReadout is [x,y,z,w, confidence]
         // our preferred order is [w,x,y,z]
-        // This is not important for state transition.
-        // No averaging over time needed, because we are only interested in the most
         // recent observation
         _rotvec = floatArrayOf(
-            newReadout.values[3], newReadout.values[0], newReadout.values[1], newReadout.values[2]
-        )
+                newReadout.values[3],
+                newReadout.values[0],
+                newReadout.values[1],
+                newReadout.values[2]
+            )
     }
 
     fun onPressureReadout(newReadout: SensorEvent) {

@@ -178,19 +178,16 @@ class ImuService : Service() {
 
                         // get data from queue
                         // skip entries that are already old
-                        var swData = _swQueue.poll()
-                        while (_swQueue.count() > 10) {
-                            swData = _swQueue.poll()
-                        }
+                        val swData = _swQueue.poll()
 
                         // if we got some data from the watch...
                         if (swData != null) {
 
                             // ... also get the newest phone IMU reading
                             var phoneData = composeImuMessage()
-                            while (phoneData == null) {
-                                phoneData = composeImuMessage()
+                            while (phoneData == null){
                                 delay(1L)
+                                phoneData = composeImuMessage()
                             }
 
                             // write phone and watch data to buffer
@@ -215,6 +212,8 @@ class ImuService : Service() {
                             // finally, send via UDP
                             udpSocket.send(dp)
                             _swOutCount += 1 // for Hz estimation
+                        } else {
+                            delay(1L)
                         }
                     }
                 }

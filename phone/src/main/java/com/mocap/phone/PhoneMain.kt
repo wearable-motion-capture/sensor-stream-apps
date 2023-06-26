@@ -131,7 +131,6 @@ class PhoneMain : ComponentActivity(),
         )
         // for the watch app to detect this phone
         _capabilityClient.addLocalCapability(DataSingleton.PHONE_APP_ACTIVE)
-        _capabilityClient.addLocalCapability(DataSingleton.PHONE_CAPABILITY)
         // check if a phone is connected and set state flows accordingly
         _viewModel.queryCapabilities()
 
@@ -151,7 +150,6 @@ class PhoneMain : ComponentActivity(),
         _messageClient.removeListener(this)
         _capabilityClient.removeListener(this)
         _capabilityClient.removeLocalCapability(DataSingleton.PHONE_APP_ACTIVE)
-        _capabilityClient.removeLocalCapability(DataSingleton.PHONE_CAPABILITY)
 
         val imuIntent = Intent(this, ImuService::class.java)
         this.stopService(imuIntent)

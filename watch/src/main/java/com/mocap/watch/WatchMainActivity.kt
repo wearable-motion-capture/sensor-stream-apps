@@ -9,7 +9,6 @@ import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.CapabilityInfo
@@ -17,6 +16,9 @@ import com.google.android.gms.wearable.Wearable
 
 import com.mocap.watch.ui.theme.WatchTheme
 import com.mocap.watch.ui.view.RenderModeSelection
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
@@ -33,6 +35,9 @@ class WatchMainActivity : ComponentActivity(),
     }
 
     private val _capabilityClient by lazy { Wearable.getCapabilityClient(this) }
+    private val _scope = CoroutineScope(Job() + Dispatchers.IO)
+
+    // TODO: Fix phone capability handling. Standalone is always true
     private val _standalone = MutableStateFlow(true) // whether standalone mode is available
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -68,7 +73,7 @@ class WatchMainActivity : ComponentActivity(),
     }
 
     private fun queryCapabilities() {
-        lifecycleScope.launch {
+        _scope.launch {
             try {
                 val task = _capabilityClient.getAllCapabilities(CapabilityClient.FILTER_REACHABLE)
                 val res = Tasks.await(task)
@@ -93,16 +98,15 @@ class WatchMainActivity : ComponentActivity(),
     }
 
     private fun register() {
-        _capabilityClient.addLocalCapability(DataSingleton.WATCH_CAPABILITY)
         _capabilityClient.addListener(
             this,
             Uri.parse("wear://"),
             CapabilityClient.FILTER_REACHABLE
         )
+        queryCapabilities()
     }
 
     private fun unregister() {
-        _capabilityClient.removeLocalCapability(DataSingleton.WATCH_CAPABILITY)
         _capabilityClient.removeListener(this)
     }
 
