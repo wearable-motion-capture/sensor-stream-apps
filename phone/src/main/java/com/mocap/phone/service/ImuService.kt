@@ -185,7 +185,7 @@ class ImuService : Service() {
 
                             // ... also get the newest phone IMU reading
                             var phoneData = composeImuMessage()
-                            while (phoneData == null){
+                            while (phoneData == null) {
                                 delay(1L)
                                 phoneData = composeImuMessage()
                             }
@@ -212,6 +212,7 @@ class ImuService : Service() {
                             // finally, send via UDP
                             udpSocket.send(dp)
                             _swOutCount += 1 // for Hz estimation
+                            delay(15L)
                         } else {
                             delay(1L)
                         }
@@ -220,12 +221,9 @@ class ImuService : Service() {
             }
         } catch (e: Exception) {
             Log.w(TAG, e)
-        } finally {
-            _imuStreamState = false
             _channelClient.close(c)
-            for (l in _listeners) {
-                _sensorManager.unregisterListener(l)
-            }
+            onChannelClose(c) // make sure the callback is triggered,
+            // the exception might kill it beforehand
             Log.d(TAG, "IMU stream stopped")
         }
     }
@@ -251,10 +249,11 @@ class ImuService : Service() {
             }
         } catch (e: Exception) {
             Log.w(TAG, e)
-            _imuStreamState = false
         } finally {
             _channelClient.close(c)
-            _swQueue.clear()
+            onChannelClose(c) // make sure the callback is triggered,
+            // the exception might kill it beforehand
+            Log.d(TAG, "IMU stream stopped")
         }
     }
 
@@ -273,6 +272,10 @@ class ImuService : Service() {
     private fun onChannelClose(c: ChannelClient.Channel) {
         if (c.path == DataSingleton.IMU_CHANNEL_PATH) {
             _imuStreamState = false
+            _swQueue.clear()
+            for (l in _listeners) {
+                _sensorManager.unregisterListener(l)
+            }
             broadcastUiUpdate()
         }
     }
@@ -301,16 +304,16 @@ class ImuService : Service() {
 
         // average gyro velocities
         val tgyro = floatArrayOf(
-            _dGyro[0] / _tsDGyro,
-            _dGyro[1] / _tsDGyro,
-            _dGyro[2] / _tsDGyro
+            _dGyro[0], // _tsDGyro,
+            _dGyro[1], // _tsDGyro,
+            _dGyro[2] // _tsDGyro
         )
 
         // average accelerations
         val tLacc = floatArrayOf(
-            _dpLvel[0] / _tsDLacc,
-            _dpLvel[1] / _tsDLacc,
-            _dpLvel[2] / _tsDLacc
+            _dpLvel[0], // _tsDLacc,
+            _dpLvel[1], // _tsDLacc,
+            _dpLvel[2] // _tsDLacc
         )
 
         // compose the message as a float array
@@ -332,7 +335,7 @@ class ImuService : Service() {
         _tsDGyro = 0f
 
         // replace rot vec with default to be overwritten when new value comes in
-        _rotvec = floatArrayOf(1f, 0f, 0f, 0f)
+        // _rotvec = floatArrayOf(1f, 0f, 0f, 0f)
 
         return message
     }
@@ -341,7 +344,7 @@ class ImuService : Service() {
     fun onLaccReadout(newReadout: SensorEvent) {
         if (_tsLacc != 0L) {
             // get time difference in seconds
-            val dT: Float = (newReadout.timestamp - _tsGyro) * NS2S
+            val dT: Float = (newReadout.timestamp - _tsLacc) * NS2S
             // avoid over-amplifying. If the time difference is larger than a second,
             // something in the pipeline must be on pause
             if (dT > 1f) {
@@ -404,7 +407,10 @@ class ImuService : Service() {
         super.onDestroy()
         _imuStreamState = false
         _scope.cancel()
+        for (l in _listeners) {
+            _sensorManager.unregisterListener(l)
+        }
         _channelClient.unregisterChannelCallback(_channelCallback)
-        Log.v(TAG, "Service destroyed")
+        Log.v(TAG, "IMU Service destroyed")
     }
 }

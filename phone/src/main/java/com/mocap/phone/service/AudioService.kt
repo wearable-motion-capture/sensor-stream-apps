@@ -138,8 +138,9 @@ class AudioService : Service() {
                     } catch (e: Exception) {
                         Log.w(TAG, e.message.toString())
                     } finally {
-                        _audioStreamState = false
                         _channelClient.close(c)
+                        onChannelClose(c) // make sure the callback is triggered,
+                        // the exception might kill it beforehand
                     }
                 }
             }

@@ -149,6 +149,8 @@ class PpgService : Service() {
         } catch (e: Exception) {
             Log.w(TAG, e)
             _channelClient.close(c)
+            onChannelClose(c) // make sure the callback is triggered,
+            // the exception might kill it beforehand
         }
     }
 
@@ -173,10 +175,11 @@ class PpgService : Service() {
             }
         } catch (e: Exception) {
             Log.w(TAG, e)
-            _ppgStreamState = false
         } finally {
-            _channelClient.close(c)
             _ppgQueue.clear()
+            _channelClient.close(c)
+            onChannelClose(c) // make sure the callback is triggered,
+            // the exception might kill it beforehand
         }
     }
 
