@@ -24,11 +24,9 @@ object DataSingleton {
     const val VERSION = "0.2.8"
 
     // dual mode communication paths
-    const val IMU_CHANNEL_PATH = "/imu_channel"
-    const val IMU_UDP_PATH = "/imu_udp"
-    const val PPG_CHANNEL_PATH = "/ppg_channel"
-    const val AUDIO_CHANNEL_PATH = "/audio_channel"
-    const val AUDIO_UDP_PATH = "/audio_udp"
+    const val IMU_PATH = "/imu"
+    const val PPG_PATH = "/ppg"
+    const val AUDIO_PATH = "/audio"
     const val CALIBRATION_PATH = "/calibration"
     const val PING_REQ = "/ping_request"
     const val PING_REP = "/ping_reply"

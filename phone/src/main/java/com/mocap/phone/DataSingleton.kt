@@ -4,12 +4,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 object DataSingleton {
-    const val VERSION = "0.2.0"
+    const val VERSION = "0.2.1"
 
     // message paths
-    const val IMU_CHANNEL_PATH = "/imu_channel"
-    const val PPG_CHANNEL_PATH = "/ppg_channel"
-    const val AUDIO_CHANNEL_PATH = "/audio_channel"
+    const val IMU_PATH = "/imu"
+    const val PPG_PATH = "/ppg"
+    const val AUDIO_PATH = "/audio"
     const val CALIBRATION_PATH = "/calibration" // calibration message path
     const val PING_REQ = "/ping_request"
     const val PING_REP = "/ping_reply"

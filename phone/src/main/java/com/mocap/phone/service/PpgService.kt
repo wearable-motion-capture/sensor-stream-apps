@@ -75,7 +75,7 @@ class PpgService : Service() {
         val intent = Intent(DataSingleton.BROADCAST_UPDATE)
         intent.putExtra(
             DataSingleton.BROADCAST_SERVICE_KEY,
-            DataSingleton.PPG_CHANNEL_PATH
+            DataSingleton.PPG_PATH
         )
         intent.putExtra(
             DataSingleton.BROADCAST_SERVICE_STATE,
@@ -184,7 +184,7 @@ class PpgService : Service() {
     }
 
     private fun onChannelOpen(c: ChannelClient.Channel) {
-        if (c.path == DataSingleton.PPG_CHANNEL_PATH) {
+        if (c.path == DataSingleton.PPG_PATH) {
             // set the local state to Streaming and start three loops
             _ppgStreamState = true
             // First, start the coroutine to fill the queue with streamed watch data
@@ -196,7 +196,7 @@ class PpgService : Service() {
     }
 
     private fun onChannelClose(c: ChannelClient.Channel) {
-        if (c.path == DataSingleton.PPG_CHANNEL_PATH) {
+        if (c.path == DataSingleton.PPG_PATH) {
             _ppgStreamState = false
             broadcastUiUpdate()
         }

@@ -71,7 +71,7 @@ abstract class BaseImuService : Service() {
         super.onDestroy()
         stopService()
         val intent = Intent(DataSingleton.BROADCAST_CLOSE)
-        intent.putExtra(DataSingleton.BROADCAST_SERVICE_KEY, DataSingleton.IMU_UDP_PATH)
+        intent.putExtra(DataSingleton.BROADCAST_SERVICE_KEY, DataSingleton.IMU_PATH)
         LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
         scope.cancel()
         Log.d(TAG, "Service destroyed")
@@ -108,9 +108,7 @@ abstract class BaseImuService : Service() {
     }
 
     protected fun composeImuMessage(): FloatArray? {
-        // get calibration values
-        val press = DataSingleton.CALIB_PRESS.value
-        val north = DataSingleton.CALIB_NORTH.value.toFloat()
+
 
         // avoid composing a new message before receiving new data
         // also, this prevents division by 0 when averaging below
@@ -158,11 +156,7 @@ abstract class BaseImuService : Service() {
                 _dpLvel + // [3] integrated linear acc x,y,z
                 tLacc + // mean acc
                 _pres + // [1] atmospheric pressure
-                _grav + // [3] vector indicating the direction of gravity x,y,z
-                floatArrayOf(
-                    press, // initial atmospheric pressure collected during calibration
-                    north // body orientation in relation to magnetic north pole collected during calibration
-                )
+                _grav // [3] vector indicating the direction of gravity x,y,z
 
         // now that the message is stored, reset the deltas
         // translation vel

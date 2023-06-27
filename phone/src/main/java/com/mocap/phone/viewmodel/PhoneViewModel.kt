@@ -76,7 +76,7 @@ class PhoneViewModel(application: Application) :
 
     fun onServiceUpdate(intent: Intent) {
         when (intent.getStringExtra(DataSingleton.BROADCAST_SERVICE_KEY)) {
-            DataSingleton.IMU_CHANNEL_PATH -> {
+            DataSingleton.IMU_PATH -> {
                 _imuStreamState.value = intent.getBooleanExtra(
                     DataSingleton.BROADCAST_SERVICE_STATE, false
                 )
@@ -91,7 +91,7 @@ class PhoneViewModel(application: Application) :
                 )
             }
 
-            DataSingleton.AUDIO_CHANNEL_PATH -> {
+            DataSingleton.AUDIO_PATH -> {
                 _audioStreamState.value = intent.getBooleanExtra(
                     DataSingleton.BROADCAST_SERVICE_STATE, false
                 )
@@ -103,7 +103,7 @@ class PhoneViewModel(application: Application) :
                 )
             }
 
-            DataSingleton.PPG_CHANNEL_PATH -> {
+            DataSingleton.PPG_PATH -> {
                 _ppgStreamState.value = intent.getBooleanExtra(
                     DataSingleton.BROADCAST_SERVICE_STATE, false
                 )

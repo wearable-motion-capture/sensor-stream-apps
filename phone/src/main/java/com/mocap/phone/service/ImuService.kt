@@ -122,7 +122,7 @@ class ImuService : Service() {
         val intent = Intent(DataSingleton.BROADCAST_UPDATE)
         intent.putExtra(
             DataSingleton.BROADCAST_SERVICE_KEY,
-            DataSingleton.IMU_CHANNEL_PATH
+            DataSingleton.IMU_PATH
         )
         intent.putExtra(
             DataSingleton.BROADCAST_SERVICE_STATE,
@@ -258,7 +258,7 @@ class ImuService : Service() {
     }
 
     private fun onChannelOpen(c: ChannelClient.Channel) {
-        if (c.path == DataSingleton.IMU_CHANNEL_PATH) {
+        if (c.path == DataSingleton.IMU_PATH) {
             // set the local state to Streaming and start three loops
             _imuStreamState = true
             // First, start the coroutine to fill the queue with streamed watch data
@@ -270,7 +270,7 @@ class ImuService : Service() {
     }
 
     private fun onChannelClose(c: ChannelClient.Channel) {
-        if (c.path == DataSingleton.IMU_CHANNEL_PATH) {
+        if (c.path == DataSingleton.IMU_PATH) {
             _imuStreamState = false
             _swQueue.clear()
             for (l in _listeners) {

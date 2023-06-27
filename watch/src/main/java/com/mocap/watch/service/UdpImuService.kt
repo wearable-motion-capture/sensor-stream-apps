@@ -46,6 +46,10 @@ class UdpImuService : BaseImuService() {
         val ip = DataSingleton.IP.value
         val port = DataSingleton.UDP_IMU_PORT
 
+        // get calibration values
+        val press = DataSingleton.CALIB_PRESS.value
+        val north = DataSingleton.CALIB_NORTH.value.toFloat()
+
         withContext(Dispatchers.IO) {
             try {
                 // open a socket
@@ -65,9 +69,15 @@ class UdpImuService : BaseImuService() {
                         val lastDat = composeImuMessage()
                         // only process if a message was composed successfully
                         if (lastDat != null) {
+                            // append calibration values
+                            val allDat = lastDat + floatArrayOf(
+                                press, // initial atmospheric pressure collected during calibration
+                                north // body orientation in relation to magnetic north pole collected during calibration
+                            )
+
                             // feed into byte buffer
                             val buffer = ByteBuffer.allocate(DataSingleton.IMU_UDP_MSG_SIZE)
-                            for (v in lastDat) buffer.putFloat(v)
+                            for (v in allDat) buffer.putFloat(v)
                             val dp = DatagramPacket(
                                 buffer.array(), buffer.capacity(), socketInetAddress, port
                             )

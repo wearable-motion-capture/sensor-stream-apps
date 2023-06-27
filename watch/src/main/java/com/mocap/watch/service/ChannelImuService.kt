@@ -41,9 +41,9 @@ class ChannelImuService : BaseImuService() {
             // Open the channel
             val channel = _channelClient.openChannel(
                 nodeId,
-                DataSingleton.IMU_CHANNEL_PATH
+                DataSingleton.IMU_PATH
             ).await()
-            Log.d(TAG, "Opened ${DataSingleton.IMU_CHANNEL_PATH} to $nodeId")
+            Log.d(TAG, "Opened ${DataSingleton.IMU_PATH} to $nodeId")
 
             try {
                 // get output stream

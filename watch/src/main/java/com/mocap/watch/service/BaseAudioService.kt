@@ -30,7 +30,7 @@ abstract class BaseAudioService : Service() {
         super.onDestroy()
         audioStreamState = false
         val intent = Intent(DataSingleton.BROADCAST_CLOSE)
-        intent.putExtra(DataSingleton.BROADCAST_SERVICE_KEY, DataSingleton.AUDIO_UDP_PATH)
+        intent.putExtra(DataSingleton.BROADCAST_SERVICE_KEY, DataSingleton.AUDIO_PATH)
         LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
         scope.cancel()
         Log.d(TAG, "Service destroyed")

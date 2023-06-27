@@ -46,9 +46,9 @@ class ChannelAudioService : BaseAudioService() {
             // Open the channel
             val channel = _channelClient.openChannel(
                 nodeId,
-                DataSingleton.AUDIO_CHANNEL_PATH
+                DataSingleton.AUDIO_PATH
             ).await()
-            Log.d(TAG, "Opened ${DataSingleton.IMU_CHANNEL_PATH} to $nodeId")
+            Log.d(TAG, "Opened ${DataSingleton.IMU_PATH} to $nodeId")
 
             // Create an AudioRecord object for the streaming
             val audioRecord = AudioRecord.Builder()

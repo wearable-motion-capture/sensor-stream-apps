@@ -71,7 +71,7 @@ class AudioService : Service() {
         val intent = Intent(DataSingleton.BROADCAST_UPDATE)
         intent.putExtra(
             DataSingleton.BROADCAST_SERVICE_KEY,
-            DataSingleton.AUDIO_CHANNEL_PATH
+            DataSingleton.AUDIO_PATH
         )
         intent.putExtra(
             DataSingleton.BROADCAST_SERVICE_STATE,
@@ -90,7 +90,7 @@ class AudioService : Service() {
     }
 
     private fun onSoundChannelOpened(c: ChannelClient.Channel) {
-        if (c.path == DataSingleton.AUDIO_CHANNEL_PATH) {
+        if (c.path == DataSingleton.AUDIO_PATH) {
             _scope.launch {
                 // our constants for this loop
                 val port = DataSingleton.UDP_AUDIO_PORT
@@ -148,7 +148,7 @@ class AudioService : Service() {
     }
 
     private fun onChannelClose(c: ChannelClient.Channel) {
-        if (c.path == DataSingleton.AUDIO_CHANNEL_PATH) {
+        if (c.path == DataSingleton.AUDIO_PATH) {
             _audioStreamState = false
             broadcastUiUpdate()
         }

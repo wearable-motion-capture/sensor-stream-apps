@@ -57,9 +57,9 @@ class ChannelPpgService : Service() {
                 // Open the channel
                 val channel = _channelClient.openChannel(
                     nodeId,
-                    DataSingleton.PPG_CHANNEL_PATH
+                    DataSingleton.PPG_PATH
                 ).await()
-                Log.d(TAG, "Opened ${DataSingleton.IMU_CHANNEL_PATH} to $nodeId")
+                Log.d(TAG, "Opened ${DataSingleton.IMU_PATH} to $nodeId")
 
                 try {
                     // get output stream
@@ -151,7 +151,7 @@ class ChannelPpgService : Service() {
             _sensorManager.unregisterListener(_ppgListener)
         }
         val intent = Intent(DataSingleton.BROADCAST_CLOSE)
-        intent.putExtra(DataSingleton.BROADCAST_SERVICE_KEY, DataSingleton.PPG_CHANNEL_PATH)
+        intent.putExtra(DataSingleton.BROADCAST_SERVICE_KEY, DataSingleton.PPG_PATH)
         LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
     }
 
