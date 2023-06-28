@@ -1,6 +1,7 @@
 package com.mocap.phone.viewmodel
 
 import android.app.Application
+import android.hardware.SensorEvent
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
@@ -83,14 +84,14 @@ class CalibViewModel(application: Application, vibrator: Vibrator) :
     /**
      * sensor callback
      */
-    fun onRotVecReadout(newReadout: FloatArray) {
+    fun onRotVecReadout(newReadout: SensorEvent) {
         // newReadout is [x,y,z,w, confidence]
         // our preferred order system is [w,x,y,z]
         _rotVec = floatArrayOf(
-            newReadout[3],
-            newReadout[0],
-            newReadout[1],
-            newReadout[2]
+            newReadout.values[3],
+            newReadout.values[0],
+            newReadout.values[1],
+            newReadout.values[2]
         )
     }
 

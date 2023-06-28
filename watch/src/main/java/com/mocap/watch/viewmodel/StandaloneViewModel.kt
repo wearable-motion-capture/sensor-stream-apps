@@ -65,8 +65,8 @@ class StandaloneViewModel(application: Application) :
 
     fun onServiceClose(serviceKey: String?) {
         when (serviceKey) {
-            DataSingleton.AUDIO_UDP_PATH -> endAudio()
-            DataSingleton.IMU_UDP_PATH -> endImu()
+            DataSingleton.AUDIO_PATH -> endAudio()
+            DataSingleton.IMU_PATH -> endImu()
         }
     }
 

@@ -14,9 +14,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.mocap.phone.DataSingleton
-import com.mocap.phone.ImuStreamState
-import com.mocap.phone.PpgStreamState
-import com.mocap.phone.SoundStreamState
 import com.mocap.phone.ui.DefaultButton
 import com.mocap.phone.ui.BigCard
 import com.mocap.phone.ui.DefaultHeadline
@@ -32,14 +29,14 @@ import kotlinx.coroutines.flow.StateFlow
 fun RenderHome(
     connectedNodeSF: StateFlow<String>,
     appActiveSF: StateFlow<Boolean>,
-    imuSF: StateFlow<ImuStreamState>,
+    imuSF: StateFlow<Boolean>,
     imuInHzSF: StateFlow<Float>,
     imuOutHzSF: StateFlow<Float>,
     imuQueueSizeSF: StateFlow<Int>,
-    audioSF: StateFlow<SoundStreamState>,
+    audioSF: StateFlow<Boolean>,
     audioBroadcastHzSF: StateFlow<Float>,
     audioStreamQueueSF: StateFlow<Int>,
-    ppgSF: StateFlow<PpgStreamState>,
+    ppgSF: StateFlow<Boolean>,
     ppgInHzSF: StateFlow<Float>,
     ppgOutHzSF: StateFlow<Float>,
     ppgQueueSizeSF: StateFlow<Int>,
@@ -127,15 +124,11 @@ fun RenderHome(
 
                 Row() {
                     SmallCard() {
-                        DefaultHighlight(text = ":"+DataSingleton.UDP_IMU_PORT.toString())
+                        DefaultHighlight(text = ":" + DataSingleton.UDP_IMU_PORT.toString())
                         DefaultText(text = ("IMU"))
                         DefaultText(
-                            text = "$imuSt",
-                            color = when (imuSt) {
-                                ImuStreamState.Idle -> Color.Yellow
-                                ImuStreamState.Streaming -> Color.Green
-                                ImuStreamState.Error -> Color.Red
-                            }
+                            text = if (imuSt) "streaming" else "idle",
+                            color = if (imuSt) Color.Green else Color.Yellow
                         )
                         DefaultText(
                             text = "I: $imuInHz Hz\n " +
@@ -144,15 +137,11 @@ fun RenderHome(
                         )
                     }
                     SmallCard() {
-                        DefaultHighlight(text = ":"+DataSingleton.UDP_AUDIO_PORT.toString())
+                        DefaultHighlight(text = ":" + DataSingleton.UDP_AUDIO_PORT.toString())
                         DefaultText(text = ("Audio"))
                         DefaultText(
-                            text = "$audioSt",
-                            color = when (audioSt) {
-                                SoundStreamState.Idle -> Color.Yellow
-                                SoundStreamState.Streaming -> Color.Green
-                                SoundStreamState.Error -> Color.Red
-                            }
+                            text = if (audioSt) "streaming" else "idle",
+                            color = if (audioSt) Color.Green else Color.Yellow
                         )
                         DefaultText(
                             text = "I/O: $audioBroadcastHz Hz\n" +
@@ -160,15 +149,11 @@ fun RenderHome(
                         )
                     }
                     SmallCard() {
-                        DefaultHighlight(text = ":"+DataSingleton.UDP_PPG_PORT.toString())
+                        DefaultHighlight(text = ":" + DataSingleton.UDP_PPG_PORT.toString())
                         DefaultText(text = ("PPG"))
                         DefaultText(
-                            text = "$ppgSt",
-                            color = when (ppgSt) {
-                                PpgStreamState.Idle -> Color.Yellow
-                                PpgStreamState.Streaming -> Color.Green
-                                PpgStreamState.Error -> Color.Red
-                            }
+                            text = if (ppgSt) "streaming" else "idle",
+                            color = if (ppgSt) Color.Green else Color.Yellow
                         )
                         DefaultText(
                             text = "I: $ppgInHz Hz\n " +

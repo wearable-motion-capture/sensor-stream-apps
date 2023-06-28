@@ -1,7 +1,7 @@
 package com.mocap.phone
 
 import android.content.Intent
-import android.hardware.SensorManager
+import android.content.IntentFilter
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -9,13 +9,17 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.preference.PreferenceManager
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.CapabilityInfo
 import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
-import com.mocap.phone.modules.PhoneChannelCallback
+import com.mocap.phone.modules.ServiceBroadcastReceiver
+import com.mocap.phone.service.AudioService
+import com.mocap.phone.service.ImuService
+import com.mocap.phone.service.PpgService
 import com.mocap.phone.viewmodel.PhoneViewModel
 import com.mocap.phone.ui.theme.PhoneTheme
 import com.mocap.phone.ui.view.RenderHome
@@ -30,27 +34,19 @@ class PhoneMain : ComponentActivity(),
         private const val TAG = "PhoneMainActivity"
     }
 
-    private val _channelClient by lazy { Wearable.getChannelClient(this) }
     private val _capabilityClient by lazy { Wearable.getCapabilityClient(this) }
     private val _messageClient by lazy { Wearable.getMessageClient(this) }
-
     private val _viewModel by viewModels<PhoneViewModel>()
-    private val _channelCallback = PhoneChannelCallback(
-        openCallback = { _viewModel.onChannelOpen(it) },
-        closeCallback = { _viewModel.onChannelClose(it) }
-    )
 
-    // System services not available to Activities before onCreate()
-    private lateinit var _sensorManager: SensorManager
+    private val _br =
+        ServiceBroadcastReceiver(
+            onServiceUpdate = { _viewModel.onServiceUpdate(it) }
+        )
 
     /** Starting point of the application */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            _sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
-            // register sensor listeners manually after startup
-            registerSensorListeners()
-
             // retrieve stored IP and update DataSingleton
             val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
             var storedIp = sharedPref.getString(DataSingleton.IP_KEY, DataSingleton.IP_DEFAULT)
@@ -58,7 +54,6 @@ class PhoneMain : ComponentActivity(),
                 storedIp = DataSingleton.IP_DEFAULT
             }
             DataSingleton.setIp(storedIp)
-            _viewModel.regularUiUpdates()
 
             PhoneTheme {
                 // keep screen on
@@ -66,6 +61,7 @@ class PhoneMain : ComponentActivity(),
 
                 // check if a phone is connected and set state flows accordingly
                 _viewModel.queryCapabilities()
+                _viewModel.regularUiUpdates()
 
                 RenderHome(
                     connectedNodeSF = _viewModel.nodeName,
@@ -119,24 +115,13 @@ class PhoneMain : ComponentActivity(),
         _viewModel.onMessageReceived(messageEvent)
     }
 
-
-    /** To register sensor listeners manually after onCreate */
-    private fun registerSensorListeners() {
-        if (this::_sensorManager.isInitialized) {
-            for (l in _viewModel.listeners) {
-                _sensorManager.registerListener(
-                    l,
-                    _sensorManager.getDefaultSensor(l.code),
-                    SensorManager.SENSOR_DELAY_FASTEST
-                )
-            }
-        }
-    }
-
     /** To register all listeners for all used channels */
     private fun registerListeners() {
-        // register all listeners with their assigned codes
-        registerSensorListeners()
+        // broadcasts inform about service updates
+        val filter = IntentFilter()
+        filter.addAction(DataSingleton.BROADCAST_UPDATE)
+        LocalBroadcastManager.getInstance(applicationContext).registerReceiver(_br, filter)
+
         _messageClient.addListener(this)
         // checks for a connected device with the Watch capability
         _capabilityClient.addListener(
@@ -144,29 +129,34 @@ class PhoneMain : ComponentActivity(),
             Uri.parse("wear://"),
             CapabilityClient.FILTER_REACHABLE
         )
-        _viewModel.queryCapabilities()
         // for the watch app to detect this phone
         _capabilityClient.addLocalCapability(DataSingleton.PHONE_APP_ACTIVE)
-        _capabilityClient.addLocalCapability(DataSingleton.PHONE_CAPABILITY)
         // check if a phone is connected and set state flows accordingly
         _viewModel.queryCapabilities()
-        // to handle incoming data streams
-        _channelClient.registerChannelCallback(_channelCallback)
+
+        val imuIntent = Intent(this, ImuService::class.java)
+        this.startService(imuIntent)
+        val ppgIntent = Intent(this, PpgService::class.java)
+        this.startService(ppgIntent)
+        val audioIntent = Intent(this, AudioService::class.java)
+        this.startService(audioIntent)
     }
 
     /**
      * clear all listeners
      */
     private fun unregisterListeners() {
-        if (this::_sensorManager.isInitialized) {
-            for (l in _viewModel.listeners) _sensorManager.unregisterListener(l)
-        }
-        _viewModel.resetStreamStates()
+        LocalBroadcastManager.getInstance(applicationContext).unregisterReceiver(_br)
         _messageClient.removeListener(this)
         _capabilityClient.removeListener(this)
         _capabilityClient.removeLocalCapability(DataSingleton.PHONE_APP_ACTIVE)
-        _capabilityClient.removeLocalCapability(DataSingleton.PHONE_CAPABILITY)
-        _channelClient.unregisterChannelCallback(_channelCallback)
+
+        val imuIntent = Intent(this, ImuService::class.java)
+        this.stopService(imuIntent)
+        val ppgIntent = Intent(this, PpgService::class.java)
+        this.stopService(ppgIntent)
+        val audioIntent = Intent(this, AudioService::class.java)
+        this.stopService(audioIntent)
     }
 
     override fun onResume() {

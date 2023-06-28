@@ -55,7 +55,7 @@ class DualViewModel(application: Application) :
     val sensorStreamState = _imuStreamState.asStateFlow()
 
     private val _audioStreamState = MutableStateFlow(AudioStreamState.Idle)
-    val soundStreamState = _audioStreamState.asStateFlow()
+    val audioStreamState = _audioStreamState.asStateFlow()
 
     private val _ppgStreamState = MutableStateFlow(PpgStreamState.Idle)
     val ppgStreamState = _ppgStreamState.asStateFlow()
@@ -99,9 +99,9 @@ class DualViewModel(application: Application) :
 
     fun onServiceClose(serviceKey: String?) {
         when (serviceKey) {
-            DataSingleton.PPG_CHANNEL_PATH -> endPpg()
-            DataSingleton.AUDIO_CHANNEL_PATH -> endAudio()
-            DataSingleton.IMU_CHANNEL_PATH -> endImu()
+            DataSingleton.PPG_PATH -> endPpg()
+            DataSingleton.AUDIO_PATH -> endAudio()
+            DataSingleton.IMU_PATH -> endImu()
         }
     }
 
@@ -116,9 +116,9 @@ class DualViewModel(application: Application) :
     fun onChannelClose(c: Channel) {
         // reset the corresponding stream loop
         when (c.path) {
-            DataSingleton.PPG_CHANNEL_PATH -> endPpg()
-            DataSingleton.AUDIO_CHANNEL_PATH -> endAudio()
-            DataSingleton.IMU_CHANNEL_PATH -> endImu()
+            DataSingleton.PPG_PATH -> endPpg()
+            DataSingleton.AUDIO_PATH -> endAudio()
+            DataSingleton.IMU_PATH -> endImu()
         }
     }
 

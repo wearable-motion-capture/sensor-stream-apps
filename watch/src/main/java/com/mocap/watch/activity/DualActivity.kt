@@ -70,11 +70,11 @@ class DualActivity : ComponentActivity(),
                         startActivity(Intent("com.mocap.watch.DUAL_CALIBRATION"))
                     },
                     imuStreamStateFlow = _dualViewModel.sensorStreamState,
-                    audioStreamStateFlow = _dualViewModel.soundStreamState,
+                    audioStreamStateFlow = _dualViewModel.audioStreamState,
                     ppgStreamStateFlow = _dualViewModel.ppgStreamState,
                     sensorStreamCallback = { _dualViewModel.imuStreamTrigger(it) },
                     soundStreamCallback = { _dualViewModel.audioStreamTrigger(it) },
-                    ppgStreamCallback = { _dualViewModel.ppgStreamTrigger(it) },
+                    ppgStreamCallback = { _dualViewModel.ppgStreamTrigger(it) }, // PPG is only for specific watches
                     finishCallback = ::finish
                 )
             }

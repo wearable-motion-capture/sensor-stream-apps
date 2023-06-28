@@ -7,6 +7,7 @@ import android.os.Vibrator
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import com.mocap.watch.DataSingleton
+import com.mocap.watch.utility.getGlobalYRotation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -63,10 +64,10 @@ class StandaloneCalibViewModel(
 
             // collect pressure and y angle for CALIBRATION_WAIT time
             val pressures = mutableListOf(_pres[0])
-            val holdDegrees = mutableListOf(getGlobalYRotation())
+            val holdDegrees = mutableListOf(getGlobalYRotation(_rotVec))
             while (diff < CALIBRATION_WAIT) {
                 pressures.add(_pres[0])
-                holdDegrees.add(getGlobalYRotation())
+                holdDegrees.add(getGlobalYRotation(_rotVec))
                 diff = Duration.between(start, LocalDateTime.now()).toMillis()
             }
 
@@ -89,8 +90,9 @@ class StandaloneCalibViewModel(
                 // the watch held horizontally if gravity in z direction is positive
                 // only start considering these values if the y-rotation from
                 // the "Hold" calibration position is greater than 45 deg
-                val curYRot = getGlobalYRotation()
+                val curYRot = getGlobalYRotation(_rotVec)
                 if ((abs(holdYRot - curYRot) < 67.5f) || (_grav[2] < 9.75)) {
+                    delay(10L)
                     start = LocalDateTime.now()
                     northDegrees.clear()
                     if (!vibrating) {
@@ -106,8 +108,10 @@ class StandaloneCalibViewModel(
                     northDegrees.add(curYRot)
                     diff = Duration.between(start, LocalDateTime.now()).toMillis()
                     // and stop vibrating pulse
-                    vibrating = false
-                    _vibrator.cancel()
+                    if (vibrating) {
+                        vibrating = false
+                        _vibrator.cancel()
+                    }
                     delay(COROUTINE_SLEEP)
                 }
             }
@@ -136,7 +140,6 @@ class StandaloneCalibViewModel(
         _scope.cancel()
     }
 
-
     /** sensor callback */
     fun onPressureReadout(newReadout: SensorEvent) {
         _pres = newReadout.values
@@ -149,38 +152,11 @@ class StandaloneCalibViewModel(
 
     /** sensor callback */
     fun onRotVecReadout(newReadout: SensorEvent) {
-        _rotVec = newReadout.values // [x,y,z,w]
-    }
-
-    /**
-     * Estimates rotation around global y-axis (Up) from watch orientation.
-     * This corresponds to the azimuth in polar coordinates. It the angle from the z-axis (forward)
-     * in between +pi and -pi.
-     */
-    private fun getGlobalYRotation(): Double {
-        // smartwatch rotation to [-w,x,z,y]
-        val r = floatArrayOf(-_rotVec[3], _rotVec[0], _rotVec[2], _rotVec[1])
-        val p = floatArrayOf(0f, 0f, 0f, 1f) // forward vector with [0,x,y,z]
-
-        // this is the result of H(R,P)
-        val hrp = floatArrayOf(
-            r[0] * p[0] - r[1] * p[1] - r[2] * p[2] - r[3] * p[3],
-            r[0] * p[1] + r[1] * p[0] + r[2] * p[3] - r[3] * p[2],
-            r[0] * p[2] - r[1] * p[3] + r[2] * p[0] + r[3] * p[1],
-            r[0] * p[3] + r[1] * p[2] - r[2] * p[1] + r[3] * p[0]
+        _rotVec = floatArrayOf(
+            newReadout.values[3],
+            newReadout.values[0],
+            newReadout.values[1],
+            newReadout.values[2]
         )
-
-        val r_p = floatArrayOf(r[0], -r[1], -r[2], -r[3]) // this ir R'
-        // the final H(H(R,P),R')
-        val p_p = floatArrayOf(
-            hrp[0] * r_p[0] - hrp[1] * r_p[1] - hrp[2] * r_p[2] - hrp[3] * r_p[3],
-            hrp[0] * r_p[1] + hrp[1] * r_p[0] + hrp[2] * r_p[3] - hrp[3] * r_p[2],
-            hrp[0] * r_p[2] - hrp[1] * r_p[3] + hrp[2] * r_p[0] + hrp[3] * r_p[1],
-            hrp[0] * r_p[3] + hrp[1] * r_p[2] - hrp[2] * r_p[1] + hrp[3] * r_p[0]
-        )
-        // get angle with atan2
-        val yRot = kotlin.math.atan2(p_p[1], p_p[3])
-
-        return yRot * 57.29578
     }
 }
