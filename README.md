@@ -9,9 +9,9 @@ these apps enable data transfer from smart devices to your system via a local ne
 The apps are at least compatible with Android 11.0 (Watch App) and Android 13.0 (Phone App). 
 They have been tested on:
 
-| Watch App              | Phone App |
-|------------------------|-----------|
-| Samsung Galaxy Watch 5 | Samsung Galaxy A23 5G |
+| Watch App              | Phone App             |
+|------------------------|-----------------------|
+| Samsung Galaxy Watch 5 | Samsung Galaxy A23 5G |  
 
 ## Install and Use
 
