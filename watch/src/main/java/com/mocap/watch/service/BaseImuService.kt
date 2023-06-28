@@ -14,6 +14,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import java.lang.Float.min
+import java.time.Duration
 import java.time.LocalDateTime
 
 abstract class BaseImuService : Service() {
@@ -25,6 +27,8 @@ abstract class BaseImuService : Service() {
     }
 
     private lateinit var _sensorManager: SensorManager // to be set in onCreate
+
+    private var _lastMsg: LocalDateTime? = null
 
     // callbacks will write to these variables
     private var _dpLvel: FloatArray = floatArrayOf(0f, 0f, 0f) // integrated linear acc
@@ -98,6 +102,7 @@ abstract class BaseImuService : Service() {
     }
 
     protected fun stopService() {
+        _lastMsg = null
         imuStreamState = false
         if (this::_sensorManager.isInitialized) {
             for (l in _listeners) {
@@ -135,6 +140,15 @@ abstract class BaseImuService : Service() {
             tsNow.nano.toFloat()
         )
 
+        // estimate delta time between messages
+        var dT = 1.0F
+        if (_lastMsg == null) {
+            _lastMsg = tsNow
+        } else {
+            // avoid over-amplification by clamping dT at 1
+            dT = min(Duration.between(tsNow, _lastMsg).toNanos() * NS2S, dT)
+        }
+
         // average gyro velocities
         val tgyro = floatArrayOf(
             _dGyro[0] / _tsDGyro,
@@ -150,13 +164,14 @@ abstract class BaseImuService : Service() {
         )
 
         // compose the message as a float array
-        val message = ts +
-                _rotvec + // transformed rotation vector[4] is a quaternion [w,x,y,z]
-                tgyro + // mean gyro
-                _dpLvel + // [3] integrated linear acc x,y,z
-                tLacc + // mean acc
-                _pres + // [1] atmospheric pressure
-                _grav // [3] vector indicating the direction of gravity x,y,z
+        val message = floatArrayOf(dT) + // [0] delta time since last message
+                ts + // [1,2,3,4] actual time stamp
+                _rotvec + // [5,6,7,8] transformed rotation vector is a quaternion [w,x,y,z]
+                tgyro + // [9,10,11] mean gyro [x,y,z]
+                _dpLvel + // [12,13,14] integrated linear acc [x,y,z]
+                tLacc + // [15,16,17] mean acc
+                _pres + // [18] atmospheric pressure
+                _grav // [19,20,21] vector indicating the direction of gravity [x,y,z]
 
         // now that the message is stored, reset the deltas
         // translation vel

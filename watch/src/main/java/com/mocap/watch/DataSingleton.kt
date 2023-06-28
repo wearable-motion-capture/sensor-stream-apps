@@ -21,7 +21,7 @@ enum class AudioStreamState {
 
 object DataSingleton {
 
-    const val VERSION = "0.2.8"
+    const val VERSION = "0.2.9"
 
     // dual mode communication paths
     const val IMU_PATH = "/imu"
@@ -42,11 +42,10 @@ object DataSingleton {
     const val PHONE_APP_ACTIVE = "phone_app" // indicates if the phone app is active
     const val WATCH_APP_ACTIVE = "watch_app" // indicates if the watch app is active
     const val PHONE_CAPABILITY = "phone" // if the phone app is connected (see res/values/wear.xml)
-    const val WATCH_CAPABILITY = "watch"
 
     // streaming parameters
-    const val IMU_CHANNEL_MSG_SIZE = (4 + 17) * 4 // timestamp(4) + data (17 float)
-    const val IMU_UDP_MSG_SIZE = (4 + 19) * 4 // timestamp(4) + data (19 float) (calibration)
+    const val IMU_CHANNEL_MSG_SIZE = (5 + 17) * 4 // deltaT + timestamp(5) + data (17 float)
+    const val IMU_UDP_MSG_SIZE = (5 + 19) * 4 // deltaT + timestamp(5) + data (19 float)
     const val PPG_MSG_SIZE = (4 + 16) * 4 // timestamp(4) + data (16 float)
     const val AUDIO_BUFFER_SIZE = 800 // bytes
 
