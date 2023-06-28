@@ -44,10 +44,8 @@ class ImuService : Service() {
      * This service is dormant until Channels from the watch are opened. This callback triggers
      * when Channel states change.
      */
-    private val _channelCallback = PhoneChannelCallback(
-        openCallback = { onChannelOpen(it) },
-        closeCallback = { onChannelClose(it) }
-    )
+    private val _channelCallback = PhoneChannelCallback(openCallback = { onChannelOpen(it) },
+        closeCallback = { onChannelClose(it) })
 
     private lateinit var _sensorManager: SensorManager
     private val _channelClient by lazy { Wearable.getChannelClient(application) }
@@ -117,6 +115,7 @@ class ImuService : Service() {
         val ds = diff.toMillis() * MS2S
         _lastBroadcast = LocalDateTime.now()
 
+
         val intent = Intent(DataSingleton.BROADCAST_UPDATE)
         intent.putExtra(
             DataSingleton.BROADCAST_SERVICE_KEY, DataSingleton.IMU_PATH
@@ -124,12 +123,18 @@ class ImuService : Service() {
         intent.putExtra(
             DataSingleton.BROADCAST_SERVICE_STATE, _imuStreamState
         )
-        intent.putExtra(
-            DataSingleton.BROADCAST_SERVICE_HZ_IN, round(_swInCount.toFloat() / ds)
-        )
-        intent.putExtra(
-            DataSingleton.BROADCAST_SERVICE_HZ_OUT, round(_swOutCount.toFloat() / ds)
-        )
+        // if the last broadcast was too recent
+        if (ds <= 0F) {
+            intent.putExtra(DataSingleton.BROADCAST_SERVICE_HZ_IN, 0F)
+            intent.putExtra(DataSingleton.BROADCAST_SERVICE_HZ_OUT, 0F)
+        } else {
+            intent.putExtra(
+                DataSingleton.BROADCAST_SERVICE_HZ_IN, round(_swInCount.toFloat() / ds)
+            )
+            intent.putExtra(
+                DataSingleton.BROADCAST_SERVICE_HZ_OUT, round(_swOutCount.toFloat() / ds)
+            )
+        }
         intent.putExtra(
             DataSingleton.BROADCAST_SERVICE_QUEUE, _swQueue.count()
         )
@@ -240,16 +245,16 @@ class ImuService : Service() {
 
                 // sum gyro speed * delta T
                 totalGyr = floatArrayOf(
-                    totalGyr[0] + rowBuf[9] * dT,
-                    totalGyr[1] + rowBuf[10] * dT,
-                    totalGyr[2] + rowBuf[11] * dT
+                    totalGyr[0] + rowBuf.getFloat(9 * 4) * dT,
+                    totalGyr[1] + rowBuf.getFloat(10 * 4) * dT,
+                    totalGyr[2] + rowBuf.getFloat(11 * 4) * dT
                 )
 
                 // sum acc * delta T
                 totalAcc = floatArrayOf(
-                    totalAcc[0] + rowBuf[15] * dT,
-                    totalAcc[1] + rowBuf[16] * dT,
-                    totalAcc[2] + rowBuf[17] * dT
+                    totalAcc[0] + rowBuf.getFloat(15 * 4) * dT,
+                    totalAcc[1] + rowBuf.getFloat(16 * 4) * dT,
+                    totalAcc[2] + rowBuf.getFloat(17 * 4) * dT
                 )
 
                 // get next row
@@ -353,16 +358,12 @@ class ImuService : Service() {
 
         // average gyro velocities
         val tgyro = floatArrayOf(
-            _dGyro[0], // _tsDGyro,
-            _dGyro[1], // _tsDGyro,
-            _dGyro[2] // _tsDGyro
+            _dGyro[0] / _tsDGyro, _dGyro[1] / _tsDGyro, _dGyro[2] / _tsDGyro
         )
 
         // average accelerations
         val tLacc = floatArrayOf(
-            _dpLvel[0], // _tsDLacc,
-            _dpLvel[1], // _tsDLacc,
-            _dpLvel[2] // _tsDLacc
+            _dpLvel[0] / _tsDLacc, _dpLvel[1] / _tsDLacc, _dpLvel[2] / _tsDLacc
         )
 
         // estimate delta time between messages

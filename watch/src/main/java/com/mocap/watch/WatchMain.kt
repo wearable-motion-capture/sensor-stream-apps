@@ -27,7 +27,7 @@ import kotlinx.coroutines.launch
  * The MainActivity is where the app starts. For the watch app, this is the main selection between
  * Dual and Standalone mode
  */
-class WatchMainActivity : ComponentActivity(),
+class WatchMain : ComponentActivity(),
     CapabilityClient.OnCapabilityChangedListener {
 
     companion object {
