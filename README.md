@@ -1,56 +1,22 @@
-# Smartwatch Stream App
+# Sensor Stream Apps
 
-Tested on Galaxy Watch 5.
+This repository provides the two apps. One Android app for smartphones and one Wear OS app for smartwatches. 
+Together with ([arm-pose-estimation](https://github.com/wearable-motion-capture/arm-pose-estimation)), 
+these apps enable data transfer from smart devices to your system via a local network.
 
-A WearOS app to stream sensor data to a target IP. Alternatively, the app can record smartwatch
-sensor data and store it as a csv.
-The app stores recorded data to:
+## Compatible Devices
 
-```
-storage/emulated/0/Documents/{date-time}.csv
-```
+The apps are at least compatible with Android 11.0 (Watch App) and Android 13.0 (Phone App). 
+They have been tested on:
+
+| Watch App              | Phone App |
+|------------------------|-----------|
+| Samsung Galaxy Watch 5 | Samsung Galaxy A23 5G |
 
 ## Install and Use
 
 Please read
-the [step-by-step instructions](https://docs.google.com/document/d/1ayMBF9kDCB9rlcrqR0sPumJhIVJgOF-SENTdoE4a6DI/edit?usp=sharing)
-
-## Recorded and streamed data
-
-The data arrays are composed in the `GlobalState.kt` file. Currently, streamed sensor messages
-consist of:
-
-```
-    time_diff + // time since streaming started (not used for predicitons)
-    rotVec +  // rotation vector[5]  is a quaternion x,y,z,w, + confidence
-    lacc + // [3] linear acceleration x,y,z
-    pres +  // [1] atmospheric pressure
-    grav + // [3] vector indicating the direction and magnitude of gravity x,y,z
-    gyro + // [3] gyro data for time series prediction
-    hrRaw + // [16] undocumented data from Samsung's Hr raw sensor (not used for predictions)
-    init_pres + // initial atmospheric pressure collected during calibration
-    north_deg // body orientation in relation to magnetic north pole collected during calibration
-                                
-```
-
-Recorded sensor data consists of
-
-```
-    time_diff + // time since streaming started (not used for predicitons)
-    rotVec + // rotation vector[5]  is a quaternion x,y,z,w, + confidence
-    lacc + // [3] linear acceleration x,y,z
-    accl + // [3] unfiltered acceleration x,y,z
-    pres +  // [1] atmospheric pressure
-    gyro + // [3] Angular speed around the x,y,z -axis
-    magn + // [3] the ambient magnetic field in the x,y,z -axis
-    grav + // [3] vector indicating the direction and magnitude of gravity x,y,z
-    hr + // [1] heart rate in bpm
-    hrRaw + // [16] undocumented data from Samsung's Hr raw sensor
-    init_pres + // initial atmospheric pressure collected during calibration
-    north_deg // body orientation in relation to magnetic north pole collected during calibration
-```
-
-
+the [step-by-step instructions](https://docs.google.com/document/d/1ayMBF9kDCB9rlcrqR0sPumJhIVJgOF-SENTdoE4a6DI/edit?usp=sharing) for a detailed instruction guide.
 
 
 
