@@ -44,8 +44,10 @@ class ImuService : Service() {
      * This service is dormant until Channels from the watch are opened. This callback triggers
      * when Channel states change.
      */
-    private val _channelCallback = PhoneChannelCallback(openCallback = { onChannelOpen(it) },
-        closeCallback = { onChannelClose(it) })
+    private val _channelCallback = PhoneChannelCallback(
+        openCallback = { onChannelOpen(it) },
+        closeCallback = { onChannelClose(it) }
+    )
 
     private lateinit var _sensorManager: SensorManager
     private val _channelClient by lazy { Wearable.getChannelClient(application) }
@@ -77,17 +79,23 @@ class ImuService : Service() {
     private var _rotvec: FloatArray = floatArrayOf(1f, 0f, 0f, 0f) // rot vector as [w,x,y,z] quat
 
     // store listeners in this list to register and unregister them automatically
-    private val _listeners = listOf(SensorListener(
-        Sensor.TYPE_PRESSURE
-    ) { onPressureReadout(it) }, SensorListener(
-        Sensor.TYPE_LINEAR_ACCELERATION
-    ) { onLaccReadout(it) }, SensorListener(
-        Sensor.TYPE_ROTATION_VECTOR
-    ) { onRotVecReadout(it) }, SensorListener(
-        Sensor.TYPE_GRAVITY
-    ) { onGravReadout(it) }, SensorListener(
-        Sensor.TYPE_GYROSCOPE
-    ) { onGyroReadout(it) })
+    private val _listeners = listOf(
+        SensorListener(
+            Sensor.TYPE_PRESSURE
+        ) { onPressureReadout(it) },
+        SensorListener(
+            Sensor.TYPE_LINEAR_ACCELERATION
+        ) { onLaccReadout(it) },
+        SensorListener(
+            Sensor.TYPE_ROTATION_VECTOR
+        ) { onRotVecReadout(it) },
+        SensorListener(
+            Sensor.TYPE_GRAVITY
+        ) { onGravReadout(it) },
+        SensorListener(
+            Sensor.TYPE_GYROSCOPE
+        ) { onGyroReadout(it) }
+    )
 
     override fun onCreate() {
         // assign our sensor manager variable now that we are sure it has been initialized
@@ -356,24 +364,29 @@ class ImuService : Service() {
             tsNow.nano.toFloat()
         )
 
-        // average gyro velocities
-        val tgyro = floatArrayOf(
-            _dGyro[0] / _tsDGyro, _dGyro[1] / _tsDGyro, _dGyro[2] / _tsDGyro
-        )
-
-        // average accelerations
-        val tLacc = floatArrayOf(
-            _dpLvel[0] / _tsDLacc, _dpLvel[1] / _tsDLacc, _dpLvel[2] / _tsDLacc
-        )
-
         // estimate delta time between messages
         var dT = 1.0F
         if (_lastMsg == null) {
             _lastMsg = tsNow
         } else {
             // avoid over-amplification by clamping dT at 1
-            dT = min(Duration.between(tsNow, _lastMsg).toNanos() * NS2S, dT)
+            dT = min(Duration.between(_lastMsg, tsNow).toNanos() * NS2S, dT)
+            _lastMsg = tsNow
         }
+
+        // average gyro velocities
+        val tgyro = floatArrayOf(
+            _dGyro[0] / _tsDGyro,
+            _dGyro[1] / _tsDGyro,
+            _dGyro[2] / _tsDGyro
+        )
+
+        // average accelerations
+        val tLacc = floatArrayOf(
+            _dpLvel[0] / _tsDLacc,
+            _dpLvel[1] / _tsDLacc,
+            _dpLvel[2] / _tsDLacc
+        )
 
         // compose the message as a float array
         val message = floatArrayOf(dT) + // [0] delta time since last message

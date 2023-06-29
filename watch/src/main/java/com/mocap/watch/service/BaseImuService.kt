@@ -146,8 +146,10 @@ abstract class BaseImuService : Service() {
             _lastMsg = tsNow
         } else {
             // avoid over-amplification by clamping dT at 1
-            dT = min(Duration.between(tsNow, _lastMsg).toNanos() * NS2S, dT)
+            dT = min(Duration.between(_lastMsg, tsNow).toNanos() * NS2S, dT)
+            _lastMsg = tsNow
         }
+
 
         // average gyro velocities
         val tgyro = floatArrayOf(
