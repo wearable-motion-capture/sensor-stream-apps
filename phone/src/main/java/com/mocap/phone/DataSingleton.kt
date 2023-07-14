@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 object DataSingleton {
-    const val VERSION = "0.2.4"
+    const val VERSION = "0.2.5"
 
     // message paths
     const val IMU_PATH = "/imu"
@@ -28,19 +28,31 @@ object DataSingleton {
     // streaming parameters
     const val IMU_MSG_SIZE = (5 + 17) * 4 // deltaT + timestamp(5) + data (14 float)
     const val PPG_MSG_SIZE = (4 + 16) * 4 // timestamp(4) + data (16 float)
-    const val IP_KEY = "com.mocap.watch.ip" // shared preferences lookup
-    const val IP_DEFAULT = "192.168.0.12"
-    const val UDP_IMU_PORT = 65000
+    const val IMU_PORT_LEFT = 65000
+    const val IMU_PORT_RIGHT = 65003
     const val UDP_AUDIO_PORT = 65001
     const val UDP_PPG_PORT = 65002
     const val AUDIO_BUFFER_SIZE = 800
     const val DUAL_IMU_MSG_SIZE = IMU_MSG_SIZE + (5 + 26) * 4 // dT + timestamp(5) + data (22 float)
+
+    // shared preferences lookup
+    const val IP_KEY = "com.mocap.phone.ip"
+    const val IP_DEFAULT = "192.168.0.12"
+    const val PORT_KEY = "com.mocap.phone.port"
+    const val IMU_PORT_DEFAULT = IMU_PORT_LEFT
 
     // as state flow to update UI elements when IP changes
     private val ipStateFlow = MutableStateFlow(IP_DEFAULT)
     val ip = ipStateFlow.asStateFlow()
     fun setIp(st: String) {
         ipStateFlow.value = st
+    }
+
+    // as state flow to update UI elements when IP changes
+    private val portStateFlow = MutableStateFlow(IMU_PORT_DEFAULT)
+    val imuPort = portStateFlow.asStateFlow()
+    fun setImuPort(p: Int) {
+        portStateFlow.value = p
     }
 
     // as state flow to update UI elements when value changes

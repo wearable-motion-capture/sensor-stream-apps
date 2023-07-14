@@ -47,13 +47,14 @@ class PhoneMain : ComponentActivity(),
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            // retrieve stored IP and update DataSingleton
+            // retrieve stored IP and PORT to update DataSingleton
             val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
-            var storedIp = sharedPref.getString(DataSingleton.IP_KEY, DataSingleton.IP_DEFAULT)
-            if (storedIp == null) {
-                storedIp = DataSingleton.IP_DEFAULT
+            val storedIp = sharedPref.getString(DataSingleton.IP_KEY, DataSingleton.IP_DEFAULT)
+            if (storedIp != null) {
+                DataSingleton.setIp(storedIp)
             }
-            DataSingleton.setIp(storedIp)
+            val storedPort = sharedPref.getInt(DataSingleton.PORT_KEY, DataSingleton.IMU_PORT_DEFAULT)
+            DataSingleton.setImuPort(storedPort)
 
             PhoneTheme {
                 // keep screen on
@@ -79,7 +80,9 @@ class PhoneMain : ComponentActivity(),
                     ppgQueueSizeSF = _viewModel.ppgQueueSize,
                     ipSetCallback = {
                         startActivity(Intent("com.mocap.phone.SET_IP"))
-                    }
+                    },
+                    handSwitchCallback = { _viewModel.switchHand() }
+
                 )
             }
         }

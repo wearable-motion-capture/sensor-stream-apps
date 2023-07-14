@@ -155,7 +155,7 @@ class ImuService : Service() {
     private suspend fun sendUdpImuMessages(c: ChannelClient.Channel) {
         try {
             // our constants for this loop
-            val port = DataSingleton.UDP_IMU_PORT
+            val port = DataSingleton.imuPort.value
             val ip = DataSingleton.ip.value
 
             val calibratedDat =

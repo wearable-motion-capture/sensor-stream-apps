@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Intent
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
+import androidx.preference.PreferenceManager
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.CapabilityInfo
@@ -118,6 +119,30 @@ class PhoneViewModel(application: Application) :
                 )
             }
         }
+    }
+
+
+    /**
+     * Switch between Left-Hand Mode and Right-Hand Mode
+     */
+    fun switchHand() {
+        // defaults
+        var hand = "left"
+        var port = DataSingleton.IMU_PORT_LEFT
+
+        // change in case current value is defaults
+        if (DataSingleton.imuPort.value == DataSingleton.IMU_PORT_LEFT) {
+            hand = "right"
+            port = DataSingleton.IMU_PORT_RIGHT
+        }
+
+        val sharedPref = PreferenceManager.getDefaultSharedPreferences(this.getApplication())
+        with(sharedPref.edit()) {
+            putInt(DataSingleton.PORT_KEY, port)
+            apply()
+        }
+        DataSingleton.setImuPort(port)
+        Log.d(TAG, "switched to $hand-hand mode. Set target port to $port")
     }
 
     fun regularUiUpdates() {

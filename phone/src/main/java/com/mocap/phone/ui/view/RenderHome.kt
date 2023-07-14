@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Switch
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -40,12 +41,14 @@ fun RenderHome(
     ppgInHzSF: StateFlow<Float>,
     ppgOutHzSF: StateFlow<Float>,
     ppgQueueSizeSF: StateFlow<Int>,
-    ipSetCallback: () -> Unit
+    ipSetCallback: () -> Unit,
+    handSwitchCallback: () -> Unit
 ) {
     val phoneForwardQuat by DataSingleton.phoneQuat.collectAsState()
     val watchForwardQuat by DataSingleton.watchQuat.collectAsState()
     val watchPressure by DataSingleton.watchPres.collectAsState()
     val ip by DataSingleton.ip.collectAsState()
+    val port by DataSingleton.imuPort.collectAsState()
 
     val nodeName by connectedNodeSF.collectAsState()
     val appState by appActiveSF.collectAsState()
@@ -121,10 +124,20 @@ fun RenderHome(
                     DefaultHighlight(text = ip)
                     DefaultButton(onClick = ipSetCallback, text = "Set Target IP")
                 }
+                SmallCard() {
+                    DefaultText(
+                        text = if (port == DataSingleton.IMU_PORT_LEFT) "Left Hand Mode"
+                        else "Right Hand Mode"
+                    )
+                    Switch(
+                        checked = (port == DataSingleton.IMU_PORT_RIGHT),
+                        onCheckedChange = { handSwitchCallback() }
+                    )
+                }
 
                 Row() {
                     SmallCard() {
-                        DefaultHighlight(text = ":" + DataSingleton.UDP_IMU_PORT.toString())
+                        DefaultHighlight(text = ":$port")
                         DefaultText(text = ("IMU"))
                         DefaultText(
                             text = if (imuSt) "streaming" else "idle",
