@@ -26,6 +26,7 @@ import java.nio.ByteBuffer
 import java.time.Duration
 import java.time.LocalDateTime
 import kotlin.math.abs
+import kotlin.math.sin
 
 enum class DualCalibrationState {
     Idle,
@@ -101,7 +102,7 @@ class DualCalibViewModel(
                 // only start considering these values if the y-rotation from
                 // the "Hold" calibration position is greater than 45 deg
                 val curYRot = getGlobalYRotation(_rotVec)
-                if ((abs(holdYRot - curYRot) < 67.5f) || (_grav[2] < 9.75)) {
+                if ((abs(sin(Math.toRadians(holdYRot)) - sin(Math.toRadians(curYRot))) < 0.4) || (_grav[2] < 9.75)) {
                     start = LocalDateTime.now()
                     quats.clear()
                     if (!vibrating) {
