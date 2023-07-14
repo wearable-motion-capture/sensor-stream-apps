@@ -53,7 +53,8 @@ class PhoneMain : ComponentActivity(),
             if (storedIp != null) {
                 DataSingleton.setIp(storedIp)
             }
-            val storedPort = sharedPref.getInt(DataSingleton.PORT_KEY, DataSingleton.IMU_PORT_DEFAULT)
+            val storedPort =
+                sharedPref.getInt(DataSingleton.PORT_KEY, DataSingleton.IMU_PORT_DEFAULT)
             DataSingleton.setImuPort(storedPort)
 
             PhoneTheme {
@@ -80,9 +81,7 @@ class PhoneMain : ComponentActivity(),
                     ppgQueueSizeSF = _viewModel.ppgQueueSize,
                     ipSetCallback = {
                         startActivity(Intent("com.mocap.phone.SET_IP"))
-                    },
-                    handSwitchCallback = { _viewModel.switchHand() }
-
+                    }
                 )
             }
         }

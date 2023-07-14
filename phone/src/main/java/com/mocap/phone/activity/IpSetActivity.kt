@@ -23,20 +23,33 @@ class IpSetActivity : ComponentActivity() {
         setContent {
             PhoneTheme {
                 RenderIpSetting(
-                    setIpCallback = { setIpAndFinish(it) }
+                    setIpAndPortCallback = this::setIpPort
                 )
             }
         }
     }
 
-    private fun setIpAndFinish(ip: String) {
+    private fun setIpPort(ip: String, leftHandMode: Boolean) {
+
+        // decide on port based on hand mode
+        var p = DataSingleton.IMU_PORT_RIGHT
+        if (leftHandMode) {
+            p = DataSingleton.IMU_PORT_LEFT
+        }
+
+        // update shared preferences
         val sharedPref = getDefaultSharedPreferences(this)
         with(sharedPref.edit()) {
+            putInt(DataSingleton.PORT_KEY, p)
             putString(DataSingleton.IP_KEY, ip)
             apply()
         }
+
+        // update data singleton
+        DataSingleton.setImuPort(p)
         DataSingleton.setIp(ip)
-        Log.d(TAG, "set target IP to $ip")
+
+        Log.d(TAG, "set target IP to $ip and IMU PORT to $p")
         this.finish() // activity done
     }
 

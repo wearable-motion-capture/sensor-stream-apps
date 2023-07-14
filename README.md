@@ -8,12 +8,13 @@ these apps enable data transfer from smart devices to a remote system through UD
 
 ## Compatible Devices
 
-The apps are at least compatible with Android 11.0 (Watch App) and Android 13.0 (Phone App).
+The apps are at least compatible with Android 11.0 (Watch App) and Android 10.0 (Phone App).
 They have been tested on:
 
-| Watch App                                    | Phone App             |
-|----------------------------------------------|-----------------------|
-| Samsung Galaxy Watch 5 (SM-R900 and SM-R910) | Samsung Galaxy A23 5G |  
+| Watch App                                    | Phone App                  |
+|----------------------------------------------|----------------------------|
+| Samsung Galaxy Watch 5 (SM-R900 and SM-R910) | Samsung Galaxy A23 5G      |  
+|                                              | OnePlus Nord N100 (BE2011) |
 
 ## Install and Use
 
