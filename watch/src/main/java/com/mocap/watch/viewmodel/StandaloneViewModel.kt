@@ -9,8 +9,8 @@ import androidx.lifecycle.AndroidViewModel
 import com.mocap.watch.ImuStreamState
 import com.mocap.watch.AudioStreamState
 import com.mocap.watch.DataSingleton
-import com.mocap.watch.service.UdpAudioService
-import com.mocap.watch.service.UdpImuService
+import com.mocap.watch.service.udp.UdpAudioService
+import com.mocap.watch.service.udp.UdpImuService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

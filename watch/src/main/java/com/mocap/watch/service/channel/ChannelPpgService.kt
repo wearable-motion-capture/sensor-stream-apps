@@ -1,4 +1,4 @@
-package com.mocap.watch.service
+package com.mocap.watch.service.channel
 
 import android.app.Service
 import android.content.Intent

@@ -97,10 +97,10 @@
             </intent-filter>
         </receiver>
 
-        <service android:name=".service.ChannelPpgService" />
-        <service android:name=".service.ChannelAudioService" />
-        <service android:name=".service.ChannelImuService" />
-        <service android:name=".service.UdpAudioService" />
-        <service android:name=".service.UdpImuService" />
+        <service android:name=".service.channel.ChannelPpgService" />
+        <service android:name=".service.channel.ChannelAudioService" />
+        <service android:name=".service.channel.ChannelImuService" />
+        <service android:name=".service.udp.UdpAudioService" />
+        <service android:name=".service.udp.UdpImuService" />
     </application>
 </manifest>

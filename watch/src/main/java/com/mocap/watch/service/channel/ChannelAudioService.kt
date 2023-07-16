@@ -1,4 +1,4 @@
-package com.mocap.watch.service
+package com.mocap.watch.service.channel
 
 import android.Manifest
 import android.content.Intent
@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.google.android.gms.wearable.Wearable
 import com.mocap.watch.DataSingleton
+import com.mocap.watch.service.BaseAudioService
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.nio.ByteBuffer

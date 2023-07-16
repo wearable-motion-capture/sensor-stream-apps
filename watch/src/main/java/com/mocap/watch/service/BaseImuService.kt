@@ -23,7 +23,7 @@ abstract class BaseImuService : Service() {
     companion object {
         private const val TAG = "IMU service"
         private const val NS2S = 1.0f / 1000000000.0f //Nano second to second
-        const val MSGBREAK = 5L // minimum pause between messages
+        const val MSGBREAK = 4L // minimum pause between messages
     }
 
     private lateinit var _sensorManager: SensorManager // to be set in onCreate
@@ -113,8 +113,6 @@ abstract class BaseImuService : Service() {
     }
 
     protected fun composeImuMessage(): FloatArray? {
-
-
         // avoid composing a new message before receiving new data
         // also, this prevents division by 0 when averaging below
         if (
@@ -124,10 +122,6 @@ abstract class BaseImuService : Service() {
                 floatArrayOf(1f, 0f, 0f, 0f)
             )
         ) {
-//            Log.d(
-//                TAG, "data is null " +
-//                        "(_tsDLacc = $_tsDLacc, _tsDGyro = $_tsDGyro, _rotvec = $_rotvec)"
-//            )
             return null
         }
 

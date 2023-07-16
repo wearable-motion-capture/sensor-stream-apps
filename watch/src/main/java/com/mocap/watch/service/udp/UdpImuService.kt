@@ -1,8 +1,9 @@
-package com.mocap.watch.service
+package com.mocap.watch.service.udp
 
 import android.content.Intent
 import android.util.Log
 import com.mocap.watch.DataSingleton
+import com.mocap.watch.service.BaseImuService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

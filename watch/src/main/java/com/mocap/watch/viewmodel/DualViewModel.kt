@@ -16,9 +16,9 @@ import com.mocap.watch.DataSingleton
 import com.mocap.watch.PpgStreamState
 import com.mocap.watch.ImuStreamState
 import com.mocap.watch.AudioStreamState
-import com.mocap.watch.service.ChannelAudioService
-import com.mocap.watch.service.ChannelImuService
-import com.mocap.watch.service.ChannelPpgService
+import com.mocap.watch.service.channel.ChannelAudioService
+import com.mocap.watch.service.channel.ChannelImuService
+import com.mocap.watch.service.channel.ChannelPpgService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

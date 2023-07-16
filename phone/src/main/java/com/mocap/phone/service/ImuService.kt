@@ -37,7 +37,7 @@ class ImuService : Service() {
         private const val TAG = "Channel IMU Service"  // for logging
         private const val NS2S = 1.0f / 1000000000.0f //Nano second to second
         private const val MS2S = 0.001f
-        private const val MSGBREAK = 5L
+        private const val MSGBREAK = 4L
     }
 
     /**

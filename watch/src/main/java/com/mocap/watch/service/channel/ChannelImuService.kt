@@ -1,9 +1,10 @@
-package com.mocap.watch.service
+package com.mocap.watch.service.channel
 
 import android.content.Intent
 import android.util.Log
 import com.google.android.gms.wearable.Wearable
 import com.mocap.watch.DataSingleton
+import com.mocap.watch.service.BaseImuService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
