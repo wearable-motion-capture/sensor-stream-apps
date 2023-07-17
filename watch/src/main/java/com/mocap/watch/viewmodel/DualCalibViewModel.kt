@@ -64,15 +64,15 @@ class DualCalibViewModel(
     val calibState = _calibState.asStateFlow()
 
     fun calibTrigger() {
-        // update calibration state
         Log.v(TAG, "Calibration Triggered")
 
         _scope.launch {
-            // begin with pressure reading
+            // update calibration state
             _calibState.value = DualCalibrationState.Hold
             var start = LocalDateTime.now()
             var diff = 0L
 
+            // begin with step 1:
             // collect pressure and y angle for CALIBRATION_WAIT time
             val pressures = mutableListOf(_pres[0])
             val holdDegrees = mutableListOf(getGlobalYRotation(_rotVec))
@@ -98,9 +98,9 @@ class DualCalibViewModel(
             // collect for CALIBRATION_WAIT time
             while (diff < CALIBRATION_WAIT) {
 
-                // the watch held horizontally if gravity in z direction is positive
-                // only start considering these values if the y-rotation from
-                // the "Hold" calibration position is greater than 45 deg
+                // the watch is held horizontally, if gravity in z direction is close to std gravity
+                // only start considering these values, if the y-rotation from
+                // the "Hold" calibration position is greater than ~80 deg
                 val curYRot = getGlobalYRotation(_rotVec)
                 if ((abs(sin(Math.toRadians(holdYRot)) - sin(Math.toRadians(curYRot))) < 0.4) || (_grav[2] < 9.75)) {
                     start = LocalDateTime.now()
