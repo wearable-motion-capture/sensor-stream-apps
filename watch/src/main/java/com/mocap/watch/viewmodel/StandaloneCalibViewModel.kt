@@ -8,6 +8,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import com.mocap.watch.DataSingleton
 import com.mocap.watch.utility.getGlobalYRotation
+import com.mocap.watch.utility.quatAverage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -19,6 +20,7 @@ import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.LocalDateTime
 import kotlin.math.abs
+import kotlin.math.sin
 
 enum class CalibrationState {
     Idle,
@@ -36,7 +38,7 @@ class StandaloneCalibViewModel(
 
     companion object {
         private const val TAG = "StandaloneCalibViewModel"  // for logging
-        private const val CALIBRATION_WAIT = 3000 // wait time in one calibration position
+        private const val CALIBRATION_WAIT = 2000L // wait time in one calibration position
         private const val COROUTINE_SLEEP = 10L
     }
 
@@ -52,9 +54,7 @@ class StandaloneCalibViewModel(
     val calibState = _calibState.asStateFlow()
 
     fun calibrationTrigger() {
-        // update calibration state
         Log.v(TAG, "Calibration Triggered")
-
 
         _scope.launch {
             // begin with pressure reading
@@ -82,19 +82,21 @@ class StandaloneCalibViewModel(
             start = LocalDateTime.now()
             diff = 0L
             var vibrating = false
-            val northDegrees = mutableListOf<Double>()
+            val quats = mutableListOf<FloatArray>()
 
             // collect for CALIBRATION_WAIT time
             while (diff < CALIBRATION_WAIT) {
 
-                // the watch held horizontally if gravity in z direction is positive
-                // only start considering these values if the y-rotation from
-                // the "Hold" calibration position is greater than 45 deg
+                // the watch is held horizontally, if gravity in z direction is close to std gravity
+                // only start considering these values, if the y-rotation from
+                // the "Hold" calibration position is greater than ~80 deg
                 val curYRot = getGlobalYRotation(_rotVec)
-                if ((abs(holdYRot - curYRot) < 67.5f) || (_grav[2] < 9.75)) {
+                if ((abs(sin(Math.toRadians(holdYRot)) - sin(Math.toRadians(curYRot))) < 0.4)
+                    || (_grav[2] < 9.75)
+                ) {
                     delay(10L)
                     start = LocalDateTime.now()
-                    northDegrees.clear()
+                    quats.clear()
                     if (!vibrating) {
                         vibrating = true
                         _vibrator.vibrate(
@@ -105,7 +107,7 @@ class StandaloneCalibViewModel(
                     }
                 } else {
                     // if all is good, store to list of vales
-                    northDegrees.add(curYRot)
+                    quats.add(_rotVec)
                     diff = Duration.between(start, LocalDateTime.now()).toMillis()
                     // and stop vibrating pulse
                     if (vibrating) {
@@ -117,8 +119,8 @@ class StandaloneCalibViewModel(
             }
 
             // Second step done. Save the average to the data singleton
-            // add 90 degrees for forward orientation of arm and hip
-            DataSingleton.setCalibNorth(northDegrees.average() + 90)
+            val avgQuat = quatAverage(quats)
+            DataSingleton.setForwardQuat(avgQuat)
 
             // final vibration pulse to confirm
             _vibrator.vibrate(
@@ -127,6 +129,7 @@ class StandaloneCalibViewModel(
                 )
             )
             delay(200L)
+
             // complete calibration and close everything
             _calibState.value = CalibrationState.Idle
             _onCompleteCallback()
@@ -140,18 +143,18 @@ class StandaloneCalibViewModel(
         _scope.cancel()
     }
 
-    /** sensor callback */
+    /** sensor callbacks */
     fun onPressureReadout(newReadout: SensorEvent) {
         _pres = newReadout.values
     }
 
-    /** sensor callback */
     fun onGravReadout(newReadout: SensorEvent) {
         _grav = newReadout.values
     }
 
-    /** sensor callback */
     fun onRotVecReadout(newReadout: SensorEvent) {
+        // newReadout is [x,y,z,w, confidence]
+        // our preferred order system is [w,x,y,z]
         _rotVec = floatArrayOf(
             newReadout.values[3],
             newReadout.values[0],

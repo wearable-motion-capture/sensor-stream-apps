@@ -76,7 +76,9 @@ class ImuService : Service() {
     // other modalities
     private var _grav: FloatArray = FloatArray(3) // gravity
     private var _pres: FloatArray = FloatArray(1) // Atmospheric pressure in hPa (millibar)
-    private var _rotvec: FloatArray = floatArrayOf(1f, 0f, 0f, 0f) // rot vector as [w,x,y,z] quat
+
+    // rot vector as [w,x,y,z, conf] quat + confidence
+    private var _rotvec: FloatArray = floatArrayOf(1f, 0f, 0f, 0f, 0f)
 
     // store listeners in this list to register and unregister them automatically
     private val _listeners = listOf(
@@ -278,12 +280,12 @@ class ImuService : Service() {
 
             // divide by total T to turn back into original measurement units
             floats[0] = totalT
-            floats[9] = totalGyr[0] / totalT
-            floats[10] = totalGyr[1] / totalT
-            floats[11] = totalGyr[2] / totalT
-            floats[15] = totalAcc[0] / totalT
-            floats[16] = totalAcc[1] / totalT
-            floats[17] = totalAcc[2] / totalT
+            floats[10] = totalGyr[0] / totalT
+            floats[11] = totalGyr[1] / totalT
+            floats[12] = totalGyr[2] / totalT
+            floats[16] = totalAcc[0] / totalT
+            floats[17] = totalAcc[1] / totalT
+            floats[18] = totalAcc[2] / totalT
 
             return floats
         }
@@ -349,7 +351,7 @@ class ImuService : Service() {
         // avoid composing a new message before receiving new data
         // also, this prevents division by 0 when averaging below
         if ((_tsDLacc == 0f) || (_tsDGyro == 0f) || _rotvec.contentEquals(
-                floatArrayOf(1f, 0f, 0f, 0f)
+                floatArrayOf(1f, 0f, 0f, 0f, 0f)
             )
         ) {
             return null
@@ -391,7 +393,7 @@ class ImuService : Service() {
         // compose the message as a float array
         val message = floatArrayOf(dT) + // [0] delta time since last message
                 ts + // actual time stamp
-                _rotvec + // transformed rotation vector[4] is a quaternion [w,x,y,z]
+                _rotvec + // transformed rotation vector[5] is a quaternion [w,x,y,z, conf]
                 tgyro + // mean gyro
                 _dpLvel + // [3] integrated linear acc x,y,z
                 tLacc + // mean acc
@@ -408,7 +410,7 @@ class ImuService : Service() {
         _tsDGyro = 0f
 
         // replace rot vec with default to be overwritten when new value comes in
-        _rotvec = floatArrayOf(1f, 0f, 0f, 0f)
+        _rotvec = floatArrayOf(1f, 0f, 0f, 0f, 0f)
 
         return message
     }
@@ -454,12 +456,16 @@ class ImuService : Service() {
 
     fun onRotVecReadout(newReadout: SensorEvent) {
         // newReadout is [x,y,z,w, confidence]
-        // our preferred order is [w,x,y,z]
+        // our preferred order is [w,x,y,z, confidence]
         // This is not important for state transition.
         // No averaging over time needed, because we are only interested in the most
         // recent observation
         _rotvec = floatArrayOf(
-            newReadout.values[3], newReadout.values[0], newReadout.values[1], newReadout.values[2]
+            newReadout.values[3],
+            newReadout.values[0],
+            newReadout.values[1],
+            newReadout.values[2],
+            newReadout.values[4]
         )
     }
 

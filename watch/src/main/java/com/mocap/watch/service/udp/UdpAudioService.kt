@@ -41,7 +41,7 @@ class UdpAudioService : BaseAudioService() {
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     private suspend fun susStreamTrigger() {
 
-        val ip = DataSingleton.IP.value
+        val ip = DataSingleton.ip.value
         val port = DataSingleton.UDP_AUDIO_PORT
 
         // run the streaming in a thread

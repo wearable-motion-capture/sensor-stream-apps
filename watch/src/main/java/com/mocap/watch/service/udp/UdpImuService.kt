@@ -44,12 +44,12 @@ class UdpImuService : BaseImuService() {
      */
     private suspend fun susStreamData() {
 
-        val ip = DataSingleton.IP.value
+        val ip = DataSingleton.ip.value
         val port = DataSingleton.UDP_IMU_PORT
 
         // get calibration values
-        val press = DataSingleton.CALIB_PRESS.value
-        val north = DataSingleton.CALIB_NORTH.value.toFloat()
+        val press = DataSingleton.calib_pres.value
+        val forwardQuat = DataSingleton.forwardQuat.value
 
         withContext(Dispatchers.IO) {
             try {
@@ -71,10 +71,9 @@ class UdpImuService : BaseImuService() {
                         // only process if a message was composed successfully
                         if (lastDat != null) {
                             // append calibration values
-                            val allDat = lastDat + floatArrayOf(
-                                press, // initial atmospheric pressure collected during calibration
-                                north // body orientation in relation to magnetic north pole collected during calibration
-                            )
+                            val allDat = lastDat +
+                                    floatArrayOf(press) + // initial atmospheric pressure collected during calibration
+                                    forwardQuat // body orientation in relation to magnetic north pole collected during calibration
 
                             // feed into byte buffer
                             val buffer = ByteBuffer.allocate(DataSingleton.IMU_UDP_MSG_SIZE)

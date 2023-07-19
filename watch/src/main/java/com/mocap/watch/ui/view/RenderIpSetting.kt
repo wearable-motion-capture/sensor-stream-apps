@@ -1,7 +1,6 @@
 package com.mocap.watch.ui.view
 
 import android.view.MotionEvent
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -23,7 +22,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.wear.compose.foundation.lazy.AutoCenteringParams
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
@@ -35,7 +33,7 @@ import com.mocap.watch.DataSingleton
 fun RenderIpSetting(setIpCallback: (String) -> Unit) {
 
     // formatting
-    val ipStr by DataSingleton.IP.collectAsState()
+    val ipStr by DataSingleton.ip.collectAsState()
     val ipSplit = ipStr.split(".")
     var selectedColumn by remember { mutableStateOf(0) }
     val textStyle = MaterialTheme.typography.body1

@@ -33,9 +33,9 @@ fun RenderStandalone(
 
     val sensorState by sensorStateFlow.collectAsState()
     val soundState by soundStateFlow.collectAsState()
-    val ip by DataSingleton.IP.collectAsState()
-    val north by DataSingleton.CALIB_NORTH.collectAsState()
-    val press by DataSingleton.CALIB_PRESS.collectAsState()
+    val ip by DataSingleton.ip.collectAsState()
+    val north by DataSingleton.forwardQuat.collectAsState()
+    val press by DataSingleton.calib_pres.collectAsState()
 
     // display information in a column
     ScalingLazyColumn(
@@ -45,7 +45,7 @@ fun RenderStandalone(
         item {
             DefaultText(
                 text = "pres: ${"%.2f".format(press)} " +
-                        "deg: ${"%.2f".format(north)}"
+                        "deg: ${"%.2f %.2f %.2f %.2f".format(north)}"
             )
         }
         item {

@@ -43,7 +43,9 @@ abstract class BaseImuService : Service() {
     // other modalities
     private var _grav: FloatArray = FloatArray(3) // gravity
     private var _pres: FloatArray = FloatArray(1) // Atmospheric pressure in hPa (millibar)
-    private var _rotvec: FloatArray = floatArrayOf(1f, 0f, 0f, 0f) // rot vector as [w,x,y,z] quat
+
+    // rot vector as [w,x,y,z,c] quat +  confidence
+    private var _rotvec: FloatArray = floatArrayOf(1f, 0f, 0f, 0f, 0f)
 
     protected val scope = CoroutineScope(Job() + Dispatchers.IO)
     protected var imuStreamState = false
@@ -119,7 +121,7 @@ abstract class BaseImuService : Service() {
             (_tsDLacc == 0f) ||
             (_tsDGyro == 0f) ||
             _rotvec.contentEquals(
-                floatArrayOf(1f, 0f, 0f, 0f)
+                floatArrayOf(1f, 0f, 0f, 0f, 0f)
             )
         ) {
             return null
@@ -162,12 +164,12 @@ abstract class BaseImuService : Service() {
         // compose the message as a float array
         val message = floatArrayOf(dT) + // [0] delta time since last message
                 ts + // [1,2,3,4] actual time stamp
-                _rotvec + // [5,6,7,8] transformed rotation vector is a quaternion [w,x,y,z]
-                tgyro + // [9,10,11] mean gyro [x,y,z]
-                _dpLvel + // [12,13,14] integrated linear acc [x,y,z]
-                tLacc + // [15,16,17] mean acc
-                _pres + // [18] atmospheric pressure
-                _grav // [19,20,21] vector indicating the direction of gravity [x,y,z]
+                _rotvec + // [5,6,7,8,9] transformed rotation vector is a quaternion [w,x,y,z,conf]
+                tgyro + // [10,11,12] mean gyro [x,y,z]
+                _dpLvel + // [13,14,15] integrated linear acc [x,y,z]
+                tLacc + // [16,17,18] mean acc
+                _pres + // [19] atmospheric pressure
+                _grav // [20,21,22] vector indicating the direction of gravity [x,y,z]
 
         // now that the message is stored, reset the deltas
         // translation vel
@@ -179,7 +181,7 @@ abstract class BaseImuService : Service() {
         _tsDGyro = 0f
 
         // replace rot vec with default to be overwritten when new value comes in
-        _rotvec = floatArrayOf(1f, 0f, 0f, 0f)
+        _rotvec = floatArrayOf(1f, 0f, 0f, 0f, 0f)
 
         return message
     }
@@ -230,7 +232,11 @@ abstract class BaseImuService : Service() {
         // No averaging over time needed, because we are only interested in the most
         // recent observation
         _rotvec = floatArrayOf(
-            newReadout.values[3], newReadout.values[0], newReadout.values[1], newReadout.values[2]
+            newReadout.values[3],
+            newReadout.values[0],
+            newReadout.values[1],
+            newReadout.values[2],
+            newReadout.values[4]
         )
     }
 

@@ -102,7 +102,9 @@ class DualCalibViewModel(
                 // only start considering these values, if the y-rotation from
                 // the "Hold" calibration position is greater than ~80 deg
                 val curYRot = getGlobalYRotation(_rotVec)
-                if ((abs(sin(Math.toRadians(holdYRot)) - sin(Math.toRadians(curYRot))) < 0.4) || (_grav[2] < 9.75)) {
+                if ((abs(sin(Math.toRadians(holdYRot)) - sin(Math.toRadians(curYRot))) < 0.4)
+                    || (_grav[2] < 9.75)
+                ) {
                     start = LocalDateTime.now()
                     quats.clear()
                     if (!vibrating) {
@@ -118,8 +120,10 @@ class DualCalibViewModel(
                     quats.add(_rotVec)
                     diff = Duration.between(start, LocalDateTime.now()).toMillis()
                     // and stop vibrating pulse
-                    vibrating = false
-                    _vibrator.cancel()
+                    if (vibrating) {
+                        vibrating = false
+                        _vibrator.cancel()
+                    }
                     delay(COROUTINE_SLEEP)
                 }
             }
@@ -212,9 +216,13 @@ class DualCalibViewModel(
     }
 
     fun onRotVecReadout(newReadout: SensorEvent) {
-        val vals = newReadout.values
         // newReadout is [x,y,z,w, confidence]
         // our preferred order system is [w,x,y,z]
-        _rotVec = floatArrayOf(vals[3], vals[0], vals[1], vals[2])
+        _rotVec = floatArrayOf(
+            newReadout.values[3],
+            newReadout.values[0],
+            newReadout.values[1],
+            newReadout.values[2]
+        )
     }
 }
