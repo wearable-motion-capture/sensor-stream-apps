@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 object DataSingleton {
-    const val VERSION = "0.2.8"
+    const val VERSION = "0.2.9"
 
     // message paths
     const val IMU_PATH = "/imu"
