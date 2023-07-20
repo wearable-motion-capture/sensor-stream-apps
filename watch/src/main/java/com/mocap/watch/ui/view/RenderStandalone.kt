@@ -45,7 +45,14 @@ fun RenderStandalone(
         item {
             DefaultText(
                 text = "pres: ${"%.2f".format(press)} " +
-                        "deg: ${"%.2f %.2f %.2f %.2f".format(north)}"
+                        "forward: \n ${
+                            "%.2f %.2f %.2f %.2f".format(
+                                north[0],
+                                north[1],
+                                north[2],
+                                north[3]
+                            )
+                        }"
             )
         }
         item {
