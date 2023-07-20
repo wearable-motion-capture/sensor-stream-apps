@@ -26,14 +26,14 @@ object DataSingleton {
     const val WATCH_CAPABILITY = "watch" // if the watch app is connected (see res/values/wear.xml)
 
     // streaming parameters
-    const val IMU_MSG_SIZE = (5 + 18) * 4 // deltaT + timestamp(5) + data (14 float)
+    const val IMU_MSG_SIZE = (5 + 18) * 4 // deltaT + timestamp(5) + data (18 float)
     const val PPG_MSG_SIZE = (4 + 16) * 4 // timestamp(4) + data (16 float)
     const val IMU_PORT_LEFT = 65000
     const val IMU_PORT_RIGHT = 65003
     const val UDP_AUDIO_PORT = 65001
     const val UDP_PPG_PORT = 65002
     const val AUDIO_BUFFER_SIZE = 800
-    const val DUAL_IMU_MSG_SIZE = IMU_MSG_SIZE + (5 + 27) * 4 // dT + timestamp(5) + data (22 float)
+    const val DUAL_IMU_MSG_SIZE = IMU_MSG_SIZE + (5 + 27) * 4 // dT + timestamp(5) + data (27 float)
 
     // shared preferences lookup
     const val IP_KEY = "com.mocap.phone.ip"

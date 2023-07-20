@@ -44,7 +44,7 @@ object DataSingleton {
     const val PHONE_CAPABILITY = "phone" // if the phone app is connected (see res/values/wear.xml)
 
     // streaming parameters
-    const val IMU_CHANNEL_MSG_SIZE = (5 + 18) * 4 // deltaT + timestamp(5) + data (17 float)
+    const val IMU_CHANNEL_MSG_SIZE = (5 + 18) * 4 // deltaT + timestamp(5) + data (18 float)
     const val IMU_UDP_MSG_SIZE = (5 + 23) * 4 // deltaT + timestamp(5) + data (19 float)
     const val PPG_MSG_SIZE = (4 + 16) * 4 // timestamp(4) + data (16 float)
     const val AUDIO_BUFFER_SIZE = 800 // bytes

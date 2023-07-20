@@ -255,16 +255,16 @@ class ImuService : Service() {
 
                 // sum gyro speed * delta T
                 totalGyr = floatArrayOf(
-                    totalGyr[0] + rowBuf.getFloat(9 * 4) * dT,
-                    totalGyr[1] + rowBuf.getFloat(10 * 4) * dT,
-                    totalGyr[2] + rowBuf.getFloat(11 * 4) * dT
+                    totalGyr[0] + rowBuf.getFloat(10 * 4) * dT,
+                    totalGyr[1] + rowBuf.getFloat(11 * 4) * dT,
+                    totalGyr[2] + rowBuf.getFloat(12 * 4) * dT
                 )
 
                 // sum acc * delta T
                 totalAcc = floatArrayOf(
-                    totalAcc[0] + rowBuf.getFloat(15 * 4) * dT,
-                    totalAcc[1] + rowBuf.getFloat(16 * 4) * dT,
-                    totalAcc[2] + rowBuf.getFloat(17 * 4) * dT
+                    totalAcc[0] + rowBuf.getFloat(16 * 4) * dT,
+                    totalAcc[1] + rowBuf.getFloat(17 * 4) * dT,
+                    totalAcc[2] + rowBuf.getFloat(18 * 4) * dT
                 )
 
                 // get next row
@@ -283,6 +283,7 @@ class ImuService : Service() {
             floats[10] = totalGyr[0] / totalT
             floats[11] = totalGyr[1] / totalT
             floats[12] = totalGyr[2] / totalT
+
             floats[16] = totalAcc[0] / totalT
             floats[17] = totalAcc[1] / totalT
             floats[18] = totalAcc[2] / totalT
