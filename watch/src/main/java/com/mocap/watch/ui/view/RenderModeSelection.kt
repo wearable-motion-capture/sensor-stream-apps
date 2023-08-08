@@ -16,7 +16,8 @@ import kotlinx.coroutines.flow.StateFlow
 fun RenderModeSelection(
     standaloneSF: StateFlow<Boolean>,
     standaloneCallback: () -> Unit,
-    dualCallback: () -> Unit
+    dualCallback: () -> Unit,
+    freeHipsCallback: () -> Unit
 ) {
     val standalone by standaloneSF.collectAsState()
 
@@ -42,6 +43,13 @@ fun RenderModeSelection(
                 enabled = true,
                 onClick = { standaloneCallback() },
                 text = "Standalone"
+            )
+        }
+        item {
+            DefaultButton(
+                enabled = true,
+                onClick = { freeHipsCallback() },
+                text = "Free Hips"
             )
         }
         item {

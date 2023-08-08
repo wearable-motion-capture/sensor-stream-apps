@@ -1,15 +1,14 @@
 package com.mocap.watch.activity
 
-import android.Manifest
-import android.content.Intent
 import android.content.IntentFilter
+import android.hardware.Sensor
+import android.hardware.SensorManager
 import android.net.Uri
 import android.os.*
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.annotation.RequiresPermission
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.CapabilityInfo
@@ -17,65 +16,74 @@ import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
 import com.mocap.watch.DataSingleton
+import com.mocap.watch.modules.SensorListener
 import com.mocap.watch.modules.ServiceBroadcastReceiver
 import com.mocap.watch.modules.WatchChannelCallback
 import com.mocap.watch.ui.theme.WatchTheme
-import com.mocap.watch.ui.view.RenderDual
-import com.mocap.watch.viewmodel.DualViewModel
+import com.mocap.watch.ui.view.RenderFreeHips
+import com.mocap.watch.viewmodel.FreeHipsViewModel
 
 
-class DualActivity : ComponentActivity(),
+class FreeHipsActivity : ComponentActivity(),
     MessageClient.OnMessageReceivedListener,
     CapabilityClient.OnCapabilityChangedListener {
 
     companion object {
-        private const val TAG = "DualActivity"  // for logging
+        private const val TAG = "FreeHips"  // for logging
     }
 
     private val _channelClient by lazy { Wearable.getChannelClient(this) }
     private val _capabilityClient by lazy { Wearable.getCapabilityClient(this) }
     private val _messageClient by lazy { Wearable.getMessageClient(this) }
-    private val _dualViewModel by viewModels<DualViewModel>()
+    private val _viewModel by viewModels<FreeHipsViewModel>()
+    private lateinit var _vibrator: Vibrator
+    private var _listeners = listOf<SensorListener>()
+    private lateinit var _sensorManager: SensorManager
+
     private val _channelCallback = WatchChannelCallback(
-        closeCallback = { _dualViewModel.onChannelClose(it) }
+        closeCallback = { _viewModel.onChannelClose(it) }
     )
     private val _br =
         ServiceBroadcastReceiver(
-            onServiceClose = { _dualViewModel.onServiceClose(it) },
-            onServiceUpdate = { _dualViewModel.onServiceUpdate(it) }
+            onServiceClose = { _viewModel.onServiceClose(it) },
+            onServiceUpdate = { _viewModel.onServiceUpdate(it) }
         )
 
-
-    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
 
-            // keep screen on
+            // add Sensor Listeners with our calibrator callbacks
+            _sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
+            _listeners = listOf(
+                SensorListener(
+                    Sensor.TYPE_PRESSURE
+                ) { _viewModel.onPressureReadout(it) },
+                SensorListener(
+                    Sensor.TYPE_ROTATION_VECTOR
+                ) { _viewModel.onRotVecReadout(it) },
+                SensorListener(
+                    Sensor.TYPE_GRAVITY
+                ) { _viewModel.onGravReadout(it) }
+            )
+            registerListeners()
+
+            // with the vibration service, create the view model
+            _viewModel.queryCapabilities()
+            _viewModel.regularConnectionCheck()
+
+            // keep screen on to not enter ambient mode
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-
-            // check if a phone is connected and set state flows accordingly
-            _dualViewModel.queryCapabilities()
-            _dualViewModel.regularConnectionCheck()
-
-            val connectedNode = _dualViewModel.nodeName
-            val appActiveStateFlow = _dualViewModel.pingSuccessState
-
-            // for colours
             WatchTheme {
-                RenderDual(
-                    connectedNodeName = connectedNode,
-                    appActiveStateFlow = appActiveStateFlow,
-                    calibCallback = {
-                        startActivity(Intent("com.mocap.watch.DUAL_CALIBRATION"))
-                    },
-                    imuStreamStateFlow = _dualViewModel.sensorStreamState,
-                    audioStreamStateFlow = _dualViewModel.audioStreamState,
-                    ppgStreamStateFlow = _dualViewModel.ppgStreamState,
-                    sensorStreamCallback = { _dualViewModel.imuStreamTrigger(it) },
-                    soundStreamCallback = { _dualViewModel.audioStreamTrigger(it) },
-                    ppgStreamCallback = { _dualViewModel.ppgStreamTrigger(it) }, // PPG is only for specific watches
+                RenderFreeHips(
+                    appSF = _viewModel.state,
+                    connectedNodeName = _viewModel.nodeName,
+                    connected = _viewModel.pingSuccessState,
+                    calibrated = _viewModel.calSuccessState,
+                    gravDiff = _viewModel.gravDiff,
+                    calibTrigger = { _viewModel.gravityCheck() },
+
                     finishCallback = ::finish
                 )
             }
@@ -83,17 +91,28 @@ class DualActivity : ComponentActivity(),
     }
 
     override fun onMessageReceived(messageEvent: MessageEvent) {
-        _dualViewModel.onMessageReceived(messageEvent)
+        _viewModel.onMessageReceived(messageEvent)
     }
 
     override fun onCapabilityChanged(capabilityInfo: CapabilityInfo) {
-        _dualViewModel.onCapabilityChanged(capabilityInfo)
+        _viewModel.onCapabilityChanged(capabilityInfo)
     }
 
     /**
-     * To register all listeners for all used channels
+     * Register all listeners with their assigned codes.
+     * Called on app startup and whenever app resumes
      */
     private fun registerListeners() {
+        if (this::_sensorManager.isInitialized) {
+            for (l in _listeners) {
+                _sensorManager.registerListener(
+                    l,
+                    _sensorManager.getDefaultSensor(l.code),
+                    SensorManager.SENSOR_DELAY_FASTEST
+                )
+            }
+        }
+
         // broadcasts inform about stopped services
         val filter = IntentFilter()
         filter.addAction(DataSingleton.BROADCAST_CLOSE)
@@ -112,24 +131,31 @@ class DualActivity : ComponentActivity(),
             Uri.parse("wear://"),
             CapabilityClient.FILTER_REACHABLE
         )
-        _dualViewModel.queryCapabilities()
+        _viewModel.queryCapabilities()
     }
 
     /**
-     * clear all listeners
+     * Unregister listeners and cancel vibration signals when exiting
+     * the calibration activity
      */
     private fun unregisterListeners() {
+        if (this::_vibrator.isInitialized) _vibrator.cancel()
+        if (this::_sensorManager.isInitialized) {
+            for (l in _listeners) _sensorManager.unregisterListener(l)
+        }
         LocalBroadcastManager.getInstance(applicationContext).unregisterReceiver(_br)
-        _dualViewModel.resetAllStreamStates()
+        _viewModel.resetAllStreamStates()
         _messageClient.removeListener(this)
         _channelClient.unregisterChannelCallback(_channelCallback)
         _capabilityClient.removeListener(this)
         _capabilityClient.removeLocalCapability(DataSingleton.WATCH_APP_ACTIVE)
+
+        this.finish()
     }
 
-    override fun onResume() {
-        super.onResume()
-        registerListeners()
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterListeners()
     }
 
     override fun onPause() {
@@ -137,8 +163,8 @@ class DualActivity : ComponentActivity(),
         unregisterListeners()
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        unregisterListeners()
+    override fun onResume() {
+        super.onResume()
+        registerListeners()
     }
 }

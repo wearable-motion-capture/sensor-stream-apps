@@ -66,7 +66,8 @@ class WatchMain : ComponentActivity(),
                 RenderModeSelection(
                     standaloneSF = _standalone,
                     standaloneCallback = { startActivity(Intent("com.mocap.watch.STANDALONE")) },
-                    dualCallback = { startActivity(Intent("com.mocap.watch.DUAL")) }
+                    dualCallback = { startActivity(Intent("com.mocap.watch.DUAL")) },
+                    freeHipsCallback = { startActivity(Intent("com.mocap.watch.FREEHIPS"))}
                 )
             }
         }

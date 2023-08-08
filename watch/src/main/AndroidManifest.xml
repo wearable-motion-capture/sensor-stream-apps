@@ -79,6 +79,15 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".activity.FreeHipsActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.DeviceDefault">
+            <intent-filter>
+                <action android:name="com.mocap.watch.FREEHIPS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <activity
             android:name=".activity.DualCalibActivity"
             android:exported="false"
             android:theme="@android:style/Theme.DeviceDefault">
