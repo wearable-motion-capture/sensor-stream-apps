@@ -1,5 +1,6 @@
 package com.mocap.watch.activity
 
+import android.Manifest
 import android.content.IntentFilter
 import android.hardware.Sensor
 import android.hardware.SensorManager
@@ -9,6 +10,7 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.annotation.RequiresPermission
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.CapabilityInfo
@@ -36,7 +38,6 @@ class FreeHipsActivity : ComponentActivity(),
     private val _capabilityClient by lazy { Wearable.getCapabilityClient(this) }
     private val _messageClient by lazy { Wearable.getMessageClient(this) }
     private val _viewModel by viewModels<FreeHipsViewModel>()
-    private lateinit var _vibrator: Vibrator
     private var _listeners = listOf<SensorListener>()
     private lateinit var _sensorManager: SensorManager
 
@@ -49,6 +50,7 @@ class FreeHipsActivity : ComponentActivity(),
             onServiceUpdate = { _viewModel.onServiceUpdate(it) }
         )
 
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -67,23 +69,26 @@ class FreeHipsActivity : ComponentActivity(),
                     Sensor.TYPE_GRAVITY
                 ) { _viewModel.onGravReadout(it) }
             )
-            registerListeners()
 
             // with the vibration service, create the view model
             _viewModel.queryCapabilities()
             _viewModel.regularConnectionCheck()
+            registerListeners()
+            registerIMUListeners()
+            _viewModel.gravityCheck()
 
             // keep screen on to not enter ambient mode
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             WatchTheme {
                 RenderFreeHips(
-                    appSF = _viewModel.state,
-                    connectedNodeName = _viewModel.nodeName,
                     connected = _viewModel.pingSuccessState,
+                    connectedNodeName = _viewModel.nodeName,
                     calibrated = _viewModel.calSuccessState,
                     gravDiff = _viewModel.gravDiff,
-                    calibTrigger = { _viewModel.gravityCheck() },
-
+                    imuStreamStateFlow = _viewModel.sensorStreamState,
+                    audioStreamStateFlow = _viewModel.audioStreamState,
+                    sensorStreamCallback = { _viewModel.imuStreamTrigger(it) },
+                    audioStreamCallback = { _viewModel.audioStreamTrigger(it) },
                     finishCallback = ::finish
                 )
             }
@@ -98,11 +103,7 @@ class FreeHipsActivity : ComponentActivity(),
         _viewModel.onCapabilityChanged(capabilityInfo)
     }
 
-    /**
-     * Register all listeners with their assigned codes.
-     * Called on app startup and whenever app resumes
-     */
-    private fun registerListeners() {
+    private fun registerIMUListeners() {
         if (this::_sensorManager.isInitialized) {
             for (l in _listeners) {
                 _sensorManager.registerListener(
@@ -112,7 +113,19 @@ class FreeHipsActivity : ComponentActivity(),
                 )
             }
         }
+    }
 
+    private fun unregisterIMUListeners() {
+        if (this::_sensorManager.isInitialized) {
+            for (l in _listeners) _sensorManager.unregisterListener(l)
+        }
+    }
+
+    /**
+     * Register all listeners with their assigned codes.
+     * Called on app startup and whenever app resumes
+     */
+    private fun registerListeners() {
         // broadcasts inform about stopped services
         val filter = IntentFilter()
         filter.addAction(DataSingleton.BROADCAST_CLOSE)
@@ -139,17 +152,13 @@ class FreeHipsActivity : ComponentActivity(),
      * the calibration activity
      */
     private fun unregisterListeners() {
-        if (this::_vibrator.isInitialized) _vibrator.cancel()
-        if (this::_sensorManager.isInitialized) {
-            for (l in _listeners) _sensorManager.unregisterListener(l)
-        }
+        unregisterIMUListeners()
         LocalBroadcastManager.getInstance(applicationContext).unregisterReceiver(_br)
         _viewModel.resetAllStreamStates()
         _messageClient.removeListener(this)
         _channelClient.unregisterChannelCallback(_channelCallback)
         _capabilityClient.removeListener(this)
         _capabilityClient.removeLocalCapability(DataSingleton.WATCH_APP_ACTIVE)
-
         this.finish()
     }
 

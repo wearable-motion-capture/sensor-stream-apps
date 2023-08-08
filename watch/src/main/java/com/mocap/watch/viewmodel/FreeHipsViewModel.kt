@@ -28,14 +28,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.nio.ByteBuffer
 import java.time.Duration
 import java.time.LocalDateTime
-
-enum class FreeHipsState {
-    Checking,
-    Streaming,
-    Error
-}
 
 class FreeHipsViewModel(application: Application) :
     AndroidViewModel(application) {
@@ -43,7 +38,7 @@ class FreeHipsViewModel(application: Application) :
     companion object {
         private const val TAG = "FreeHipsViewModel"  // for logging
         private const val COROUTINE_SLEEP = 10L
-        private const val CALIBRATION_WAIT = 1000L
+        private const val CALIBRATION_WAIT = 100L
 
     }
 
@@ -56,9 +51,6 @@ class FreeHipsViewModel(application: Application) :
     private var _rotVec: FloatArray = FloatArray(4) // Rotation Vector sensor or estimation
     private var _grav: FloatArray = FloatArray(3) // gravity
     private var _pres: FloatArray = FloatArray(1) // Atmospheric pressure in hPa (millibar)
-
-    private val _state = MutableStateFlow(FreeHipsState.Checking)
-    val state = _state.asStateFlow()
 
     private val _gravDiff = MutableStateFlow(0.0f)
     val gravDiff = _gravDiff.asStateFlow()
@@ -93,6 +85,8 @@ class FreeHipsViewModel(application: Application) :
         Intent(_application.applicationContext, ChannelImuService::class.java).also { intent ->
             _application.stopService(intent)
         }
+        // restart gravity check for posture
+        gravityCheck()
     }
 
     fun resetAllStreamStates() {
@@ -138,19 +132,17 @@ class FreeHipsViewModel(application: Application) :
                 _application.stopService(intent)
             }
         } else {
-            val intent = Intent(_application.applicationContext, ChannelImuService::class.java)
-            intent.putExtra("sourceNodeId", connectedNodeId)
-            _application.startService(intent)
-            _imuStreamState.value = ImuStreamState.Streaming
+            calibPhoneAndStartIMUStream(
+                DataSingleton.forwardQuat.value,
+                DataSingleton.calib_pres.value
+            )
         }
     }
 
     fun gravityCheck() {
         _scope.launch {
-
             val gravThresh = 9.75f
-
-            while (_state.value == FreeHipsState.Checking) {
+            while (_imuStreamState.value != ImuStreamState.Streaming) {
 
                 var start = LocalDateTime.now()
                 var diff = 0L
@@ -159,7 +151,7 @@ class FreeHipsViewModel(application: Application) :
 
                 // collect for CALIBRATION_WAIT time
                 while (diff < CALIBRATION_WAIT) {
-                    _gravDiff.value = (_grav[2] / 10f + 1f) * 0.5f
+                    _gravDiff.value = (_grav[2] / 9.81f + 1f) * 0.5f
                     if (_grav[2] < gravThresh) {
                         start = LocalDateTime.now()
                         quats.clear()
@@ -173,7 +165,6 @@ class FreeHipsViewModel(application: Application) :
                         delay(COROUTINE_SLEEP)
                     }
                 }
-
                 // We got an estimate save the average to the data singleton
                 val avgQuat = quatAverage(quats)
                 DataSingleton.setForwardQuat(avgQuat)
@@ -218,6 +209,30 @@ class FreeHipsViewModel(application: Application) :
         }
     }
 
+    private fun calibPhoneAndStartIMUStream(cal_fwd: FloatArray, cal_pres: Float) {
+        _scope.launch {
+            try {
+                // feed into byte buffer
+                val msgData = cal_fwd + floatArrayOf(
+                    cal_pres,
+                    1f // mode. 1f means free hips
+                )
+                val buffer = ByteBuffer.allocate(4 * msgData.size) // [quat, pres]
+                for (v in msgData) buffer.putFloat(v)
+
+                // send byte array in a message
+                val sendMessageTask = _messageClient.sendMessage(
+                    connectedNodeId, DataSingleton.CALIBRATION_PATH, buffer.array()
+                )
+                Tasks.await(sendMessageTask)
+                Log.d(TAG, "Sent Calibration message to $connectedNodeId")
+            } catch (e: Exception) {
+                Log.w(TAG, "Calibration message failed for $connectedNodeId")
+            }
+        }
+    }
+
+
     /**
      * check for ping messages
      * This function is called by the listener registered in the PhoneMain Activity
@@ -235,6 +250,13 @@ class FreeHipsViewModel(application: Application) :
                     _messageClient.sendMessage(connectedNodeId, DataSingleton.PING_REP, null)
                         .await()
                 }
+            }
+            // feedback from the phone that calibration is complete
+            DataSingleton.CALIBRATION_PATH -> {
+                val intent = Intent(_application.applicationContext, ChannelImuService::class.java)
+                intent.putExtra("sourceNodeId", connectedNodeId)
+                _application.startService(intent)
+                _imuStreamState.value = ImuStreamState.Streaming
             }
         }
     }

@@ -8,27 +8,26 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
-import com.mocap.watch.ui.DefaultButton
-import com.mocap.watch.ui.DefaultText
+import com.mocap.watch.AudioStreamState
+import com.mocap.watch.ImuStreamState
 import com.mocap.watch.ui.RedButton
-import com.mocap.watch.viewmodel.DualCalibrationState
-import com.mocap.watch.viewmodel.FreeHipsState
+import com.mocap.watch.ui.StreamToggle
 import kotlinx.coroutines.flow.StateFlow
-import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.min
 
 @Composable
 fun RenderFreeHips(
-    appSF: StateFlow<FreeHipsState>,
     connected: StateFlow<Boolean>,
-    calibrated: StateFlow<Boolean>,
     connectedNodeName: StateFlow<String>,
+    calibrated: StateFlow<Boolean>,
     gravDiff: StateFlow<Float>,
-    calibTrigger: () -> Unit,
+    imuStreamStateFlow: StateFlow<ImuStreamState>,
+    audioStreamStateFlow: StateFlow<AudioStreamState>,
+    sensorStreamCallback: (Boolean) -> Unit,
+    audioStreamCallback: (Boolean) -> Unit,
     finishCallback: () -> Unit
 ) {
-    val appState by appSF.collectAsState()
+    val streamSt by imuStreamStateFlow.collectAsState()
+    val soundSt by audioStreamStateFlow.collectAsState()
     val nodeName by connectedNodeName.collectAsState()
     val gravNum by gravDiff.collectAsState()
     val con by connected.collectAsState()
@@ -40,7 +39,7 @@ fun RenderFreeHips(
     ) {
         item {
             Text(
-                text = "BT device found:\n$nodeName",
+                text = if (con) "Phone App Active\n$nodeName" else "Phone App Not Active",
                 color = if (con) Color.Green else Color.Red,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
@@ -49,35 +48,28 @@ fun RenderFreeHips(
         }
         item {
             Text(
-                text = "%.2f".format(gravNum),
-                color = Color(
-                    red = max(1f - gravNum, 0f),
-                    green = gravNum,
-                    0f
-                ),
-            )
-        }
-        item {
-            Text(
-                text = when (appState) {
-                    FreeHipsState.Checking ->
-                        "Hold\n" +
-                                "level to ground \n" +
-                                "and parallel to Hip\n"
-
-                    FreeHipsState.Streaming -> "Streaming"
-                    FreeHipsState.Error -> "An Error occurred. Check log."
-                },
+                text = if (cal) "Posture Good" else "Hold watch level to ground and parallel to Hip\n" +
+                        "%.2f".format(gravNum),
+                color = if (cal) Color.Green else Color.Red,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.body1
             )
-
         }
         item {
-            DefaultButton(
-                onClick = { calibTrigger() },
-                text = "calib"
+            StreamToggle(
+                enabled = (con and cal),
+                text = "Stream IMU",
+                checked = (streamSt == ImuStreamState.Streaming),
+                onChecked = { sensorStreamCallback(it) }
+            )
+        }
+        item {
+            StreamToggle(
+                enabled = (con and cal),
+                text = "Stream Audio",
+                checked = (soundSt == AudioStreamState.Streaming),
+                onChecked = { audioStreamCallback(it) }
             )
         }
         item {

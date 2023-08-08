@@ -27,29 +27,29 @@ fun RenderModeSelection(
     ) {
         item {
             DefaultText(
-                text = "Select App Mode"
+                text = "Select MoCap Mode"
             )
         }
-        item {
-            DefaultButton(
-                enabled = true,
-                onClick = { dualCallback() },
-                text = "Dual"
-            )
-        }
-        item { DefaultText(text = if (standalone) "No phone connected" else "Found connected phone") }
         item {
             DefaultButton(
                 enabled = true,
                 onClick = { standaloneCallback() },
-                text = "Standalone"
+                text = "Watch Only"
+            )
+        }
+        item { DefaultText(text = if (standalone) "No phone app connected" else "Found connected phone app") }
+        item {
+            DefaultButton(
+                enabled = true,
+                onClick = { dualCallback() },
+                text = "+ Phone Upper Arm"
             )
         }
         item {
             DefaultButton(
                 enabled = true,
                 onClick = { freeHipsCallback() },
-                text = "Free Hips"
+                text = "+ Phone Back Pocket"
             )
         }
         item {

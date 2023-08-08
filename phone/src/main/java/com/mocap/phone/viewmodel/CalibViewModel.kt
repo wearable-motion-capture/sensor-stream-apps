@@ -21,8 +21,6 @@ class CalibViewModel(application: Application, vibrator: Vibrator) :
 
     companion object {
         private const val TAG = "PhoneCalibration"  // for logging
-        private const val CALIBRATION_WAIT = 2000L // wait time in one calibration position
-        private const val THREAD_SLEEP = 10L
     }
 
     private val _vibrator = vibrator
@@ -39,7 +37,43 @@ class CalibViewModel(application: Application, vibrator: Vibrator) :
     /**
      * records orientation for CALIBRATION_WAIT milliseconds and saves average to DataSingleton
      */
-    fun calibrationTrigger(doneCallback: () -> Unit, sourceId: String? = null) {
+    fun freeHipsCalibrationTrigger(doneCallback: () -> Unit, sourceId: String? = null) {
+        Log.v(TAG, "Calibration Triggered")
+        thread {
+            val start = LocalDateTime.now()
+            var diff = 0L
+            val quats = mutableListOf<FloatArray>()
+
+            // collect for CALIBRATION_WAIT time
+            while (diff < 100L) {
+                quats.add(_rotVec)
+                diff = Duration.between(start, LocalDateTime.now()).toMillis()
+                _quatReading.value = _rotVec
+                Thread.sleep(10L)
+            }
+
+            // Save the average to the data singleton
+            val avgQuat = quatAverage(quats)
+            DataSingleton.setPhoneForwardQuat(avgQuat)
+
+            // send a reply if the calibration was triggered by a connected node with sourceID
+            if (sourceId != null) {
+                val repTask = _messageClient.sendMessage(
+                    sourceId, DataSingleton.CALIBRATION_PATH, null
+                )
+                Tasks.await(repTask)
+            }
+
+            // finish activity
+            doneCallback()
+        }
+        Log.v(TAG, "Calibration Done")
+    }
+
+    /**
+     * records orientation for CALIBRATION_WAIT milliseconds and saves average to DataSingleton
+     */
+    fun upperArmCalibrationTrigger(doneCallback: () -> Unit, sourceId: String? = null) {
 
         Log.v(TAG, "Calibration Triggered")
         thread {
@@ -48,11 +82,11 @@ class CalibViewModel(application: Application, vibrator: Vibrator) :
             val quats = mutableListOf<FloatArray>()
 
             // collect for CALIBRATION_WAIT time
-            while (diff < CALIBRATION_WAIT) {
+            while (diff < 2000L) {
                 quats.add(_rotVec)
                 diff = Duration.between(start, LocalDateTime.now()).toMillis()
                 _quatReading.value = _rotVec
-                Thread.sleep(THREAD_SLEEP)
+                Thread.sleep(10L)
             }
 
             // Save the average to the data singleton

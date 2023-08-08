@@ -108,9 +108,12 @@ class PhoneMain : ComponentActivity(),
                 )
                 DataSingleton.setWatchRelPres(b.getFloat(16))
 
+                val mode = b.getFloat(20)
+
                 // trigger phone calibration and pass it the node ID that sent the trigger
                 val i = Intent("com.mocap.phone.CALIBRATION")
                 i.putExtra("sourceNodeId", messageEvent.sourceNodeId)
+                i.putExtra("mode", mode)
                 startActivity(i)
             }
         }
