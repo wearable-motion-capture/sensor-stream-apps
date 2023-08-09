@@ -58,16 +58,24 @@ class CalibActivity : ComponentActivity() {
 
             // check if a source node ID was sent with the application
             val sourceId: String? = intent.extras?.getString("sourceNodeId")
-
+            val mode = intent.extras?.getFloat("mode")
 
             PhoneTheme {
                 RenderCalib(quatReadingStateFlow = _viewModel.quatReading)
 
-                // begin the calibration
-                _viewModel.calibrationTrigger(
-                    doneCallback = this::onComplete,
-                    sourceId = sourceId
-                )
+                if (mode == 0f) {
+                    // begin the calibration
+                    _viewModel.upperArmCalibrationTrigger(
+                        doneCallback = this::onComplete,
+                        sourceId = sourceId
+                    )
+                } else {
+                    // begin the calibration
+                    _viewModel.freeHipsCalibrationTrigger(
+                        doneCallback = this::onComplete,
+                        sourceId = sourceId
+                    )
+                }
             }
         }
     }

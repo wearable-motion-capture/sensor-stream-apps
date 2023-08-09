@@ -16,7 +16,8 @@ import kotlinx.coroutines.flow.StateFlow
 fun RenderModeSelection(
     standaloneSF: StateFlow<Boolean>,
     standaloneCallback: () -> Unit,
-    dualCallback: () -> Unit
+    dualCallback: () -> Unit,
+    freeHipsCallback: () -> Unit
 ) {
     val standalone by standaloneSF.collectAsState()
 
@@ -26,24 +27,31 @@ fun RenderModeSelection(
     ) {
         item {
             DefaultText(
-                text = "Select App Mode"
+                text = "Select MoCap Mode"
             )
         }
-        item {
-            DefaultButton(
-                enabled = true,
-                onClick = { dualCallback() },
-                text = "Dual"
-            )
-        }
-        item { DefaultText(text = if (standalone) "No phone connected" else "Found connected phone") }
         item {
             DefaultButton(
                 enabled = true,
                 onClick = { standaloneCallback() },
-                text = "Standalone"
+                text = "Watch Only"
             )
         }
+        item { DefaultText(text = if (standalone) "No phone app connected" else "Found connected phone app") }
+        item {
+            DefaultButton(
+                enabled = true,
+                onClick = { dualCallback() },
+                text = "+ Phone Upper Arm"
+            )
+        }
+//        item {
+//            DefaultButton(
+//                enabled = true,
+//                onClick = { freeHipsCallback() },
+//                text = "+ Phone Pocket"
+//            )
+//        }
         item {
             Text(text = "Version: ${DataSingleton.VERSION}")
         }

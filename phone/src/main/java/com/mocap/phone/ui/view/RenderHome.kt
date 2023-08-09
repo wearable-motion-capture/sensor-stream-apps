@@ -157,19 +157,19 @@ fun RenderHome(
                                     "Queue: $audioQueueSize"
                         )
                     }
-                    SmallCard() {
-                        DefaultHighlight(text = ":" + DataSingleton.UDP_PPG_PORT.toString())
-                        DefaultText(text = ("PPG"))
-                        DefaultText(
-                            text = if (ppgSt) "streaming" else "idle",
-                            color = if (ppgSt) Color.Green else Color.Yellow
-                        )
-                        DefaultText(
-                            text = "I: $ppgInHz Hz\n " +
-                                    "O: $ppgOutHz Hz\n" +
-                                    "Queue: $ppgQueueSize"
-                        )
-                    }
+//                    SmallCard() {
+//                        DefaultHighlight(text = ":" + DataSingleton.UDP_PPG_PORT.toString())
+//                        DefaultText(text = ("PPG"))
+//                        DefaultText(
+//                            text = if (ppgSt) "streaming" else "idle",
+//                            color = if (ppgSt) Color.Green else Color.Yellow
+//                        )
+//                        DefaultText(
+//                            text = "I: $ppgInHz Hz\n " +
+//                                    "O: $ppgOutHz Hz\n" +
+//                                    "Queue: $ppgQueueSize"
+//                        )
+//                    }
                 }
 
             }

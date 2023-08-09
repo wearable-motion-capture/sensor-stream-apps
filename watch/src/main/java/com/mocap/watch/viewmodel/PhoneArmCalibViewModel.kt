@@ -6,6 +6,11 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
+import com.google.android.gms.tasks.Tasks
+import com.google.android.gms.wearable.CapabilityClient
+import com.google.android.gms.wearable.MessageClient
+import com.google.android.gms.wearable.MessageEvent
+import com.google.android.gms.wearable.Wearable
 import com.mocap.watch.DataSingleton
 import com.mocap.watch.utility.getGlobalYRotation
 import com.mocap.watch.utility.quatAverage
@@ -17,51 +22,57 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.nio.ByteBuffer
 import java.time.Duration
 import java.time.LocalDateTime
 import kotlin.math.abs
 import kotlin.math.sin
 
-enum class CalibrationState {
+enum class DualCalibrationState {
     Idle,
     Hold,
-    Forward
+    Forward,
+    Phone,
+    Error
 }
 
-
-class StandaloneCalibViewModel(
+class DualCalibViewModel(
     application: Application,
     vibrator: Vibrator,
     onCompleteCallback: () -> Unit
 ) :
-    AndroidViewModel(application) {
+    AndroidViewModel(application),
+    MessageClient.OnMessageReceivedListener {
 
     companion object {
-        private const val TAG = "StandaloneCalibViewModel"  // for logging
-        private const val CALIBRATION_WAIT = 2000L // wait time in one calibration position
+        private const val TAG = "DualCalibViewModel"  // for logging
+        private const val CALIBRATION_WAIT = 2000L
         private const val COROUTINE_SLEEP = 10L
     }
 
     private val _vibrator = vibrator
     private val _onCompleteCallback = onCompleteCallback
+    private val _capabilityClient by lazy { Wearable.getCapabilityClient(application) }
+    private val _messageClient by lazy { Wearable.getMessageClient(application) }
     private val _scope = CoroutineScope(Job() + Dispatchers.IO)
 
     private var _rotVec: FloatArray = FloatArray(4) // Rotation Vector sensor or estimation
     private var _grav: FloatArray = FloatArray(3) // gravity
     private var _pres: FloatArray = FloatArray(1) // Atmospheric pressure in hPa (millibar)
 
-    private val _calibState = MutableStateFlow(CalibrationState.Idle)
+    private val _calibState = MutableStateFlow(DualCalibrationState.Idle)
     val calibState = _calibState.asStateFlow()
 
-    fun calibrationTrigger() {
+    fun calibTrigger() {
         Log.v(TAG, "Calibration Triggered")
 
         _scope.launch {
-            // begin with pressure reading
-            _calibState.value = CalibrationState.Hold
+            // update calibration state
+            _calibState.value = DualCalibrationState.Hold
             var start = LocalDateTime.now()
             var diff = 0L
 
+            // begin with step 1:
             // collect pressure and y angle for CALIBRATION_WAIT time
             val pressures = mutableListOf(_pres[0])
             val holdDegrees = mutableListOf(getGlobalYRotation(_rotVec))
@@ -78,7 +89,7 @@ class StandaloneCalibViewModel(
 
             // next step: forward orientation reading
             // reset start and diff
-            _calibState.value = CalibrationState.Forward
+            _calibState.value = DualCalibrationState.Forward
             start = LocalDateTime.now()
             diff = 0L
             var vibrating = false
@@ -94,7 +105,6 @@ class StandaloneCalibViewModel(
                 if ((abs(sin(Math.toRadians(holdYRot)) - sin(Math.toRadians(curYRot))) < 0.4)
                     || (_grav[2] < 9.75)
                 ) {
-                    delay(10L)
                     start = LocalDateTime.now()
                     quats.clear()
                     if (!vibrating) {
@@ -128,11 +138,67 @@ class StandaloneCalibViewModel(
                     200L, VibrationEffect.DEFAULT_AMPLITUDE
                 )
             )
-            delay(200L)
 
-            // complete calibration and close everything
-            _calibState.value = CalibrationState.Idle
-            _onCompleteCallback()
+            // now step 3: send message to phone
+            _calibState.value = DualCalibrationState.Phone
+            try {
+                // Connect to phone node
+                val task = _capabilityClient.getAllCapabilities(CapabilityClient.FILTER_REACHABLE)
+                val res = Tasks.await(task)
+                val phoneNodes = res.getValue(DataSingleton.PHONE_APP_ACTIVE).nodes
+                // throw error if more than one phone connected or no phone connected
+                if ((phoneNodes.count() > 1) || (phoneNodes.isEmpty())) {
+                    throw Exception(
+                        "0 or more than 1 node with active phone app detected. " +
+                                "List of available nodes: $phoneNodes"
+                    )
+                }
+                val node = phoneNodes.first()
+
+                // feed into byte buffer
+                val msgData = avgQuat + floatArrayOf(
+                    relPres.toFloat(),
+                    0f // mode. 0f means upper arm
+                )
+                val buffer = ByteBuffer.allocate(4 * msgData.size) // [quat, pres]
+                for (v in msgData) buffer.putFloat(v)
+
+                // send byte array in a message
+                val sendMessageTask = _messageClient.sendMessage(
+                    node.id, DataSingleton.CALIBRATION_PATH, buffer.array()
+                )
+                Tasks.await(sendMessageTask)
+                Log.d(TAG, "Sent Calibration message to ${node.id}")
+            } catch (exception: Exception) {
+                Log.d(TAG, "Failed to send calibration request to phone:\n $exception")
+                _calibState.value = DualCalibrationState.Error
+            }
+        }
+    }
+
+
+    /**
+     * Checks received messages if phone calibration is complete
+     */
+    override fun onMessageReceived(p0: MessageEvent) {
+        Log.d(TAG, "Received from: ${p0.sourceNodeId} with path ${p0.path}")
+        when (p0.path) {
+            DataSingleton.CALIBRATION_PATH -> {
+                if (calibState.value == DualCalibrationState.Phone) {
+                    _calibState.value = DualCalibrationState.Idle
+                    _scope.launch {
+                        // final vibration pulse to confirm
+                        _vibrator.vibrate(
+                            VibrationEffect.createOneShot(
+                                200L, VibrationEffect.DEFAULT_AMPLITUDE
+                            )
+                        )
+                        delay(200L)
+                        // complete calibration and close everything
+                        _onCompleteCallback()
+                    }
+                }
+            }
         }
     }
 

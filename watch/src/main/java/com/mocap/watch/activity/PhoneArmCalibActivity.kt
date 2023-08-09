@@ -6,19 +6,21 @@ import android.os.*
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import com.google.android.gms.wearable.Wearable
 import com.mocap.watch.modules.SensorListener
 import com.mocap.watch.ui.theme.WatchTheme
-import com.mocap.watch.ui.view.RenderStandaloneCalib
-import com.mocap.watch.viewmodel.StandaloneCalibViewModel
+import com.mocap.watch.ui.view.RenderDualCalib
+import com.mocap.watch.viewmodel.DualCalibViewModel
 
 
-class StandaloneCalibActivity : ComponentActivity() {
+class PhoneArmCalibActivity : ComponentActivity() {
 
     companion object {
-        private const val TAG = "StandaloneCalibration"  // for logging
+        private const val TAG = "PhoneArmCalibration"  // for logging
     }
 
-    private lateinit var _viewModel: StandaloneCalibViewModel
+    private val _messageClient by lazy { Wearable.getMessageClient(application) }
+    private lateinit var _viewModel: DualCalibViewModel
     private lateinit var _vibrator: Vibrator
     private var _listeners = listOf<SensorListener>()
     private lateinit var _sensorManager: SensorManager
@@ -38,8 +40,8 @@ class StandaloneCalibActivity : ComponentActivity() {
                 _vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
             }
 
-            // create the view model class
-            _viewModel = StandaloneCalibViewModel(
+            // with the vibration service, create the view model
+            _viewModel = DualCalibViewModel(
                 application = this.application,
                 vibrator = _vibrator,
                 onCompleteCallback = this::onComplete
@@ -63,10 +65,9 @@ class StandaloneCalibActivity : ComponentActivity() {
             // keep screen on to not enter ambient mode
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             WatchTheme {
-                // render the UI
-                RenderStandaloneCalib(
+                RenderDualCalib(
                     calibStateFlow = _viewModel.calibState,
-                    calibTrigger = { _viewModel.calibrationTrigger() },
+                    calibTrigger = { _viewModel.calibTrigger() },
                     calibDone = this::onComplete
                 )
             }
@@ -87,6 +88,7 @@ class StandaloneCalibActivity : ComponentActivity() {
                 )
             }
         }
+        if (this::_viewModel.isInitialized) _messageClient.addListener(_viewModel)
     }
 
     /**
@@ -98,6 +100,7 @@ class StandaloneCalibActivity : ComponentActivity() {
         if (this::_sensorManager.isInitialized) {
             for (l in _listeners) _sensorManager.unregisterListener(l)
         }
+        if (this::_viewModel.isInitialized) _messageClient.removeListener(_viewModel)
         this.finish()
     }
 

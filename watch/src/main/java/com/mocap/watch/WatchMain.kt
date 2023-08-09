@@ -36,8 +36,6 @@ class WatchMain : ComponentActivity(),
 
     private val _capabilityClient by lazy { Wearable.getCapabilityClient(this) }
     private val _scope = CoroutineScope(Job() + Dispatchers.IO)
-
-    // TODO: Fix phone capability handling. Standalone is always true
     private val _standalone = MutableStateFlow(true) // whether standalone mode is available
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,8 +63,9 @@ class WatchMain : ComponentActivity(),
             WatchTheme {
                 RenderModeSelection(
                     standaloneSF = _standalone,
-                    standaloneCallback = { startActivity(Intent("com.mocap.watch.STANDALONE")) },
-                    dualCallback = { startActivity(Intent("com.mocap.watch.DUAL")) }
+                    standaloneCallback = { startActivity(Intent("com.mocap.watch.WATCH_ONLY")) },
+                    dualCallback = { startActivity(Intent("com.mocap.watch.PHONE_ARM")) },
+                    freeHipsCallback = { startActivity(Intent("com.mocap.watch.PHONE_POCKET")) }
                 )
             }
         }
