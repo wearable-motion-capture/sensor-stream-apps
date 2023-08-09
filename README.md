@@ -1,6 +1,6 @@
 # Sensor Stream Apps
 
-This repository is part of the our [__wearable motion capture system__](https://github.com/wearable-motion-capture). 
+This repository is part of our [__wearable motion capture system__](https://github.com/wearable-motion-capture). 
 
 Here, we provide two apps for smart devices. One Android app for smartphones and one Wear OS app for smartwatches.
 Together with [arm-pose-estimation](https://github.com/wearable-motion-capture/arm-pose-estimation),
