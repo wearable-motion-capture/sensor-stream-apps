@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 
-class StandaloneViewModel(application: Application) :
+class WatchOnlyViewModel(application: Application) :
     AndroidViewModel(application) {
 
     /** setup-specific parameters */

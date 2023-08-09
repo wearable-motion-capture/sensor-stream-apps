@@ -23,21 +23,21 @@ import com.mocap.watch.modules.ServiceBroadcastReceiver
 import com.mocap.watch.modules.WatchChannelCallback
 import com.mocap.watch.ui.theme.WatchTheme
 import com.mocap.watch.ui.view.RenderFreeHips
-import com.mocap.watch.viewmodel.FreeHipsViewModel
+import com.mocap.watch.viewmodel.PhonePocketViewModel
 
 
-class FreeHipsActivity : ComponentActivity(),
+class PhonePocketActivity : ComponentActivity(),
     MessageClient.OnMessageReceivedListener,
     CapabilityClient.OnCapabilityChangedListener {
 
     companion object {
-        private const val TAG = "FreeHips"  // for logging
+        private const val TAG = "PhonePocket"  // for logging
     }
 
     private val _channelClient by lazy { Wearable.getChannelClient(this) }
     private val _capabilityClient by lazy { Wearable.getCapabilityClient(this) }
     private val _messageClient by lazy { Wearable.getMessageClient(this) }
-    private val _viewModel by viewModels<FreeHipsViewModel>()
+    private val _viewModel by viewModels<PhonePocketViewModel>()
     private var _listeners = listOf<SensorListener>()
     private lateinit var _sensorManager: SensorManager
 

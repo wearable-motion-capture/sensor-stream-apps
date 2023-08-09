@@ -21,28 +21,28 @@ import com.mocap.watch.modules.ServiceBroadcastReceiver
 import com.mocap.watch.modules.WatchChannelCallback
 import com.mocap.watch.ui.theme.WatchTheme
 import com.mocap.watch.ui.view.RenderDual
-import com.mocap.watch.viewmodel.DualViewModel
+import com.mocap.watch.viewmodel.PhoneArmViewModel
 
 
-class DualActivity : ComponentActivity(),
+class PhoneArmActivity : ComponentActivity(),
     MessageClient.OnMessageReceivedListener,
     CapabilityClient.OnCapabilityChangedListener {
 
     companion object {
-        private const val TAG = "DualActivity"  // for logging
+        private const val TAG = "PhoneArmActivity"  // for logging
     }
 
     private val _channelClient by lazy { Wearable.getChannelClient(this) }
     private val _capabilityClient by lazy { Wearable.getCapabilityClient(this) }
     private val _messageClient by lazy { Wearable.getMessageClient(this) }
-    private val _dualViewModel by viewModels<DualViewModel>()
+    private val _phoneArmViewModel by viewModels<PhoneArmViewModel>()
     private val _channelCallback = WatchChannelCallback(
-        closeCallback = { _dualViewModel.onChannelClose(it) }
+        closeCallback = { _phoneArmViewModel.onChannelClose(it) }
     )
     private val _br =
         ServiceBroadcastReceiver(
-            onServiceClose = { _dualViewModel.onServiceClose(it) },
-            onServiceUpdate = { _dualViewModel.onServiceUpdate(it) }
+            onServiceClose = { _phoneArmViewModel.onServiceClose(it) },
+            onServiceUpdate = { _phoneArmViewModel.onServiceUpdate(it) }
         )
 
 
@@ -56,11 +56,11 @@ class DualActivity : ComponentActivity(),
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
             // check if a phone is connected and set state flows accordingly
-            _dualViewModel.queryCapabilities()
-            _dualViewModel.regularConnectionCheck()
+            _phoneArmViewModel.queryCapabilities()
+            _phoneArmViewModel.regularConnectionCheck()
 
-            val connectedNode = _dualViewModel.nodeName
-            val appActiveStateFlow = _dualViewModel.pingSuccessState
+            val connectedNode = _phoneArmViewModel.nodeName
+            val appActiveStateFlow = _phoneArmViewModel.pingSuccessState
 
             // for colours
             WatchTheme {
@@ -68,14 +68,14 @@ class DualActivity : ComponentActivity(),
                     connectedNodeName = connectedNode,
                     appActiveStateFlow = appActiveStateFlow,
                     calibCallback = {
-                        startActivity(Intent("com.mocap.watch.DUAL_CALIBRATION"))
+                        startActivity(Intent("com.mocap.watch.PHONE_ARM_CALIBRATION"))
                     },
-                    imuStreamStateFlow = _dualViewModel.sensorStreamState,
-                    audioStreamStateFlow = _dualViewModel.audioStreamState,
-                    ppgStreamStateFlow = _dualViewModel.ppgStreamState,
-                    sensorStreamCallback = { _dualViewModel.imuStreamTrigger(it) },
-                    soundStreamCallback = { _dualViewModel.audioStreamTrigger(it) },
-                    ppgStreamCallback = { _dualViewModel.ppgStreamTrigger(it) }, // PPG is only for specific watches
+                    imuStreamStateFlow = _phoneArmViewModel.sensorStreamState,
+                    audioStreamStateFlow = _phoneArmViewModel.audioStreamState,
+                    ppgStreamStateFlow = _phoneArmViewModel.ppgStreamState,
+                    sensorStreamCallback = { _phoneArmViewModel.imuStreamTrigger(it) },
+                    soundStreamCallback = { _phoneArmViewModel.audioStreamTrigger(it) },
+                    ppgStreamCallback = { _phoneArmViewModel.ppgStreamTrigger(it) }, // PPG is only for specific watches
                     finishCallback = ::finish
                 )
             }
@@ -83,11 +83,11 @@ class DualActivity : ComponentActivity(),
     }
 
     override fun onMessageReceived(messageEvent: MessageEvent) {
-        _dualViewModel.onMessageReceived(messageEvent)
+        _phoneArmViewModel.onMessageReceived(messageEvent)
     }
 
     override fun onCapabilityChanged(capabilityInfo: CapabilityInfo) {
-        _dualViewModel.onCapabilityChanged(capabilityInfo)
+        _phoneArmViewModel.onCapabilityChanged(capabilityInfo)
     }
 
     /**
@@ -112,7 +112,7 @@ class DualActivity : ComponentActivity(),
             Uri.parse("wear://"),
             CapabilityClient.FILTER_REACHABLE
         )
-        _dualViewModel.queryCapabilities()
+        _phoneArmViewModel.queryCapabilities()
     }
 
     /**
@@ -120,7 +120,7 @@ class DualActivity : ComponentActivity(),
      */
     private fun unregisterListeners() {
         LocalBroadcastManager.getInstance(applicationContext).unregisterReceiver(_br)
-        _dualViewModel.resetAllStreamStates()
+        _phoneArmViewModel.resetAllStreamStates()
         _messageClient.removeListener(this)
         _channelClient.unregisterChannelCallback(_channelCallback)
         _capabilityClient.removeListener(this)

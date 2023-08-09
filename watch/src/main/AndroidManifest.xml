@@ -52,47 +52,47 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".activity.StandaloneActivity"
+            android:name=".activity.WatchOnlyActivity"
             android:exported="true"
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
-                <action android:name="com.mocap.watch.STANDALONE" />
+                <action android:name="com.mocap.watch.WATCH_ONLY" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
         <activity
-            android:name=".activity.StandaloneCalibActivity"
+            android:name=".activity.WatchOnlyCalibActivity"
             android:exported="true"
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
-                <action android:name="com.mocap.watch.STANDALONE_CALIBRATION" />
+                <action android:name="com.mocap.watch.WATCH_ONLY_CALIBRATION" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
         <activity
-            android:name=".activity.DualActivity"
+            android:name=".activity.PhoneArmActivity"
             android:exported="true"
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
-                <action android:name="com.mocap.watch.DUAL" />
+                <action android:name="com.mocap.watch.PHONE_ARM" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
         <activity
-            android:name=".activity.FreeHipsActivity"
+            android:name=".activity.PhonePocketActivity"
             android:exported="true"
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
-                <action android:name="com.mocap.watch.FREEHIPS" />
+                <action android:name="com.mocap.watch.PHONE_POCKET" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
         <activity
-            android:name=".activity.DualCalibActivity"
+            android:name=".activity.PhoneArmCalibActivity"
             android:exported="false"
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
-                <action android:name="com.mocap.watch.DUAL_CALIBRATION" />
+                <action android:name="com.mocap.watch.PHONE_ARM_CALIBRATION" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>

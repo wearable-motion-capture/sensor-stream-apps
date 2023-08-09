@@ -15,20 +15,20 @@ import androidx.preference.PreferenceManager
 import com.mocap.watch.DataSingleton
 import com.mocap.watch.modules.ServiceBroadcastReceiver
 import com.mocap.watch.ui.theme.WatchTheme
-import com.mocap.watch.viewmodel.StandaloneViewModel
+import com.mocap.watch.viewmodel.WatchOnlyViewModel
 
 
-class StandaloneActivity : ComponentActivity() {
+class WatchOnlyActivity : ComponentActivity() {
 
     companion object {
-        private const val TAG = "StandaloneActivity"  // for logging
+        private const val TAG = "WatchOnlyActivity"  // for logging
     }
 
-    private val _standaloneViewModel by viewModels<StandaloneViewModel>()
+    private val _watchOnlyViewModel by viewModels<WatchOnlyViewModel>()
     private val _br =
         ServiceBroadcastReceiver(
-            onServiceClose = { _standaloneViewModel.onServiceClose(it) },
-            onServiceUpdate = { _standaloneViewModel.onServiceUpdate(it) }
+            onServiceClose = { _watchOnlyViewModel.onServiceClose(it) },
+            onServiceUpdate = { _watchOnlyViewModel.onServiceUpdate(it) }
         )
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
@@ -51,16 +51,16 @@ class StandaloneActivity : ComponentActivity() {
                 }
 
                 RenderStandalone(
-                    soundStateFlow = _standaloneViewModel.audioStrState,
-                    sensorStateFlow = _standaloneViewModel.sensorStrState,
+                    soundStateFlow = _watchOnlyViewModel.audioStrState,
+                    sensorStateFlow = _watchOnlyViewModel.sensorStrState,
                     calibCallback = {
-                        startActivity(Intent("com.mocap.watch.STANDALONE_CALIBRATION"))
+                        startActivity(Intent("com.mocap.watch.WATCH_ONLY_CALIBRATION"))
                     },
                     ipSetCallback = {
                         startActivity(Intent("com.mocap.watch.SET_IP"))
                     },
-                    imuStreamCallback = { _standaloneViewModel.imuStreamTrigger(it) },
-                    micStreamCallback = { _standaloneViewModel.audioStreamTrigger(it) },
+                    imuStreamCallback = { _watchOnlyViewModel.imuStreamTrigger(it) },
+                    micStreamCallback = { _watchOnlyViewModel.audioStreamTrigger(it) },
                     finishCallback = ::finish
                 )
 
@@ -84,7 +84,7 @@ class StandaloneActivity : ComponentActivity() {
      */
     private fun unregisterListeners() {
         LocalBroadcastManager.getInstance(applicationContext).unregisterReceiver(_br)
-        _standaloneViewModel.resetAllStreamStates()
+        _watchOnlyViewModel.resetAllStreamStates()
     }
 
     override fun onResume() {

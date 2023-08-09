@@ -37,7 +37,7 @@ class StandaloneCalibViewModel(
     AndroidViewModel(application) {
 
     companion object {
-        private const val TAG = "StandaloneCalibViewModel"  // for logging
+        private const val TAG = "WatchOnlyCalibViewModel"  // for logging
         private const val CALIBRATION_WAIT = 2000L // wait time in one calibration position
         private const val COROUTINE_SLEEP = 10L
     }

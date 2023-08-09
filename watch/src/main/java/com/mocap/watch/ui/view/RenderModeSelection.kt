@@ -45,13 +45,13 @@ fun RenderModeSelection(
                 text = "+ Phone Upper Arm"
             )
         }
-        item {
-            DefaultButton(
-                enabled = true,
-                onClick = { freeHipsCallback() },
-                text = "+ Phone Back Pocket"
-            )
-        }
+//        item {
+//            DefaultButton(
+//                enabled = true,
+//                onClick = { freeHipsCallback() },
+//                text = "+ Phone Pocket"
+//            )
+//        }
         item {
             Text(text = "Version: ${DataSingleton.VERSION}")
         }
