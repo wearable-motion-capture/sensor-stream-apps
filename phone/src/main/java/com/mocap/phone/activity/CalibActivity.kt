@@ -11,7 +11,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.mocap.phone.modules.SensorListener
 import com.mocap.phone.ui.theme.PhoneTheme
-import com.mocap.phone.ui.view.RenderCalib
 import com.mocap.phone.viewmodel.CalibViewModel
 
 
@@ -61,7 +60,7 @@ class CalibActivity : ComponentActivity() {
             val mode = intent.extras?.getFloat("mode")
 
             PhoneTheme {
-                RenderCalib(quatReadingStateFlow = _viewModel.quatReading)
+                //RenderCalib(quatReadingStateFlow = _viewModel.quatReading)
 
                 if (mode == 0f) {
                     // begin the calibration

@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 object DataSingleton {
-    const val VERSION = "0.2.9"
+    const val VERSION = "0.2.10"
 
     // message paths
     const val IMU_PATH = "/imu"
@@ -37,7 +37,7 @@ object DataSingleton {
 
     // shared preferences lookup
     const val IP_KEY = "com.mocap.phone.ip"
-    const val IP_DEFAULT = "192.168.0.12"
+    const val IP_DEFAULT = "192.168.1.138"
     const val PORT_KEY = "com.mocap.phone.port"
     const val IMU_PORT_DEFAULT = IMU_PORT_LEFT
 

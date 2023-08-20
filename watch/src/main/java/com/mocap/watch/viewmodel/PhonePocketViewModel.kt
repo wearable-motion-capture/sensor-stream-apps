@@ -253,10 +253,14 @@ class PhonePocketViewModel(application: Application) :
             }
             // feedback from the phone that calibration is complete
             DataSingleton.CALIBRATION_PATH -> {
-                val intent = Intent(_application.applicationContext, ChannelImuService::class.java)
-                intent.putExtra("sourceNodeId", connectedNodeId)
-                _application.startService(intent)
-                _imuStreamState.value = ImuStreamState.Streaming
+                _scope.launch {
+                    delay(200)
+                    val intent =
+                        Intent(_application.applicationContext, ChannelImuService::class.java)
+                    intent.putExtra("sourceNodeId", connectedNodeId)
+                    _application.startService(intent)
+                    _imuStreamState.value = ImuStreamState.Streaming
+                }
             }
         }
     }

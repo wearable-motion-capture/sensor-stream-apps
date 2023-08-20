@@ -17,10 +17,10 @@ abstract class BaseAudioService : Service() {
 
     companion object {
         private const val TAG = "Audio Service"  // for logging
-        const val AUDIO_RATE = 16000 // can go up to 44K, if needed
+        const val AUDIO_RATE = 32000 // can go up to 44K, if needed
         const val AUDIO_CHANNEL_IN = AudioFormat.CHANNEL_IN_MONO
         const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
-        const val AUDIO_BUFFER_SIZE = 1600
+        const val AUDIO_BUFFER_SIZE = DataSingleton.AUDIO_BUFFER_SIZE
     }
 
     protected val scope = CoroutineScope(Job() + Dispatchers.IO)
