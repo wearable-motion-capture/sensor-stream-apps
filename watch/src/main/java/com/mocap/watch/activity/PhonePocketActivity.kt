@@ -40,7 +40,6 @@ class PhonePocketActivity : ComponentActivity(),
     private val _viewModel by viewModels<PhonePocketViewModel>()
     private var _listeners = listOf<SensorListener>()
     private lateinit var _sensorManager: SensorManager
-
     private val _channelCallback = WatchChannelCallback(
         closeCallback = { _viewModel.onChannelClose(it) }
     )

@@ -49,7 +49,7 @@ class ChannelAudioService : BaseAudioService() {
                 nodeId,
                 DataSingleton.AUDIO_PATH
             ).await()
-            Log.d(TAG, "Opened ${DataSingleton.IMU_PATH} to $nodeId")
+            Log.d(TAG, "Opened ${DataSingleton.AUDIO_PATH} to $nodeId")
 
             // Create an AudioRecord object for the streaming
             val audioRecord = AudioRecord.Builder()
@@ -90,6 +90,7 @@ class ChannelAudioService : BaseAudioService() {
             Log.w(TAG, e)
         } finally {
             audioStreamState = false
+            this.stopService()
         }
     }
 }

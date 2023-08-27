@@ -73,6 +73,7 @@ class PhonePocketViewModel(application: Application) :
     val audioStreamState = _audioStreamState.asStateFlow()
 
     fun endAudio() {
+        Log.v(TAG, "end audio called")
         _audioStreamState.value = AudioStreamState.Idle
         // stop an eventually running service
         Intent(_application.applicationContext, ChannelAudioService::class.java).also { intent ->
@@ -102,6 +103,9 @@ class PhonePocketViewModel(application: Application) :
     }
 
     fun onChannelClose(c: ChannelClient.Channel) {
+
+
+        Log.v(TAG, "channel close ${c.path}")
         // reset the corresponding stream loop
         when (c.path) {
             DataSingleton.AUDIO_PATH -> endAudio()
@@ -254,7 +258,7 @@ class PhonePocketViewModel(application: Application) :
             // feedback from the phone that calibration is complete
             DataSingleton.CALIBRATION_PATH -> {
                 _scope.launch {
-                    delay(200)
+                    delay(500)
                     val intent =
                         Intent(_application.applicationContext, ChannelImuService::class.java)
                     intent.putExtra("sourceNodeId", connectedNodeId)
