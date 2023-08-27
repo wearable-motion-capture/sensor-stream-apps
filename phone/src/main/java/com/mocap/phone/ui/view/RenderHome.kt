@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -40,7 +41,8 @@ fun RenderHome(
     ppgInHzSF: StateFlow<Float>,
     ppgOutHzSF: StateFlow<Float>,
     ppgQueueSizeSF: StateFlow<Int>,
-    ipSetCallback: () -> Unit
+    ipSetCallback: () -> Unit,
+    imuStreamTrigger: () -> Unit
 ) {
     val phoneForwardQuat by DataSingleton.phoneQuat.collectAsState()
     val watchForwardQuat by DataSingleton.watchQuat.collectAsState()
@@ -144,6 +146,12 @@ fun RenderHome(
                                     "O: $imuOutHz Hz\n" +
                                     "Queue: $imuQueueSize"
                         )
+                        Button(
+                            onClick = imuStreamTrigger,
+                            modifier = Modifier.padding(8.dp)
+                        ) {
+                            Text(text = "trigger")
+                        }
                     }
                     SmallCard() {
                         DefaultHighlight(text = ":" + DataSingleton.UDP_AUDIO_PORT.toString())

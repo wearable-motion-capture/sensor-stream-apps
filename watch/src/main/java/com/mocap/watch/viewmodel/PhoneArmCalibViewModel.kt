@@ -156,12 +156,10 @@ class DualCalibViewModel(
                 val node = phoneNodes.first()
 
                 // feed into byte buffer
-                val msgData = avgQuat + floatArrayOf(
-                    relPres.toFloat(),
-                    0f // mode. 0f means upper arm
-                )
-                val buffer = ByteBuffer.allocate(4 * msgData.size) // [quat, pres]
-                for (v in msgData) buffer.putFloat(v)
+                val buffer = ByteBuffer.allocate(4 * 6) // [quat (4), pres, mode]
+                for (v in avgQuat) buffer.putFloat(v)
+                buffer.putFloat(relPres.toFloat())
+                buffer.putInt(1) // mode
 
                 // send byte array in a message
                 val sendMessageTask = _messageClient.sendMessage(

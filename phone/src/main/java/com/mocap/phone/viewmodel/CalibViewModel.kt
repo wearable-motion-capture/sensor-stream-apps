@@ -14,6 +14,7 @@ import java.time.Duration
 import java.time.LocalDateTime
 import kotlin.concurrent.thread
 import com.mocap.phone.utility.quatAverage
+import java.nio.ByteBuffer
 
 class CalibViewModel(application: Application, vibrator: Vibrator) :
     AndroidViewModel(application) {
@@ -65,12 +66,16 @@ class CalibViewModel(application: Application, vibrator: Vibrator) :
 
             // send a reply if the calibration was triggered by a connected node with sourceID
             if (sourceId != null) {
-                val repTask = _messageClient.sendMessage(
-                    sourceId, DataSingleton.CALIBRATION_PATH, null
-                )
+                val buffer = ByteBuffer.allocate(4) // [mode (int)]
+                buffer.putInt(0)
+                val repTask =
+                    _messageClient.sendMessage( // send a reply to trigger the watch streaming
+                        sourceId,
+                        DataSingleton.CALIBRATION_PATH,
+                        buffer.array()
+                    )
                 Tasks.await(repTask)
             }
-
             // finish activity
             doneCallback()
         }

@@ -136,10 +136,7 @@ class PhonePocketViewModel(application: Application) :
                 _application.stopService(intent)
             }
         } else {
-            calibPhoneAndStartIMUStream(
-                DataSingleton.forwardQuat.value,
-                DataSingleton.calib_pres.value
-            )
+            calibPhoneAndStartIMUStream()
         }
     }
 
@@ -213,26 +210,26 @@ class PhonePocketViewModel(application: Application) :
         }
     }
 
-    private fun calibPhoneAndStartIMUStream(cal_fwd: FloatArray, cal_pres: Float) {
-        _scope.launch {
-            try {
-                // feed into byte buffer
-                val msgData = cal_fwd + floatArrayOf(
-                    cal_pres,
-                    1f // mode. 1f means free hips
-                )
-                val buffer = ByteBuffer.allocate(4 * msgData.size) // [quat, pres]
-                for (v in msgData) buffer.putFloat(v)
+    private fun calibPhoneAndStartIMUStream() {
+        try {
+            val calFwd = DataSingleton.forwardQuat.value
+            val calPres = DataSingleton.calib_pres.value
 
+            // feed into byte buffer
+            val buffer = ByteBuffer.allocate(4 * 6) // [quat (4), pres, mode]
+            for (v in calFwd) buffer.putFloat(v)
+            buffer.putFloat(calPres)
+            buffer.putInt(2) // mode
+
+            _scope.launch {
                 // send byte array in a message
-                val sendMessageTask = _messageClient.sendMessage(
+                _messageClient.sendMessage(
                     connectedNodeId, DataSingleton.CALIBRATION_PATH, buffer.array()
-                )
-                Tasks.await(sendMessageTask)
-                Log.d(TAG, "Sent Calibration message to $connectedNodeId")
-            } catch (e: Exception) {
-                Log.w(TAG, "Calibration message failed for $connectedNodeId")
+                ).await()
             }
+            Log.d(TAG, "Sent Calibration message to $connectedNodeId")
+        } catch (e: Exception) {
+            Log.w(TAG, "Calibration message failed for $connectedNodeId")
         }
     }
 
@@ -257,13 +254,23 @@ class PhonePocketViewModel(application: Application) :
             }
             // feedback from the phone that calibration is complete
             DataSingleton.CALIBRATION_PATH -> {
-                _scope.launch {
-                    delay(500)
-                    val intent =
-                        Intent(_application.applicationContext, ChannelImuService::class.java)
-                    intent.putExtra("sourceNodeId", connectedNodeId)
-                    _application.startService(intent)
-                    _imuStreamState.value = ImuStreamState.Streaming
+                val b = ByteBuffer.wrap(messageEvent.data)
+                when (b.getInt(0)) {
+                    0 -> { // mode == 0 means calibration done
+                        val intent =
+                            Intent(_application.applicationContext, ChannelImuService::class.java)
+                        intent.putExtra("sourceNodeId", connectedNodeId)
+                        _application.startService(intent)
+                        _imuStreamState.value = ImuStreamState.Streaming
+                    }
+
+                    3 -> { // mode == 3 means trigger IMU stream
+                        if (_calSuccess.value) {
+                            calibPhoneAndStartIMUStream()
+                        } else {
+                            Log.w(TAG, "could not start streaming because calibration failed")
+                        }
+                    }
                 }
             }
         }

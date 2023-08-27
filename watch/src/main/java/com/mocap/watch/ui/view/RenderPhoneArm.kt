@@ -76,14 +76,14 @@ fun RenderDual(
                 onChecked = { soundStreamCallback(it) }
             )
         }
-        item {
-            StreamToggle(
-                enabled = appState,
-                text = "Stream PPG",
-                checked = (ppgSt == PpgStreamState.Streaming),
-                onChecked = { ppgStreamCallback(it) }
-            )
-        }
+//        item {
+//            StreamToggle(
+//                enabled = appState,
+//                text = "Stream PPG",
+//                checked = (ppgSt == PpgStreamState.Streaming),
+//                onChecked = { ppgStreamCallback(it) }
+//            )
+//        }
         item {
             RedButton(
                 onClick = finishCallback,
