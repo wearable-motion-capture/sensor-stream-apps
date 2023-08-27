@@ -58,7 +58,7 @@ fun RenderPhonePocket(
         }
         item {
             StreamToggle(
-                enabled = (con and cal),
+                enabled = (con and cal) or (streamSt == ImuStreamState.Streaming),
                 text = "Stream IMU",
                 checked = (streamSt == ImuStreamState.Streaming),
                 onChecked = { imuStreamCallback(it) }
@@ -66,7 +66,7 @@ fun RenderPhonePocket(
         }
         item {
             StreamToggle(
-                enabled = (con and cal),
+                enabled = con,
                 text = "Stream Audio",
                 checked = (soundSt == AudioStreamState.Streaming),
                 onChecked = { audioStreamCallback(it) }
