@@ -76,7 +76,7 @@ class UdpImuService : BaseImuService() {
                                     forwardQuat // body orientation in relation to magnetic north pole collected during calibration
 
                             // feed into byte buffer
-                            val buffer = ByteBuffer.allocate(DataSingleton.IMU_UDP_MSG_SIZE)
+                            val buffer = ByteBuffer.allocate(DataSingleton.IMU_MSG_SIZE)
                             for (v in allDat) buffer.putFloat(v)
                             val dp = DatagramPacket(
                                 buffer.array(), buffer.capacity(), socketInetAddress, port

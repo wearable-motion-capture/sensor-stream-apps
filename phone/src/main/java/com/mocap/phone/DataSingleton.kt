@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 object DataSingleton {
-    const val VERSION = "0.2.10"
+    const val VERSION = "0.3.0"
 
     // message paths
     const val IMU_PATH = "/imu"
@@ -26,7 +26,9 @@ object DataSingleton {
     const val WATCH_CAPABILITY = "watch" // if the watch app is connected (see res/values/wear.xml)
 
     // streaming parameters
-    const val IMU_MSG_SIZE = (5 + 18) * 4 // deltaT + timestamp(5) + data (18 float)
+    const val SELF_CALIB_END = 10
+    var calib_count = SELF_CALIB_END // reset this counter if you want to self-calibrate IMU
+    const val IMU_MSG_SIZE = (5 + 23) * 4 // deltaT + timestamp(5) + data (18 float)
     const val PPG_MSG_SIZE = (4 + 16) * 4 // timestamp(4) + data (16 float)
     const val IMU_PORT_LEFT = 65000
     const val IMU_PORT_RIGHT = 65003
@@ -40,6 +42,7 @@ object DataSingleton {
     const val IP_DEFAULT = "192.168.1.138"
     const val PORT_KEY = "com.mocap.phone.port"
     const val IMU_PORT_DEFAULT = IMU_PORT_LEFT
+
 
     // as state flow to update UI elements when IP changes
     private val ipStateFlow = MutableStateFlow(IP_DEFAULT)

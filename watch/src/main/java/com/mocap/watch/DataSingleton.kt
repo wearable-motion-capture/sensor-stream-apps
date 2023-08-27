@@ -20,7 +20,7 @@ enum class AudioStreamState {
 }
 
 object DataSingleton {
-    const val VERSION = "0.3.2"
+    const val VERSION = "0.3.3"
 
     // dual mode communication paths
     const val IMU_PATH = "/imu"
@@ -31,11 +31,7 @@ object DataSingleton {
     const val PING_REP = "/ping_reply"
     const val BROADCAST_CLOSE = "mocap.broadcast.close"
     const val BROADCAST_SERVICE_KEY = "service.id"
-
-    // TODO: implement frequency outputs on watch
     const val BROADCAST_UPDATE = "mocap.broadcast.update"
-    const val BROADCAST_SERVICE_HZ = "service.hz"
-    const val BROADCAST_SERVICE_QUEUE = "service.queue"
 
     // capabilities
     const val PHONE_APP_ACTIVE = "phone_app" // indicates if the phone app is active
@@ -43,8 +39,7 @@ object DataSingleton {
     const val PHONE_CAPABILITY = "phone" // if the phone app is connected (see res/values/wear.xml)
 
     // streaming parameters
-    const val IMU_CHANNEL_MSG_SIZE = (5 + 18) * 4 // deltaT + timestamp(5) + data (18 float)
-    const val IMU_UDP_MSG_SIZE = (5 + 23) * 4 // deltaT + timestamp(5) + data (19 float)
+    const val IMU_MSG_SIZE = (5 + 23) * 4
     const val PPG_MSG_SIZE = (4 + 16) * 4 // timestamp(4) + data (16 float)
     const val AUDIO_BUFFER_SIZE = 800 // bytes
 

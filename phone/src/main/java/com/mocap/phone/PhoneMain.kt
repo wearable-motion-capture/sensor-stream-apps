@@ -11,6 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.preference.PreferenceManager
+import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.CapabilityInfo
 import com.google.android.gms.wearable.MessageClient
@@ -23,6 +24,10 @@ import com.mocap.phone.service.PpgService
 import com.mocap.phone.viewmodel.PhoneViewModel
 import com.mocap.phone.ui.theme.PhoneTheme
 import com.mocap.phone.ui.view.RenderHome
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import java.nio.ByteBuffer
 
 
@@ -109,12 +114,23 @@ class PhoneMain : ComponentActivity(),
                 DataSingleton.setWatchRelPres(b.getFloat(16))
 
                 val mode = b.getFloat(20)
-
-                // trigger phone calibration and pass it the node ID that sent the trigger
-                val i = Intent("com.mocap.phone.CALIBRATION")
-                i.putExtra("sourceNodeId", messageEvent.sourceNodeId)
-                i.putExtra("mode", mode)
-                startActivity(i)
+                if (mode == 0f) {
+                    // trigger phone calibration and pass it the node ID that sent the trigger
+                    val i = Intent("com.mocap.phone.CALIBRATION")
+                    i.putExtra("sourceNodeId", messageEvent.sourceNodeId)
+                    i.putExtra("mode", mode)
+                    startActivity(i)
+                } else {
+                    CoroutineScope(Job() + Dispatchers.IO).launch{
+                        // reset self-calibration count and skip calibration activity
+                        DataSingleton.calib_count = 0
+                        // send a reply to trigger the watch streaming
+                        val repTask = _messageClient.sendMessage(
+                            messageEvent.sourceNodeId, DataSingleton.CALIBRATION_PATH, null
+                        )
+                        Tasks.await(repTask)
+                    }
+                }
             }
         }
         _viewModel.onMessageReceived(messageEvent)

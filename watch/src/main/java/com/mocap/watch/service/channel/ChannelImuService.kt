@@ -62,7 +62,7 @@ class ChannelImuService : BaseImuService() {
                         if (lastDat != null) {
                             // only process if a message was composed successfully
                             // feed into byte buffer
-                            val buffer = ByteBuffer.allocate(DataSingleton.IMU_CHANNEL_MSG_SIZE)
+                            val buffer = ByteBuffer.allocate(DataSingleton.IMU_MSG_SIZE)
                             for (v in lastDat) buffer.putFloat(v)
                             // write to output stream
                             outputStream.write(buffer.array())
