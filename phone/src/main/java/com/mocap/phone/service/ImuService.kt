@@ -56,7 +56,6 @@ class ImuService : Service() {
     private var _lastBroadcast = LocalDateTime.now()
 
     private var _lastMsg: LocalDateTime? = null
-    private var _calibrationCount = DataSingleton.SELF_CALIB_END
     private var _calibrationDatList = mutableListOf<FloatArray>()
 
 
@@ -210,20 +209,20 @@ class ImuService : Service() {
                                 )
                                 DataSingleton.calib_count += 1
 
-                                if (_calibrationCount == DataSingleton.SELF_CALIB_END) {
+                                if (DataSingleton.calib_count == DataSingleton.SELF_CALIB_END) {
                                     // set calibration vec when enough is available
                                     DataSingleton.setWatchForwardQuat(
                                         swData.slice(23..26).toFloatArray()
                                     )
                                     DataSingleton.setPhoneForwardQuat(
-                                        quatAverage(
-                                            _calibrationDatList
-                                        )
+                                        quatAverage(_calibrationDatList)
                                     )
                                     DataSingleton.setWatchRelPres(swData[27])
                                     calibrationDat = DataSingleton.watchQuat.value +
                                             DataSingleton.phoneQuat.value +
                                             floatArrayOf(DataSingleton.watchPres.value)
+                                    Log.d(TAG, "finished self calib ${DataSingleton.calib_count}")
+                                    _calibrationDatList.clear()
                                 } else {
                                     continue
                                 }
@@ -233,7 +232,7 @@ class ImuService : Service() {
                             // write phone and watch data to buffer
                             val buffer = ByteBuffer.allocate(DataSingleton.DUAL_IMU_MSG_SIZE)
                             // put smartwatch data
-                            for (s in swData.slice(0..18)) {
+                            for (s in swData.slice(0..22)) {
                                 buffer.putFloat(s)
                             }
                             // append phone data
@@ -423,8 +422,8 @@ class ImuService : Service() {
 
         // compose the message as a float array
         val message = floatArrayOf(dT) + // [0] delta time since last message
-                ts + // actual time stamp
-                _rotvec + // transformed rotation vector[5] is a quaternion [w,x,y,z, conf]
+                ts + // [1,2,3,4] actual time stamp
+                _rotvec + // transformed rotation vector[5,6,7,8,9] is a quaternion [w,x,y,z, conf]
                 tgyro + // mean gyro
                 _dpLvel + // [3] integrated linear acc x,y,z
                 tLacc + // mean acc

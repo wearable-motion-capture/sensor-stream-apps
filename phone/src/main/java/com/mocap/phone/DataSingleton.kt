@@ -14,6 +14,7 @@ object DataSingleton {
     const val PING_REQ = "/ping_request"
     const val PING_REP = "/ping_reply"
 
+    // UI broadcasts
     const val BROADCAST_UPDATE = "mocap.broadcast.update"
     const val BROADCAST_SERVICE_KEY = "service.id"
     const val BROADCAST_SERVICE_STATE = "service.state"
@@ -25,17 +26,19 @@ object DataSingleton {
     const val PHONE_APP_ACTIVE = "phone_app" // indicates if the phone app is active
     const val WATCH_CAPABILITY = "watch" // if the watch app is connected (see res/values/wear.xml)
 
-    // streaming parameters
+    // self calibration
     const val SELF_CALIB_END = 10
     var calib_count = SELF_CALIB_END // reset this counter if you want to self-calibrate IMU
-    const val IMU_MSG_SIZE = (5 + 23) * 4 // deltaT + timestamp(5) + data (18 float)
+
+    // streaming parameters
+    const val IMU_MSG_SIZE = (5 + 23) * 4 // deltaT + timestamp(4) + data (22 float)
     const val PPG_MSG_SIZE = (4 + 16) * 4 // timestamp(4) + data (16 float)
     const val IMU_PORT_LEFT = 65000
     const val IMU_PORT_RIGHT = 65003
     const val UDP_AUDIO_PORT = 65001
     const val UDP_PPG_PORT = 65002
     const val AUDIO_BUFFER_SIZE = 800
-    const val DUAL_IMU_MSG_SIZE = IMU_MSG_SIZE + (5 + 27) * 4 // dT + timestamp(5) + data (27 float)
+    const val DUAL_IMU_MSG_SIZE = (55) * 4 // dT + SW IMU msg without calib + PH IMU MSG
 
     // shared preferences lookup
     const val IP_KEY = "com.mocap.phone.ip"
