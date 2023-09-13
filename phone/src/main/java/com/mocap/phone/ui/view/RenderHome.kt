@@ -42,6 +42,7 @@ fun RenderHome(
     ppgOutHzSF: StateFlow<Float>,
     ppgQueueSizeSF: StateFlow<Int>,
     ipSetCallback: () -> Unit,
+    gpsEnableCallback: () -> Unit,
     imuStreamTrigger: () -> Unit
 ) {
     val phoneForwardQuat by DataSingleton.phoneQuat.collectAsState()
@@ -131,6 +132,17 @@ fun RenderHome(
                         style = MaterialTheme.typography.h6
                     )
                     DefaultButton(onClick = ipSetCallback, text = "Set IP and Hand Mode")
+                }
+
+                SmallCard() {
+                    DefaultHighlight(text = "GPS Text Highlight")
+                    Text(
+                        text = "GPS Test",
+                        modifier = Modifier.padding(8.dp),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.h6
+                    )
+                    DefaultButton(onClick = gpsEnableCallback, text = "Enable GPS")
                 }
 
                 Row() {

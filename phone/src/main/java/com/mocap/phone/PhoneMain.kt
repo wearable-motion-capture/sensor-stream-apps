@@ -80,6 +80,9 @@ class PhoneMain : ComponentActivity(),
                     ipSetCallback = {
                         startActivity(Intent("com.mocap.phone.SET_IP"))
                     },
+                    gpsEnableCallback = {
+                        startActivity(Intent("com.mocap.phone.ENABLE_GPS"))
+                    },
                     imuStreamTrigger = {
                         _viewModel.sendImuTrigger()
                     }

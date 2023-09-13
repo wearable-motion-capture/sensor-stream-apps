@@ -6,6 +6,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
     <application
         android:icon="@mipmap/ic_launcher"
         android:label="mocap_phone"
@@ -34,6 +38,16 @@
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
                 <action android:name="com.mocap.phone.SET_IP" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".activity.gpsEnableActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.DeviceDefault">
+            <intent-filter>
+                <action android:name="com.mocap.phone.ENABLE_GPS" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
