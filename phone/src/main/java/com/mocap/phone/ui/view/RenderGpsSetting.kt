@@ -57,16 +57,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.MultiplePermissionsState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.mocap.phone.ui.BigCard
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun RenderGpsSetting(){
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -74,9 +77,14 @@ fun RenderGpsSetting(){
         userScrollEnabled = false,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        item { DefaultHeadline(text = "Will Gps Work this time?!") }
+        item { DefaultHeadline(text = "Gps - Current Location") }
 
-        item { CurrentLocationScreen() }
+        item {
+            BigCard() {
+                CurrentLocationScreen()
+            }
+        }
+//        item { CurrentLocationScreen() }
     }
 }
 
@@ -84,8 +92,8 @@ fun RenderGpsSetting(){
 @Composable
 fun CurrentLocationScreen() {
     val permissions = listOf(
-        Manifest.permission.ACCESS_COARSE_LOCATION,
         Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION,
     )
     PermissionBox(
         permissions = permissions,
@@ -99,7 +107,8 @@ fun CurrentLocationScreen() {
 }
 
 @RequiresPermission(
-    anyOf = [Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION],
+//    anyOf = [Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION],
+    anyOf = [Manifest.permission.ACCESS_FINE_LOCATION],
 )
 @Composable
 fun CurrentLocationContent(usePreciseLocation: Boolean) {
@@ -116,8 +125,7 @@ fun CurrentLocationContent(usePreciseLocation: Boolean) {
         Modifier
             .fillMaxWidth()
             .animateContentSize()
-            .padding(16.dp)
-            .background(MaterialTheme.colors.onBackground),
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -139,10 +147,8 @@ fun CurrentLocationContent(usePreciseLocation: Boolean) {
                 }
             },
         ) {
-            Text("Get last known location")
+            Text(text = "Get last known location")
         }
-
-        Text(text = "Testing")
 
         Button(
             onClick = {
@@ -160,7 +166,10 @@ fun CurrentLocationContent(usePreciseLocation: Boolean) {
                     result?.let { fetchedLocation ->
                         locationInfo =
                             "Current location is \n" + "lat : ${fetchedLocation.latitude}\n" +
-                                    "long : ${fetchedLocation.longitude}\n" + "fetched at ${System.currentTimeMillis()}"
+                                    "long : ${fetchedLocation.longitude}\n" +
+                                    "acc : ${fetchedLocation.accuracy}\n" +
+                                    "alt : ${fetchedLocation.altitude}\n" +
+                                    "fetched at ${System.currentTimeMillis()}"
                     }
                 }
             },
@@ -169,6 +178,7 @@ fun CurrentLocationContent(usePreciseLocation: Boolean) {
         }
         Text(
             text = locationInfo,
+            color = Color.White
         )
     }
 }

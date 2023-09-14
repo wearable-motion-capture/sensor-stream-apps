@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.mocap.phone.ui.theme.PhoneTheme
 import com.mocap.phone.ui.view.RenderGpsSetting
+import com.mocap.phone.ui.view.RenderGpsUpdates
 
 class gpsEnableActivity: ComponentActivity() {
 
@@ -12,12 +13,14 @@ class gpsEnableActivity: ComponentActivity() {
         private const val TAG = "gpsEnableActivity"
     }
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
             PhoneTheme {
-                RenderGpsSetting()
+//                RenderGpsSetting()
+                RenderGpsUpdates()
             }
         }
 
