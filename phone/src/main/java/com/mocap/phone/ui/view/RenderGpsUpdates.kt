@@ -16,6 +16,7 @@ import android.os.Looper
 import androidx.annotation.RequiresPermission
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,23 +42,21 @@ import java.util.concurrent.TimeUnit
 
 @Composable
 fun RenderGpsUpdates(){
-    LazyColumn(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colors.background),
-        userScrollEnabled = false,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        item { DefaultHeadline(text = "Gps Updates") }
+        DefaultHeadline(text = "Gps Updates")
 
-        item {
-            BigCard {
-                Text(
-                    text = "Does it work?",
-                    color = Color.White
-                )
-                LocationUpdatesScreen()
-            }
+        BigCard {
+            Text(
+                text = "Does it work?",
+                color = Color.White
+            )
+            LocationUpdatesScreen()
+
         }
     }
 }
@@ -66,8 +65,8 @@ fun RenderGpsUpdates(){
 @Composable
 fun LocationUpdatesScreen() {
     val permissions = listOf(
-        Manifest.permission.ACCESS_FINE_LOCATION,
         Manifest.permission.ACCESS_COARSE_LOCATION,
+        Manifest.permission.ACCESS_FINE_LOCATION,
     )
     // Requires at least coarse permission
     PermissionBox(
@@ -99,10 +98,11 @@ fun LocationUpdatesContent(usePreciseLocation: Boolean) {
         LocationUpdatesEffect(locationRequest!!) { result ->
             // For each result update the text
             for (currentLocation in result.locations) {
-                locationUpdates = "${System.currentTimeMillis()}:\n" +
+                locationUpdates = "Time(ms): ${System.currentTimeMillis()}:\n" +
                         "- @lat: ${currentLocation.latitude}\n" +
                         "- @lng: ${currentLocation.longitude}\n" +
-                        "- Accuracy: ${currentLocation.accuracy}\n\n" +
+                        "- @Acc: ${currentLocation.accuracy}\n\n" +
+                        "- @Speed Acc: ${currentLocation.speedAccuracyMetersPerSecond}\n\n" +
                         locationUpdates
             }
         }
@@ -127,13 +127,13 @@ fun LocationUpdatesContent(usePreciseLocation: Boolean) {
                     checked = locationRequest != null,
                     onCheckedChange = { checked ->
                         locationRequest = if (checked) {
-                            val priority = Priority.PRIORITY_HIGH_ACCURACY
-//                            val priority = if (usePreciseLocation) {
-//                                Priority.PRIORITY_HIGH_ACCURACY
-//                            } else {
-//                                Priority.PRIORITY_BALANCED_POWER_ACCURACY
-//                            }
-                            LocationRequest.Builder(priority, TimeUnit.SECONDS.toMillis(3)).build()
+                            // Define the accuracy based on your needs and granted permissions
+                            val priority = if (usePreciseLocation) {
+                                Priority.PRIORITY_HIGH_ACCURACY
+                            } else {
+                                Priority.PRIORITY_BALANCED_POWER_ACCURACY
+                            }
+                            LocationRequest.Builder(priority, TimeUnit.SECONDS.toMillis(1)).build()
                         } else {
                             null
                         }
@@ -155,8 +155,7 @@ fun LocationUpdatesContent(usePreciseLocation: Boolean) {
  * updates are added and removed whenever the composable enters or exists the composition.
  */
 @RequiresPermission(
-//    anyOf = [Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION],
-    anyOf = [Manifest.permission.ACCESS_FINE_LOCATION],
+    anyOf = [Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION],
 )
 @Composable
 fun LocationUpdatesEffect(
@@ -195,3 +194,4 @@ fun LocationUpdatesEffect(
         }
     }
 }
+
