@@ -68,6 +68,8 @@ fun RenderHome(
     val audioBroadcastHz by audioBroadcastHzSF.collectAsState()
     val audioQueueSize by audioStreamQueueSF.collectAsState()
 
+    val gpsLongvalui by DataSingleton.gpsLong.collectAsState()
+
     LazyColumn(
         modifier = Modifier
             .fillMaxWidth()
@@ -175,6 +177,14 @@ fun RenderHome(
                         DefaultText(
                             text = "I/O: $audioBroadcastHz Hz\n" +
                                     "Queue: $audioQueueSize"
+                        )
+                    }
+
+                    SmallCard() {
+                        DefaultHighlight(text = "GPS")
+                        DefaultText(text = "Status\n")
+                        DefaultText(
+                            text = "Long: $gpsLongvalui"
                         )
                     }
 //                    SmallCard() {

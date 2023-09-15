@@ -36,8 +36,7 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import java.util.concurrent.TimeUnit
-
+import com.mocap.phone.DataSingleton.setGpsLong
 
 
 @Composable
@@ -65,8 +64,8 @@ fun RenderGpsUpdates(){
 @Composable
 fun LocationUpdatesScreen() {
     val permissions = listOf(
-        Manifest.permission.ACCESS_COARSE_LOCATION,
         Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION,
     )
     // Requires at least coarse permission
     PermissionBox(
@@ -80,7 +79,7 @@ fun LocationUpdatesScreen() {
 }
 
 @RequiresPermission(
-    anyOf = [Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION],
+    anyOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION],
 )
 @Composable
 fun LocationUpdatesContent(usePreciseLocation: Boolean) {
@@ -97,14 +96,26 @@ fun LocationUpdatesContent(usePreciseLocation: Boolean) {
     if (locationRequest != null) {
         LocationUpdatesEffect(locationRequest!!) { result ->
             // For each result update the text
-            for (currentLocation in result.locations) {
-                locationUpdates = "Time(ms): ${System.currentTimeMillis()}:\n" +
-                        "- @lat: ${currentLocation.latitude}\n" +
-                        "- @lng: ${currentLocation.longitude}\n" +
-                        "- @Acc: ${currentLocation.accuracy}\n\n" +
-                        "- @Speed Acc: ${currentLocation.speedAccuracyMetersPerSecond}\n\n" +
-                        locationUpdates
-            }
+            locationUpdates =
+                result.lastLocation!!.longitude.toString() //latitude locations.listIterator(1).toString()
+
+            locationUpdates = "Time(ms): ${System.currentTimeMillis()}:\n" +
+                    "- @lat: ${result.lastLocation!!.latitude}\n" +
+                    "- @lng: ${result.lastLocation!!.longitude}\n" +
+                    "- @Acc: ${result.lastLocation!!.accuracy}\n" +
+                    "- @Alt: ${result.lastLocation!!.altitude}\n" +
+                    "- @Spd: ${result.lastLocation!!.speed}\n" +            // Returns the speed at the time of this location in meters per second. Note that the speed returned here may be more accurate than would be obtained simply by calculating distance / time for sequential positions, such as if the Doppler measurements from GNSS satellites are taken into account.
+                    "- @Bea: ${result.lastLocation!!.bearing}\n"            // Returns the bearing at the time of this location in degrees. Bearing is the horizontal direction of travel of this device and is unrelated to the device orientation. The bearing is guaranteed to be in the range [0, 360).
+
+            setGpsLong(result.lastLocation!!.longitude.toFloat())
+//            for (currentLocation in result.locations) {
+//                locationUpdates = "Time(ms): ${System.currentTimeMillis()}:\n" +
+//                        "- @lat: ${currentLocation.latitude}\n" +
+//                        "- @lng: ${currentLocation.longitude}\n" +
+//                        "- @Acc: ${currentLocation.accuracy}\n" +
+//                        "- @Speed Acc: ${currentLocation.speedAccuracyMetersPerSecond}\n\n" +
+//                        locationUpdates
+//            }
         }
     }
 
@@ -133,7 +144,9 @@ fun LocationUpdatesContent(usePreciseLocation: Boolean) {
                             } else {
                                 Priority.PRIORITY_BALANCED_POWER_ACCURACY
                             }
-                            LocationRequest.Builder(priority, TimeUnit.SECONDS.toMillis(1)).build()
+//                            LocationRequest.Builder(priority, TimeUnit.SECONDS.toMillis(1)).build()
+//                            LocationRequest.Builder(priority, TimeUnit.NANOSECONDS.toNanos(1)).build()
+                            LocationRequest.Builder(priority, 1).build()
                         } else {
                             null
                         }

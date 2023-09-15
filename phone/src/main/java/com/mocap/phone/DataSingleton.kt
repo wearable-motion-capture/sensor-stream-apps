@@ -82,4 +82,10 @@ object DataSingleton {
     fun setWatchRelPres(fl: Float) {
         watchRelPres.value = fl
     }
+
+    private val gpsVals = MutableStateFlow(0.0F)
+    val gpsLong = gpsVals.asStateFlow()
+    fun setGpsLong(fl: Float) {
+        gpsVals.value = fl
+    }
 }
