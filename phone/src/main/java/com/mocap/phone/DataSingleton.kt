@@ -83,9 +83,16 @@ object DataSingleton {
         watchRelPres.value = fl
     }
 
-    private val gpsVals = MutableStateFlow(0.0F)
-    val gpsLong = gpsVals.asStateFlow()
-    fun setGpsLong(fl: Float) {
-        gpsVals.value = fl
+    private val gpsVals = MutableStateFlow(floatArrayOf(0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F))
+    //    latitude, longitude, accuracy, altitude, speed, bearing
+    val gpsValsArray = gpsVals.asStateFlow()
+    fun setGpsVals(array: FloatArray) {
+        gpsVals.value = array
+    }
+
+    private val gpsSwitch = MutableStateFlow(false)
+    val gpsSwitchStatus = gpsSwitch.asStateFlow()
+    fun setGpsSwtichStatus(boolean: Boolean) {
+        gpsSwitch.value = boolean
     }
 }

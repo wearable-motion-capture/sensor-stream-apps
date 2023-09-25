@@ -244,6 +244,12 @@ class PhoneViewModel(application: Application) :
         }
     }
 
+    fun sendGpsTrigger(){
+        _scope.launch {
+            null
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         _scope.cancel()

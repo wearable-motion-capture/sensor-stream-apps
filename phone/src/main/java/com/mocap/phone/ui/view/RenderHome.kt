@@ -1,11 +1,13 @@
 package com.mocap.phone.ui.view
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Switch
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -15,6 +17,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.mocap.phone.DataSingleton
+import com.mocap.phone.DataSingleton.gpsValsArray
+import com.mocap.phone.DataSingleton.setGpsSwtichStatus
+import com.mocap.phone.service.GpsService
+import com.mocap.phone.service.ImuService
 import com.mocap.phone.ui.DefaultButton
 import com.mocap.phone.ui.BigCard
 import com.mocap.phone.ui.DefaultHeadline
@@ -68,7 +74,8 @@ fun RenderHome(
     val audioBroadcastHz by audioBroadcastHzSF.collectAsState()
     val audioQueueSize by audioStreamQueueSF.collectAsState()
 
-    val gpsLongvalui by DataSingleton.gpsLong.collectAsState()
+    val gpsValuesArray by DataSingleton.gpsValsArray.collectAsState()
+    val gpsSwitchStatus by DataSingleton.gpsSwitchStatus.collectAsState()
 
     LazyColumn(
         modifier = Modifier
@@ -137,14 +144,32 @@ fun RenderHome(
                 }
 
                 SmallCard() {
-                    DefaultHighlight(text = "GPS Text Highlight")
-                    Text(
-                        text = "GPS Test",
-                        modifier = Modifier.padding(8.dp),
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.h6
+                    DefaultHighlight(text = "GPS Activity")
+                    DefaultText(
+                        text = if (gpsSwitchStatus) "On" else "Off",
+                        color = if (gpsSwitchStatus) Color.Green else Color.Yellow
                     )
-                    DefaultButton(onClick = gpsEnableCallback, text = "Enable GPS")
+                    DefaultButton(
+                        onClick = gpsEnableCallback,
+                        text = "Enable GPS"
+                    )
+                    DefaultText(
+                        //    latitude, longitude, accuracy, altitude, speed, bearing
+                        text = ("GPS:\n" +
+                                "Lat %.8f,\n" +
+                                "Lon %.8f,\n" +
+                                "Acc %.2f,\n" +
+                                "Alt %.8f,\n" +
+                                "Spe %.8f,\n" +
+                                "Bea %.8f").format(
+                            gpsValuesArray[0],
+                            gpsValuesArray[1],
+                            gpsValuesArray[2],
+                            gpsValuesArray[3],
+                            gpsValuesArray[4],
+                            gpsValuesArray[5],
+                        )
+                    )
                 }
 
                 Row() {
@@ -180,24 +205,28 @@ fun RenderHome(
                         )
                     }
 
-                    SmallCard() {
-                        DefaultHighlight(text = "GPS")
-                        DefaultText(text = "Status\n")
-                        DefaultText(
-                            text = "Long: $gpsLongvalui"
-                        )
-                    }
 //                    SmallCard() {
-//                        DefaultHighlight(text = ":" + DataSingleton.UDP_PPG_PORT.toString())
-//                        DefaultText(text = ("PPG"))
+//                        DefaultHighlight(text = "GPS")
 //                        DefaultText(
-//                            text = if (ppgSt) "streaming" else "idle",
-//                            color = if (ppgSt) Color.Green else Color.Yellow
+//                            text = if (gpsSwitchStatus) "On" else "Off",
+//                            color = if (gpsSwitchStatus) Color.Green else Color.Yellow
 //                        )
 //                        DefaultText(
-//                            text = "I: $ppgInHz Hz\n " +
-//                                    "O: $ppgOutHz Hz\n" +
-//                                    "Queue: $ppgQueueSize"
+//                            //    latitude, longitude, accuracy, altitude, speed, bearing
+//                            text = ("GPS:\n" +
+//                                    "Lat %.2f,\n" +
+//                                    "Lon %.2f,\n" +
+//                                    "Acc %.2f,\n" +
+//                                    "Alt %.2f,\n" +
+//                                    "Spe %.2f,\n" +
+//                                    "Bea %.2f").format(
+//                                gpsValuesArray[0],
+//                                gpsValuesArray[1],
+//                                gpsValuesArray[2],
+//                                gpsValuesArray[3],
+//                                gpsValuesArray[4],
+//                                gpsValuesArray[5],
+//                            )
 //                        )
 //                    }
                 }
