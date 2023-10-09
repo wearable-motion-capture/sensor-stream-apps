@@ -51,7 +51,7 @@ class WatchOnlyActivity : ComponentActivity() {
                 }
 
                 RenderStandalone(
-                    soundStateFlow = _watchOnlyViewModel.audioStrState,
+                    audioStateFlow = _watchOnlyViewModel.audioStrState,
                     sensorStateFlow = _watchOnlyViewModel.sensorStrState,
                     calibCallback = {
                         startActivity(Intent("com.mocap.watch.WATCH_ONLY_CALIBRATION"))

@@ -15,14 +15,14 @@ import com.mocap.watch.ui.StreamToggle
 import kotlinx.coroutines.flow.StateFlow
 
 @Composable
-fun RenderFreeHips(
+fun RenderPhonePocket(
     connected: StateFlow<Boolean>,
     connectedNodeName: StateFlow<String>,
     calibrated: StateFlow<Boolean>,
     gravDiff: StateFlow<Float>,
     imuStreamStateFlow: StateFlow<ImuStreamState>,
     audioStreamStateFlow: StateFlow<AudioStreamState>,
-    sensorStreamCallback: (Boolean) -> Unit,
+    imuStreamCallback: (Boolean) -> Unit,
     audioStreamCallback: (Boolean) -> Unit,
     finishCallback: () -> Unit
 ) {
@@ -58,15 +58,15 @@ fun RenderFreeHips(
         }
         item {
             StreamToggle(
-                enabled = (con and cal),
+                enabled = (con and cal) or (streamSt == ImuStreamState.Streaming),
                 text = "Stream IMU",
                 checked = (streamSt == ImuStreamState.Streaming),
-                onChecked = { sensorStreamCallback(it) }
+                onChecked = { imuStreamCallback(it) }
             )
         }
         item {
             StreamToggle(
-                enabled = (con and cal),
+                enabled = con,
                 text = "Stream Audio",
                 checked = (soundSt == AudioStreamState.Streaming),
                 onChecked = { audioStreamCallback(it) }

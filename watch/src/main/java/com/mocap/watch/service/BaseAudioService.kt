@@ -10,17 +10,16 @@ import com.mocap.watch.DataSingleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
 
 
 abstract class BaseAudioService : Service() {
 
     companion object {
         private const val TAG = "Audio Service"  // for logging
-        const val AUDIO_RATE = 16000 // can go up to 44K, if needed
+        const val AUDIO_RATE = 32000 // can go up to 44K, if needed
         const val AUDIO_CHANNEL_IN = AudioFormat.CHANNEL_IN_MONO
         const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
-        const val AUDIO_BUFFER_SIZE = 1600
+        const val AUDIO_BUFFER_SIZE = DataSingleton.AUDIO_BUFFER_SIZE
     }
 
     protected val scope = CoroutineScope(Job() + Dispatchers.IO)
@@ -29,11 +28,14 @@ abstract class BaseAudioService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         audioStreamState = false
+        Log.d(TAG, "Service destroyed")
+    }
+
+    fun stopService() {
         val intent = Intent(DataSingleton.BROADCAST_CLOSE)
         intent.putExtra(DataSingleton.BROADCAST_SERVICE_KEY, DataSingleton.AUDIO_PATH)
         LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
-        scope.cancel()
-        Log.d(TAG, "Service destroyed")
+        Log.d(TAG, "Service stopped")
     }
 
     /** not intended to be bound **/

@@ -28,6 +28,7 @@ import java.net.InetAddress
 import java.nio.ByteBuffer
 import java.time.Duration
 import java.time.LocalDateTime
+import com.mocap.phone.utility.quatAverage
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.math.round
 
@@ -55,6 +56,8 @@ class ImuService : Service() {
     private var _lastBroadcast = LocalDateTime.now()
 
     private var _lastMsg: LocalDateTime? = null
+    private var _calibrationDatList = mutableListOf<FloatArray>()
+
 
     // service state indicators
     private var _imuStreamState = false
@@ -160,10 +163,9 @@ class ImuService : Service() {
             val port = DataSingleton.imuPort.value
             val ip = DataSingleton.ip.value
 
-            val calibratedDat =
-                DataSingleton.watchQuat.value + DataSingleton.phoneQuat.value + floatArrayOf(
-                    DataSingleton.watchPres.value
-                )
+            var calibrationDat = DataSingleton.watchQuat.value +
+                    DataSingleton.phoneQuat.value +
+                    floatArrayOf(DataSingleton.watchPres.value)
 
             withContext(Dispatchers.IO) {
                 // open a socket
@@ -200,10 +202,37 @@ class ImuService : Service() {
                         }
 
                         if (phoneData != null && swData != null) {
+                            if (DataSingleton.calib_count < DataSingleton.SELF_CALIB_END) {
+                                // calibrate the phone with the first data that comes in
+                                _calibrationDatList.add(
+                                    phoneData.slice(5..8).toFloatArray()
+                                )
+                                DataSingleton.calib_count += 1
+
+                                if (DataSingleton.calib_count == DataSingleton.SELF_CALIB_END) {
+                                    // set calibration vec when enough is available
+                                    DataSingleton.setWatchForwardQuat(
+                                        swData.slice(23..26).toFloatArray()
+                                    )
+                                    DataSingleton.setPhoneForwardQuat(
+                                        quatAverage(_calibrationDatList)
+                                    )
+                                    DataSingleton.setWatchRelPres(swData[27])
+                                    calibrationDat = DataSingleton.watchQuat.value +
+                                            DataSingleton.phoneQuat.value +
+                                            floatArrayOf(DataSingleton.watchPres.value)
+                                    Log.d(TAG, "finished self calib ${DataSingleton.calib_count}")
+                                    _calibrationDatList.clear()
+                                } else {
+                                    continue
+                                }
+                            }
+
+
                             // write phone and watch data to buffer
                             val buffer = ByteBuffer.allocate(DataSingleton.DUAL_IMU_MSG_SIZE)
                             // put smartwatch data
-                            for (s in swData) {
+                            for (s in swData.slice(0..22)) {
                                 buffer.putFloat(s)
                             }
                             // append phone data
@@ -211,7 +240,7 @@ class ImuService : Service() {
                                 buffer.putFloat(v)
                             }
                             // append calibration data
-                            for (v in calibratedDat) {
+                            for (v in calibrationDat) {
                                 buffer.putFloat(v)
                             }
                             // create packet
@@ -393,8 +422,8 @@ class ImuService : Service() {
 
         // compose the message as a float array
         val message = floatArrayOf(dT) + // [0] delta time since last message
-                ts + // actual time stamp
-                _rotvec + // transformed rotation vector[5] is a quaternion [w,x,y,z, conf]
+                ts + // [1,2,3,4] actual time stamp
+                _rotvec + // transformed rotation vector[5,6,7,8,9] is a quaternion [w,x,y,z, conf]
                 tgyro + // mean gyro
                 _dpLvel + // [3] integrated linear acc x,y,z
                 tLacc + // mean acc

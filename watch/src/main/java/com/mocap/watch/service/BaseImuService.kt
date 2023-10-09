@@ -169,7 +169,9 @@ abstract class BaseImuService : Service() {
                 _dpLvel + // [13,14,15] integrated linear acc [x,y,z]
                 tLacc + // [16,17,18] mean acc
                 _pres + // [19] atmospheric pressure
-                _grav // [20,21,22] vector indicating the direction of gravity [x,y,z]
+                _grav + // [20,21,22] vector indicating the direction of gravity [x,y,z]
+                DataSingleton.forwardQuat.value +
+                floatArrayOf(DataSingleton.calib_pres.value)
 
         // now that the message is stored, reset the deltas
         // translation vel

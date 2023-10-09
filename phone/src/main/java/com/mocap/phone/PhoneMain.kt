@@ -4,7 +4,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -24,7 +23,6 @@ import com.mocap.phone.viewmodel.PhoneViewModel
 import com.mocap.phone.ui.theme.PhoneTheme
 import com.mocap.phone.ui.view.RenderHome
 import java.nio.ByteBuffer
-
 
 class PhoneMain : ComponentActivity(),
     MessageClient.OnMessageReceivedListener,
@@ -81,6 +79,9 @@ class PhoneMain : ComponentActivity(),
                     ppgQueueSizeSF = _viewModel.ppgQueueSize,
                     ipSetCallback = {
                         startActivity(Intent("com.mocap.phone.SET_IP"))
+                    },
+                    imuStreamTrigger = {
+                        _viewModel.sendImuTrigger()
                     }
                 )
             }
@@ -91,30 +92,18 @@ class PhoneMain : ComponentActivity(),
         _viewModel.onCapabilityChanged(capabilityInfo)
     }
 
-    /** Checks received messages for Calibration triggers */
     override fun onMessageReceived(messageEvent: MessageEvent) {
-        Log.d(
-            TAG, "Received from: ${messageEvent.sourceNodeId} " +
-                    "with path ${messageEvent.path}"
-        )
         when (messageEvent.path) {
+            // reset self-calibration count and skip calibration activity
             DataSingleton.CALIBRATION_PATH -> {
                 val b = ByteBuffer.wrap(messageEvent.data)
-                DataSingleton.setWatchForwardQuat(
-                    floatArrayOf(
-                        b.getFloat(0), b.getFloat(4),
-                        b.getFloat(8), b.getFloat(12)
-                    )
-                )
-                DataSingleton.setWatchRelPres(b.getFloat(16))
-
-                val mode = b.getFloat(20)
-
-                // trigger phone calibration and pass it the node ID that sent the trigger
-                val i = Intent("com.mocap.phone.CALIBRATION")
-                i.putExtra("sourceNodeId", messageEvent.sourceNodeId)
-                i.putExtra("mode", mode)
-                startActivity(i)
+                when (b.getInt(20)) {
+                    1 -> { // lengthy calibration with vibrating pulse confirmation. Starts a separate activity
+                        val i = Intent("com.mocap.phone.CALIBRATION")
+                        i.putExtra("sourceNodeId", messageEvent.sourceNodeId)
+                        startActivity(i)
+                    }
+                }
             }
         }
         _viewModel.onMessageReceived(messageEvent)

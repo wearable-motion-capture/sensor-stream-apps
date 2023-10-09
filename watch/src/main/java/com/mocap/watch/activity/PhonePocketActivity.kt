@@ -22,7 +22,7 @@ import com.mocap.watch.modules.SensorListener
 import com.mocap.watch.modules.ServiceBroadcastReceiver
 import com.mocap.watch.modules.WatchChannelCallback
 import com.mocap.watch.ui.theme.WatchTheme
-import com.mocap.watch.ui.view.RenderFreeHips
+import com.mocap.watch.ui.view.RenderPhonePocket
 import com.mocap.watch.viewmodel.PhonePocketViewModel
 
 
@@ -40,7 +40,6 @@ class PhonePocketActivity : ComponentActivity(),
     private val _viewModel by viewModels<PhonePocketViewModel>()
     private var _listeners = listOf<SensorListener>()
     private lateinit var _sensorManager: SensorManager
-
     private val _channelCallback = WatchChannelCallback(
         closeCallback = { _viewModel.onChannelClose(it) }
     )
@@ -80,14 +79,14 @@ class PhonePocketActivity : ComponentActivity(),
             // keep screen on to not enter ambient mode
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             WatchTheme {
-                RenderFreeHips(
+                RenderPhonePocket(
                     connected = _viewModel.pingSuccessState,
                     connectedNodeName = _viewModel.nodeName,
                     calibrated = _viewModel.calSuccessState,
                     gravDiff = _viewModel.gravDiff,
                     imuStreamStateFlow = _viewModel.sensorStreamState,
                     audioStreamStateFlow = _viewModel.audioStreamState,
-                    sensorStreamCallback = { _viewModel.imuStreamTrigger(it) },
+                    imuStreamCallback = { _viewModel.imuStreamTrigger(it) },
                     audioStreamCallback = { _viewModel.audioStreamTrigger(it) },
                     finishCallback = ::finish
                 )

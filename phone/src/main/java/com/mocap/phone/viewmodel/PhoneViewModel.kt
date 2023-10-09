@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.nio.ByteBuffer
 import java.time.Duration
 import java.time.LocalDateTime
 
@@ -187,6 +188,8 @@ class PhoneViewModel(application: Application) :
      * This function is called by the listener registered in the PhoneMain Activity
      */
     fun onMessageReceived(messageEvent: MessageEvent) {
+
+        Log.d(TAG, "Received from: ${messageEvent.sourceNodeId} with path ${messageEvent.path}")
         when (messageEvent.path) {
             DataSingleton.PING_REP -> {
                 _pingSuccess.value = true
@@ -200,6 +203,44 @@ class PhoneViewModel(application: Application) :
                         .await()
                 }
             }
+
+            // reset self-calibration count and skip calibration activity
+            DataSingleton.CALIBRATION_PATH -> {
+                val b = ByteBuffer.wrap(messageEvent.data)
+                DataSingleton.setWatchForwardQuat(
+                    floatArrayOf(
+                        b.getFloat(0), b.getFloat(4),
+                        b.getFloat(8), b.getFloat(12)
+                    )
+                )
+                DataSingleton.setWatchRelPres(b.getFloat(16))
+                when (b.getInt(20)) {
+                    2 -> { // self-calibration without confirmation
+                        DataSingleton.calib_count = 0
+                        _scope.launch {
+                            val buffer = ByteBuffer.allocate(4) // [mode (int)]
+                            buffer.putInt(0)
+                            _messageClient.sendMessage( // send a reply to trigger the watch streaming
+                                messageEvent.sourceNodeId,
+                                DataSingleton.CALIBRATION_PATH,
+                                buffer.array()
+                            ).await()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun sendImuTrigger() {
+        _scope.launch {
+            val buffer = ByteBuffer.allocate(4) // [mode (int)]
+            buffer.putInt(3)
+            _messageClient.sendMessage( // trigger watch calibration and streaming
+                _connectedNodeId,
+                DataSingleton.CALIBRATION_PATH,
+                buffer.array()
+            ).await()
         }
     }
 

@@ -22,7 +22,7 @@ import com.mocap.watch.ui.StreamToggle
 
 @Composable
 fun RenderStandalone(
-    soundStateFlow: StateFlow<AudioStreamState>,
+    audioStateFlow: StateFlow<AudioStreamState>,
     sensorStateFlow: StateFlow<ImuStreamState>,
     calibCallback: () -> Unit,
     imuStreamCallback: (Boolean) -> Unit,
@@ -32,7 +32,7 @@ fun RenderStandalone(
 ) {
 
     val sensorState by sensorStateFlow.collectAsState()
-    val soundState by soundStateFlow.collectAsState()
+    val audioState by audioStateFlow.collectAsState()
     val ip by DataSingleton.ip.collectAsState()
     val north by DataSingleton.forwardQuat.collectAsState()
     val press by DataSingleton.calib_pres.collectAsState()
@@ -84,13 +84,13 @@ fun RenderStandalone(
             )
         }
         item {
-            SoundStateDisplay(state = soundState, modifier = Modifier.fillMaxWidth())
+            SoundStateDisplay(state = audioState, modifier = Modifier.fillMaxWidth())
         }
         item {
             StreamToggle(
                 enabled = true,
                 text = "Stream Audio",
-                checked = (soundState == AudioStreamState.Streaming),
+                checked = (audioState == AudioStreamState.Streaming),
                 onChecked = { micStreamCallback(it) }
             )
         }
@@ -100,7 +100,7 @@ fun RenderStandalone(
         item {
             DefaultButton(
                 enabled = (sensorState != ImuStreamState.Streaming) &&
-                        (soundState != AudioStreamState.Streaming),
+                        (audioState != AudioStreamState.Streaming),
                 onClick = { ipSetCallback() },
                 text = "Set Target IP"
             )
