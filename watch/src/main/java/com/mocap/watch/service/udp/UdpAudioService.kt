@@ -90,7 +90,8 @@ class UdpAudioService : BaseAudioService() {
             } finally {
                 Log.d(TAG, "Audio stream stopped")
                 audioRecord.release()
-                audioStreamState = false
+                stopService()
+                onDestroy()
             }
         }
     }
