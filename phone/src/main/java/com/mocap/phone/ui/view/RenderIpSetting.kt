@@ -24,8 +24,13 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.DropdownMenu
+import androidx.compose.material.DropdownMenuItem
+import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.wear.compose.material.*
@@ -33,16 +38,19 @@ import com.mocap.phone.DataSingleton
 import com.mocap.phone.ui.BigCard
 import com.mocap.phone.ui.DefaultButton
 import com.mocap.phone.ui.DefaultHeadline
+import com.mocap.phone.ui.DefaultText
 import com.mocap.phone.ui.SmallCard
 
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun RenderIpSetting(setIpAndPortCallback: (String, Boolean) -> Unit) {
+fun RenderIpSetting(setIpAndPortCallback: (String, Boolean, Boolean) -> Unit) {
 
     // hand mode variables
     val port by DataSingleton.imuPort.collectAsState()
+    val recordLocally by DataSingleton.recordLocally.collectAsState()
     var leftHandMode by remember { mutableStateOf(port == DataSingleton.IMU_PORT_LEFT) }
+    val recordActivity by DataSingleton.recordActivityName.collectAsState()
 
     // formatting
     val ipStr by DataSingleton.ip.collectAsState()
@@ -181,6 +189,51 @@ fun RenderIpSetting(setIpAndPortCallback: (String, Boolean) -> Unit) {
         }
 
         item {
+            SmallCard() {
+                var expanded by remember { mutableStateOf(false) }
+
+                Text(
+                    text = if (recordLocally) "Record Locally" else "Broadcast",
+                    modifier = Modifier.padding(8.dp),
+                    textAlign = TextAlign.Center,
+                    color = if (recordLocally) Color.Yellow else Color.Magenta,
+                    style = MaterialTheme.typography.h6
+                )
+                androidx.compose.material.Switch(
+                    checked = recordLocally,
+                    onCheckedChange = { DataSingleton.setRecordLocally(!recordLocally) }
+                )
+
+                DefaultText(text = recordActivity)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentSize(Alignment.TopEnd)
+                ) {
+                    IconButton(onClick = { expanded = !expanded }) {
+                        androidx.compose.material.Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "More"
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        for (a in DataSingleton.activityOptions) {
+                            DropdownMenuItem(onClick = {
+                                DataSingleton.setRecordActivityName(a)
+                                expanded = false
+                            }) {
+                                Text(a)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
             DefaultButton(
                 onClick = {
                     setIpAndPortCallback(
@@ -188,7 +241,8 @@ fun RenderIpSetting(setIpAndPortCallback: (String, Boolean) -> Unit) {
                                 "${secondState.selectedOption}." +
                                 "${thirdState.selectedOption}." +
                                 "${fourthState.selectedOption}",
-                        leftHandMode
+                        leftHandMode,
+                        recordLocally
                     )
                 },
                 text = "Done"

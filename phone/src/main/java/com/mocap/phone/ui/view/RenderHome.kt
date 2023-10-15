@@ -49,6 +49,8 @@ fun RenderHome(
     val watchPressure by DataSingleton.watchPres.collectAsState()
     val ip by DataSingleton.ip.collectAsState()
     val port by DataSingleton.imuPort.collectAsState()
+    val recordLocally by DataSingleton.recordLocally.collectAsState()
+    val recordActivityName by DataSingleton.recordActivityName.collectAsState()
 
     val nodeName by connectedNodeSF.collectAsState()
     val appState by appActiveSF.collectAsState()
@@ -118,10 +120,12 @@ fun RenderHome(
         }
         item {
             BigCard() {
-                DefaultHeadline(text = "Broadcast")
+                DefaultHeadline(text = "Data Processing")
 
                 SmallCard() {
-                    DefaultHighlight(text = ip)
+                    DefaultHighlight(
+                        text = if (recordLocally) "Record - $recordActivityName"  else ip
+                    )
                     Text(
                         text = if (port == DataSingleton.IMU_PORT_LEFT) "Left Hand Mode"
                         else "Right Hand Mode",

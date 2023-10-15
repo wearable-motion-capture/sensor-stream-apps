@@ -5,6 +5,7 @@ import android.content.Intent
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorManager
+import android.os.Environment
 import android.os.IBinder
 import android.util.Log
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -29,6 +30,9 @@ import java.nio.ByteBuffer
 import java.time.Duration
 import java.time.LocalDateTime
 import com.mocap.phone.utility.quatAverage
+import java.io.File
+import java.io.FileWriter
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.math.round
 
@@ -154,6 +158,122 @@ class ImuService : Service() {
         LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
         _swInCount = 0
         _swOutCount = 0
+    }
+
+    /** reads watch IMU messages from _imuPpgQueue and broadcasts them via UDP */
+    private suspend fun recordImuMessages(c: ChannelClient.Channel) {
+        try {
+            withContext(Dispatchers.IO) {
+                var calibrationDat = DataSingleton.watchQuat.value +
+                        DataSingleton.phoneQuat.value +
+                        floatArrayOf(DataSingleton.watchPres.value)
+                // register all sensor listeners
+                for (l in _listeners) {
+                    _sensorManager.registerListener(
+                        l,
+                        _sensorManager.getDefaultSensor(l.code),
+                        SensorManager.SENSOR_DELAY_FASTEST
+                    )
+                }
+
+                // create unique filename from current date and time
+                val currentDate =
+                    (DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss-SSS")).format(LocalDateTime.now())
+                val activityName = DataSingleton.recordActivityName.value
+                val fileName = "rec_phone_pocket_${activityName}_${currentDate}.csv"
+
+                // permission rules only allow to write into the public shared directory
+                // /storage/emulated/0/Documents/_2022-09-273_05-08-49.csv
+                val path = Environment.getExternalStoragePublicDirectory(
+                    Environment.DIRECTORY_DOCUMENTS
+                )
+                val textFile = File(path, fileName)
+
+                // try to write data into a file at above location
+                val fOut = FileWriter(textFile)
+                // write header
+                fOut.write(
+                    "sw_dt," +
+                            "sw_h,sw_m,sw_s,sw_ns," +
+                            "sw_rotvec_w,sw_rotvec_x,sw_rotvec_y,sw_rotvec_z,sw_rotvec_conf," +
+                            "sw_gyro_x,sw_gyro_y,sw_gyro_z," +
+                            "sw_lvel_x,sw_lvel_y,sw_lvel_z," +
+                            "sw_lacc_x,sw_lacc_y,sw_lacc_z," +
+                            "sw_pres," +
+                            "sw_grav_x,sw_grav_y,sw_grav_z," +
+                            "ph_dt," +
+                            "ph_h,ph_m,ph_s,ph_ns," +
+                            "ph_rotvec_w,ph_rotvec_x,ph_rotvec_y,ph_rotvec_z,ph_rotvec_conf," +
+                            "ph_gyro_x,ph_gyro_y,ph_gyro_z," +
+                            "ph_lvel_x,ph_lvel_y,ph_lvel_z," +
+                            "ph_lacc_x,ph_lacc_y,ph_lacc_z," +
+                            "ph_pres," +
+                            "ph_grav_x,ph_grav_y,ph_grav_z," +
+                            "sw_forward_w,sw_forward_x,sw_forward_y,sw_forward_z," +
+                            "ph_forward_w,ph_forward_x,ph_forward_y,ph_forward_z," +
+                            "sw_init_pres," +
+                            "activity\n"
+                )
+                // Parse the file and path to uri
+                Log.v(TAG, "Text file created at ${textFile.absolutePath}.")
+
+                // begin the loop
+                while (_imuStreamState) {
+
+                    // Get data from smartwatch message queue
+                    var swData = pollEntireQueue()
+                    while (swData == null && _imuStreamState) {
+                        delay(1L)
+                        swData = pollEntireQueue()
+                    }
+
+                    // Get the newest phone IMU reading
+                    var phoneData = composeImuMessage()
+                    while (phoneData == null && _imuStreamState) {
+                        delay(1L)
+                        phoneData = composeImuMessage()
+                    }
+
+                    if (phoneData != null && swData != null) {
+                        if (DataSingleton.calib_count < DataSingleton.SELF_CALIB_END) {
+                            // calibrate the phone with the first data that comes in
+                            _calibrationDatList.add(
+                                phoneData.slice(5..8).toFloatArray()
+                            )
+                            DataSingleton.calib_count += 1
+
+                            if (DataSingleton.calib_count == DataSingleton.SELF_CALIB_END) {
+                                // set calibration vec when enough is available
+                                DataSingleton.setWatchForwardQuat(
+                                    swData.slice(23..26).toFloatArray()
+                                )
+                                DataSingleton.setPhoneForwardQuat(
+                                    quatAverage(_calibrationDatList)
+                                )
+                                DataSingleton.setWatchRelPres(swData[27])
+                                calibrationDat = DataSingleton.watchQuat.value +
+                                        DataSingleton.phoneQuat.value +
+                                        floatArrayOf(DataSingleton.watchPres.value)
+                                Log.d(TAG, "finished self calib ${DataSingleton.calib_count}")
+                                _calibrationDatList.clear()
+                            } else {
+                                continue
+                            }
+                        }
+                        for (entry in swData.slice(0..22).toFloatArray() + phoneData + calibrationDat) {
+                            fOut.write("$entry,")
+                        }
+                        fOut.write("$activityName\n") // new line at the end
+
+                        _swOutCount += 1 // for Hz estimation
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, e)
+            _channelClient.close(c)
+            Log.d(TAG, "IMU message recording stopped")
+        }
     }
 
     /** reads watch IMU messages from _imuPpgQueue and broadcasts them via UDP */
@@ -358,7 +478,11 @@ class ImuService : Service() {
             // First, start the coroutine to fill the queue with streamed watch data
             _scope.launch { swQueueFiller(c) }
             // Also, start the coroutine to deal with queued data and broadcast it via UDP
-            _scope.launch { sendUdpImuMessages(c) }
+            if (DataSingleton.recordLocally.value) {
+                _scope.launch { recordImuMessages(c) }
+            } else {
+                _scope.launch { sendUdpImuMessages(c) }
+            }
             broadcastUiUpdate()
         }
     }
