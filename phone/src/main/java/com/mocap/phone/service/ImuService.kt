@@ -260,10 +260,11 @@ class ImuService : Service() {
                                 continue
                             }
                         }
+                        var wstr = ""
                         for (entry in swData.slice(0..22).toFloatArray() + phoneData + calibrationDat) {
-                            fOut.write("$entry,")
+                            wstr += "$entry,"
                         }
-                        fOut.write("$activityName\n") // new line at the end
+                        fOut.write(wstr + "$activityName\n") // new line at the end
 
                         _swOutCount += 1 // for Hz estimation
                     }

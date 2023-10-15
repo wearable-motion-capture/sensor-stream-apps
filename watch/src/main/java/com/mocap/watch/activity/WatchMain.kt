@@ -1,4 +1,4 @@
-package com.mocap.watch
+package com.mocap.watch.activity
 
 import android.Manifest
 import android.content.Intent
@@ -13,6 +13,7 @@ import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.CapabilityInfo
 import com.google.android.gms.wearable.Wearable
+import com.mocap.watch.DataSingleton
 
 import com.mocap.watch.ui.theme.WatchTheme
 import com.mocap.watch.ui.view.RenderModeSelection

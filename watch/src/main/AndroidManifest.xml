@@ -31,7 +31,7 @@
             android:value="true" />
 
         <activity
-            android:name=".WatchMain"
+            android:name=".activity.WatchMain"
             android:exported="true"
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
