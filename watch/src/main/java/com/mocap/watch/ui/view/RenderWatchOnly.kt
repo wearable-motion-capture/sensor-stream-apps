@@ -21,21 +21,22 @@ import com.mocap.watch.ui.RedButton
 import com.mocap.watch.ui.StreamToggle
 
 @Composable
-fun RenderStandalone(
-    audioStateFlow: StateFlow<AudioStreamState>,
-    sensorStateFlow: StateFlow<ImuStreamState>,
-    calibCallback: () -> Unit,
+fun RenderWatchOnly(
+    audioStreamStateFlow: StateFlow<AudioStreamState>,
+    imuStreamStateFlow: StateFlow<ImuStreamState>,
+    calibrated: StateFlow<Boolean>,
+    gravDiff: StateFlow<Float>,
     imuStreamCallback: (Boolean) -> Unit,
-    micStreamCallback: (Boolean) -> Unit,
+    audioStreamCallback: (Boolean) -> Unit,
     ipSetCallback: () -> Unit,
     finishCallback: () -> Unit
 ) {
 
-    val sensorState by sensorStateFlow.collectAsState()
-    val audioState by audioStateFlow.collectAsState()
+    val imuState by imuStreamStateFlow.collectAsState()
+    val audioState by audioStreamStateFlow.collectAsState()
+    val gravNum by gravDiff.collectAsState()
+    val cal by calibrated.collectAsState()
     val ip by DataSingleton.ip.collectAsState()
-    val north by DataSingleton.forwardQuat.collectAsState()
-    val press by DataSingleton.calib_pres.collectAsState()
 
     // display information in a column
     ScalingLazyColumn(
@@ -43,55 +44,29 @@ fun RenderStandalone(
     ) {
         // calibration
         item {
-            DefaultText(
-                text = "pres: ${"%.2f".format(press)} " +
-                        "forward: \n ${
-                            "%.2f %.2f %.2f %.2f".format(
-                                north[0],
-                                north[1],
-                                north[2],
-                                north[3]
-                            )
-                        }"
+            Text(
+                text = if (cal) "Posture Good" else "Hold watch level to ground and parallel to Hip\n" +
+                        "%.2f".format(gravNum),
+                color = if (cal) Color.Green else Color.Red,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.body1
             )
-        }
-        item {
-            DefaultButton(
-                enabled = (sensorState == ImuStreamState.Idle),
-                onClick = { calibCallback() },
-                text = "Recalibrate"
-            )
-        }
-        // Sensor data handler
-//        item {
-//            StreamToggle(
-//                enabled = (sensorState == SensorStreamState.Idle) or
-//                        (sensorState == SensorStreamState.Recording),
-//                text = "Record Locally",
-//                checked = (sensorState == SensorStreamState.Recording),
-//                onChecked = { recordCallback(it) }
-//            )
-//        }
-        item {
-            SensorStateDisplay(state = sensorState, modifier = Modifier.fillMaxWidth())
         }
         item {
             StreamToggle(
-                enabled = true,
+                enabled = cal or (imuState == ImuStreamState.Streaming),
                 text = "Stream IMU",
-                checked = (sensorState == ImuStreamState.Streaming),
+                checked = (imuState == ImuStreamState.Streaming),
                 onChecked = { imuStreamCallback(it) }
             )
-        }
-        item {
-            SoundStateDisplay(state = audioState, modifier = Modifier.fillMaxWidth())
         }
         item {
             StreamToggle(
                 enabled = true,
                 text = "Stream Audio",
                 checked = (audioState == AudioStreamState.Streaming),
-                onChecked = { micStreamCallback(it) }
+                onChecked = { audioStreamCallback(it) }
             )
         }
         item {
@@ -99,7 +74,7 @@ fun RenderStandalone(
         }
         item {
             DefaultButton(
-                enabled = (sensorState != ImuStreamState.Streaming) &&
+                enabled = (imuState != ImuStreamState.Streaming) &&
                         (audioState != AudioStreamState.Streaming),
                 onClick = { ipSetCallback() },
                 text = "Set Target IP"
@@ -114,47 +89,47 @@ fun RenderStandalone(
     }
 }
 
-/**
- * The simple state display when recording or streaming data. Switches between:
- * ready, streaming, Error
- */
-@Composable
-fun SensorStateDisplay(state: ImuStreamState, modifier: Modifier = Modifier) {
-    var color = Color.Red
-    if (state == ImuStreamState.Idle) {
-        color = Color.Yellow
-    } else if (state == ImuStreamState.Streaming) {
-        color = Color.Green
-    }
-    Text(
-        modifier = modifier,
-        textAlign = TextAlign.Center,
-        text = state.name,
-        style = MaterialTheme.typography.body1.copy(
-            color = color
-        )
-    )
-}
-
-
-/**
- * The simple state display when recording or streaming data. Switches between:
- * ready, streaming, Error
- */
-@Composable
-fun SoundStateDisplay(state: AudioStreamState, modifier: Modifier = Modifier) {
-    var color = Color.Red
-    if (state == AudioStreamState.Idle) {
-        color = Color.Yellow
-    } else if (state == AudioStreamState.Streaming) {
-        color = Color.Green
-    }
-    Text(
-        modifier = modifier,
-        textAlign = TextAlign.Center,
-        text = state.name,
-        style = MaterialTheme.typography.body1.copy(
-            color = color
-        )
-    )
-}
+///**
+// * The simple state display when recording or streaming data. Switches between:
+// * ready, streaming, Error
+// */
+//@Composable
+//fun SensorStateDisplay(state: ImuStreamState, modifier: Modifier = Modifier) {
+//    var color = Color.Red
+//    if (state == ImuStreamState.Idle) {
+//        color = Color.Yellow
+//    } else if (state == ImuStreamState.Streaming) {
+//        color = Color.Green
+//    }
+//    Text(
+//        modifier = modifier,
+//        textAlign = TextAlign.Center,
+//        text = state.name,
+//        style = MaterialTheme.typography.body1.copy(
+//            color = color
+//        )
+//    )
+//}
+//
+//
+///**
+// * The simple state display when recording or streaming data. Switches between:
+// * ready, streaming, Error
+// */
+//@Composable
+//fun SoundStateDisplay(state: AudioStreamState, modifier: Modifier = Modifier) {
+//    var color = Color.Red
+//    if (state == AudioStreamState.Idle) {
+//        color = Color.Yellow
+//    } else if (state == AudioStreamState.Streaming) {
+//        color = Color.Green
+//    }
+//    Text(
+//        modifier = modifier,
+//        textAlign = TextAlign.Center,
+//        text = state.name,
+//        style = MaterialTheme.typography.body1.copy(
+//            color = color
+//        )
+//    )
+//}

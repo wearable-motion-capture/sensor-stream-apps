@@ -173,6 +173,7 @@ class PhonePocketActivity : ComponentActivity(),
 
     override fun onResume() {
         super.onResume()
+        registerIMUListeners()
         registerListeners()
     }
 }
