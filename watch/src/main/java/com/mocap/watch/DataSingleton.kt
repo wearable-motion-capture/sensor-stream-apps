@@ -41,11 +41,11 @@ object DataSingleton {
     // streaming parameters
     const val IMU_MSG_SIZE = (5 + 23) * 4
     const val PPG_MSG_SIZE = (4 + 16) * 4 // timestamp(4) + data (16 float)
-    const val AUDIO_BUFFER_SIZE = 800 // bytes
+    const val AUDIO_BUFFER_SIZE = 2048 // bytes
 
     // standalone mode
     const val UDP_IMU_PORT = 46000
-    const val UDP_AUDIO_PORT = 46001
+    const val UDP_AUDIO_PORT = 65001
     const val IP_DEFAULT = "192.168.0.12"
     const val IP_KEY = "com.mocap.watch.ip" // shared preferences lookup
 

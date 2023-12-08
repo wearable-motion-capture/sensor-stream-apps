@@ -37,7 +37,7 @@ object DataSingleton {
     const val IMU_PORT_RIGHT = 65003
     const val UDP_AUDIO_PORT = 65001
     const val UDP_PPG_PORT = 65002
-    const val AUDIO_BUFFER_SIZE = 800
+    const val AUDIO_BUFFER_SIZE = 2048
     const val DUAL_IMU_MSG_SIZE = (55) * 4 // dT + SW IMU msg without calib + PH IMU MSG
 
     // recording parameters

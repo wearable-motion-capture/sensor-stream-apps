@@ -46,7 +46,7 @@ class DualCalibViewModel(
 
     companion object {
         private const val TAG = "DualCalibViewModel"  // for logging
-        private const val CALIBRATION_WAIT = 2000L
+        private const val CALIBRATION_WAIT = 1000L
         private const val COROUTINE_SLEEP = 10L
     }
 
