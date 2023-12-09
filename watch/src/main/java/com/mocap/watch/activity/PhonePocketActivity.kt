@@ -105,11 +105,15 @@ class PhonePocketActivity : ComponentActivity(),
     private fun registerIMUListeners() {
         if (this::_sensorManager.isInitialized) {
             for (l in _listeners) {
-                _sensorManager.registerListener(
-                    l,
-                    _sensorManager.getDefaultSensor(l.code),
-                    SensorManager.SENSOR_DELAY_FASTEST
-                )
+                if (_sensorManager.getDefaultSensor(l.code) != null) {
+                    _sensorManager.registerListener(
+                        l,
+                        _sensorManager.getDefaultSensor(l.code),
+                        SensorManager.SENSOR_DELAY_FASTEST
+                    )
+                } else {
+                    throw Exception("Sensor code ${l.code} is not present on this device")
+                }
             }
         }
     }
