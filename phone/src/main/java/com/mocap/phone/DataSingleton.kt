@@ -42,16 +42,13 @@ object DataSingleton {
 
     // recording parameters
     val activityOptions = listOf<String>(
+        "other",
         "brush_teeth",
         "shave",
         "deodorant",
         "wash_hands",
         "lotion",
-        "toilet_paper",
-        "wipe",
-        "wash_hair",
-        "hairwax",
-        "other"
+        "hairstyling"
     )
 
     // shared preferences lookup

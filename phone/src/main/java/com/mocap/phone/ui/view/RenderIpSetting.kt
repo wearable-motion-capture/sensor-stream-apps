@@ -174,6 +174,13 @@ fun RenderIpSetting(setIpAndPortCallback: (String, Boolean, Boolean) -> Unit) {
         item {
             SmallCard() {
                 Text(
+                    text = "Right Hand Mode is experimental. Thus far, only the Left Hand Mode is fully supported.",
+                    modifier = Modifier.padding(8.dp),
+                    textAlign = TextAlign.Left,
+                    style = MaterialTheme.typography.body2,
+                    color = Color.White
+                )
+                Text(
                     text = if (leftHandMode) "Left Hand Mode"
                     else "Right Hand Mode",
                     modifier = Modifier.padding(8.dp),
@@ -191,7 +198,13 @@ fun RenderIpSetting(setIpAndPortCallback: (String, Boolean, Boolean) -> Unit) {
         item {
             SmallCard() {
                 var expanded by remember { mutableStateOf(false) }
-
+                Text(
+                    text = "Record Locally is for developer use only. Full documentation to be added in future versions.",
+                    modifier = Modifier.padding(8.dp),
+                    textAlign = TextAlign.Left,
+                    style = MaterialTheme.typography.body2,
+                    color = Color.White
+                )
                 Text(
                     text = if (recordLocally) "Record Locally" else "Broadcast",
                     modifier = Modifier.padding(8.dp),

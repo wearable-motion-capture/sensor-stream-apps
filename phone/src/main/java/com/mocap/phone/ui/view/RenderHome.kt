@@ -134,7 +134,7 @@ fun RenderHome(
                         color = if (port == DataSingleton.IMU_PORT_LEFT) Color.Yellow else Color.Magenta,
                         style = MaterialTheme.typography.h6
                     )
-                    DefaultButton(onClick = ipSetCallback, text = "Set IP and Hand Mode")
+                    DefaultButton(onClick = ipSetCallback, text = "IP And Other Settings")
                 }
 
                 Row() {
@@ -150,12 +150,12 @@ fun RenderHome(
                                     "O: $imuOutHz Hz\n" +
                                     "Queue: $imuQueueSize"
                         )
-                        Button(
-                            onClick = imuStreamTrigger,
-                            modifier = Modifier.padding(8.dp)
-                        ) {
-                            Text(text = "trigger")
-                        }
+//                        Button(
+//                            onClick = imuStreamTrigger,
+//                            modifier = Modifier.padding(8.dp)
+//                        ) {
+//                            Text(text = "trigger")
+//                        }
                     }
                     SmallCard() {
                         DefaultHighlight(text = ":" + DataSingleton.UDP_AUDIO_PORT.toString())
