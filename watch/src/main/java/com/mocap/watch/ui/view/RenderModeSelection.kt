@@ -32,7 +32,7 @@ fun RenderModeSelection(
         }
         item {
             DefaultButton(
-                enabled = true,
+                enabled = standalone,
                 onClick = { standaloneCallback() },
                 text = "Watch Only"
             )
@@ -40,14 +40,14 @@ fun RenderModeSelection(
         item { DefaultText(text = if (standalone) "No phone app connected" else "Found connected phone app") }
         item {
             DefaultButton(
-                enabled = true,
+                enabled = !standalone,
                 onClick = { dualCallback() },
                 text = "+ Phone Upper Arm"
             )
         }
         item {
             DefaultButton(
-                enabled = true,
+                enabled = !standalone,
                 onClick = { freeHipsCallback() },
                 text = "+ Phone Pocket"
             )

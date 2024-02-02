@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId "com.mocap"
-        minSdk 30 // galaxy 4 watch SDK is 30
+        minSdk 28 // galaxy 4 watch SDK is 30
         targetSdk 33
         versionCode 1
         versionName "1.0"

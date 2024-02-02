@@ -39,7 +39,6 @@ class PhonePocketViewModel(application: Application) :
         private const val TAG = "FreeHipsViewModel"  // for logging
         private const val COROUTINE_SLEEP = 10L
         private const val CALIBRATION_WAIT = 100L
-
     }
 
     private val _application = application

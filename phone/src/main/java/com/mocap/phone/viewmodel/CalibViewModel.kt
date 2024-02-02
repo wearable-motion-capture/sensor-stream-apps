@@ -45,7 +45,7 @@ class CalibViewModel(application: Application, vibrator: Vibrator) :
             val quats = mutableListOf<FloatArray>()
 
             // collect for CALIBRATION_WAIT time
-            while (diff < 2000L) {
+            while (diff < 1000L) {
                 quats.add(_rotVec)
                 diff = Duration.between(start, LocalDateTime.now()).toMillis()
                 _quatReading.value = _rotVec
@@ -59,10 +59,10 @@ class CalibViewModel(application: Application, vibrator: Vibrator) :
             // signal completion with vibration
             _vibrator.vibrate(
                 VibrationEffect.createOneShot(
-                    500L, VibrationEffect.DEFAULT_AMPLITUDE
+                    300L, VibrationEffect.DEFAULT_AMPLITUDE
                 )
             )
-            Thread.sleep(500L)
+            Thread.sleep(300L)
 
             // send a reply if the calibration was triggered by a connected node with sourceID
             if (sourceId != null) {

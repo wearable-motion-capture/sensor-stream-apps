@@ -1,4 +1,4 @@
-package com.mocap.phone
+package com.mocap.phone.activity
 
 import android.content.Intent
 import android.content.IntentFilter
@@ -15,6 +15,7 @@ import com.google.android.gms.wearable.CapabilityInfo
 import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
+import com.mocap.phone.DataSingleton
 import com.mocap.phone.modules.ServiceBroadcastReceiver
 import com.mocap.phone.service.AudioService
 import com.mocap.phone.service.ImuService
@@ -51,9 +52,14 @@ class PhoneMain : ComponentActivity(),
             if (storedIp != null) {
                 DataSingleton.setIp(storedIp)
             }
-            val storedPort =
-                sharedPref.getInt(DataSingleton.PORT_KEY, DataSingleton.IMU_PORT_DEFAULT)
-            DataSingleton.setImuPort(storedPort)
+            DataSingleton.setImuPort(sharedPref.getInt(
+                DataSingleton.PORT_KEY,
+                DataSingleton.IMU_PORT_DEFAULT)
+            )
+            DataSingleton.setRecordLocally(sharedPref.getBoolean(
+                DataSingleton.RECORD_LOCALLY_KEY,
+                DataSingleton.RECORD_LOCALLY_DEFAULT
+            ))
 
             PhoneTheme {
                 // keep screen on

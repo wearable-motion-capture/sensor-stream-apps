@@ -1,9 +1,11 @@
 package com.mocap.watch.activity
 
-import RenderStandalone
+import RenderWatchOnly
 import android.Manifest
 import android.content.Intent
 import android.content.IntentFilter
+import android.hardware.Sensor
+import android.hardware.SensorManager
 import android.os.*
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -13,6 +15,7 @@ import androidx.annotation.RequiresPermission
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.preference.PreferenceManager
 import com.mocap.watch.DataSingleton
+import com.mocap.watch.modules.SensorListener
 import com.mocap.watch.modules.ServiceBroadcastReceiver
 import com.mocap.watch.ui.theme.WatchTheme
 import com.mocap.watch.viewmodel.WatchOnlyViewModel
@@ -24,11 +27,13 @@ class WatchOnlyActivity : ComponentActivity() {
         private const val TAG = "WatchOnlyActivity"  // for logging
     }
 
-    private val _watchOnlyViewModel by viewModels<WatchOnlyViewModel>()
+    private val _viewModel by viewModels<WatchOnlyViewModel>()
+    private lateinit var _sensorManager: SensorManager
+    private var _listeners = listOf<SensorListener>()
     private val _br =
         ServiceBroadcastReceiver(
-            onServiceClose = { _watchOnlyViewModel.onServiceClose(it) },
-            onServiceUpdate = { _watchOnlyViewModel.onServiceUpdate(it) }
+            onServiceClose = { _viewModel.onServiceClose(it) },
+            onServiceUpdate = { _viewModel.onServiceUpdate(it) }
         )
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
@@ -36,35 +41,75 @@ class WatchOnlyActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
+
+            // keep screen on
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+            // retrieve stored IP and update DataSingleton
+            val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+            val ip = sharedPref.getString(DataSingleton.IP_KEY, DataSingleton.IP_DEFAULT)
+            if (ip == null) {
+                DataSingleton.setIp(DataSingleton.IP_DEFAULT)
+                DataSingleton.IP_DEFAULT
+            } else {
+                DataSingleton.setIp(ip)
+            }
+
+            // add Sensor Listeners with our calibrator callbacks
+            _sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
+            _listeners = listOf(
+                SensorListener(
+                    Sensor.TYPE_PRESSURE
+                ) { _viewModel.onPressureReadout(it) },
+                SensorListener(
+                    Sensor.TYPE_ROTATION_VECTOR
+                ) { _viewModel.onRotVecReadout(it) },
+                SensorListener(
+                    Sensor.TYPE_GRAVITY
+                ) { _viewModel.onGravReadout(it) }
+            )
+
+            registerListeners()
+            registerIMUListeners()
+            _viewModel.gravityCheck()
+
             WatchTheme {
-                // keep screen on
-                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-
-                // retrieve stored IP and update DataSingleton
-                val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
-                val ip = sharedPref.getString(DataSingleton.IP_KEY, DataSingleton.IP_DEFAULT)
-                if (ip == null) {
-                    DataSingleton.setIp(DataSingleton.IP_DEFAULT)
-                    DataSingleton.IP_DEFAULT
-                } else {
-                    DataSingleton.setIp(ip)
-                }
-
-                RenderStandalone(
-                    audioStateFlow = _watchOnlyViewModel.audioStrState,
-                    sensorStateFlow = _watchOnlyViewModel.sensorStrState,
-                    calibCallback = {
-                        startActivity(Intent("com.mocap.watch.WATCH_ONLY_CALIBRATION"))
-                    },
+                RenderWatchOnly(
+                    audioStreamStateFlow = _viewModel.audioStrState,
+                    imuStreamStateFlow = _viewModel.sensorStrState,
+                    calibrated = _viewModel.calSuccessState,
+                    gravDiff = _viewModel.gravDiff,
                     ipSetCallback = {
                         startActivity(Intent("com.mocap.watch.SET_IP"))
                     },
-                    imuStreamCallback = { _watchOnlyViewModel.imuStreamTrigger(it) },
-                    micStreamCallback = { _watchOnlyViewModel.audioStreamTrigger(it) },
+                    imuStreamCallback = { _viewModel.imuStreamTrigger(it) },
+                    audioStreamCallback = { _viewModel.audioStreamTrigger(it) },
                     finishCallback = ::finish
                 )
-
             }
+        }
+    }
+
+    private fun registerIMUListeners() {
+        if (this::_sensorManager.isInitialized) {
+            for (l in _listeners) {
+                if (_sensorManager.getDefaultSensor(l.code) != null){
+                    _sensorManager.registerListener(
+                        l,
+                        _sensorManager.getDefaultSensor(l.code),
+                        SensorManager.SENSOR_DELAY_FASTEST
+                    )
+                }
+                else {
+                    throw Exception("Sensor code ${l.code} is not present on this device")
+                }
+            }
+        }
+    }
+
+    private fun unregisterIMUListeners() {
+        if (this::_sensorManager.isInitialized) {
+            for (l in _listeners) _sensorManager.unregisterListener(l)
         }
     }
 
@@ -83,12 +128,14 @@ class WatchOnlyActivity : ComponentActivity() {
      * clear all listeners
      */
     private fun unregisterListeners() {
+        unregisterIMUListeners()
+        _viewModel.resetAllStreamStates()
         LocalBroadcastManager.getInstance(applicationContext).unregisterReceiver(_br)
-        _watchOnlyViewModel.resetAllStreamStates()
     }
 
     override fun onResume() {
         super.onResume()
+        registerIMUListeners()
         registerListeners()
     }
 

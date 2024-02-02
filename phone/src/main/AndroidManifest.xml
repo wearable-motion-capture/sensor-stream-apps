@@ -11,7 +11,7 @@
         android:label="mocap_phone"
         android:theme="@android:style/Theme.DeviceDefault">
         <activity
-            android:name=".PhoneMain"
+            android:name=".activity.PhoneMain"
             android:exported="true"
             android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen">
             <intent-filter>

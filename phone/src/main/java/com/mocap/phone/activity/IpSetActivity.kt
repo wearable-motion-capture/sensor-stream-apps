@@ -29,7 +29,7 @@ class IpSetActivity : ComponentActivity() {
         }
     }
 
-    private fun setIpPort(ip: String, leftHandMode: Boolean) {
+    private fun setIpPort(ip: String, leftHandMode: Boolean, recordLocally : Boolean) {
 
         // decide on port based on hand mode
         var p = DataSingleton.IMU_PORT_RIGHT
@@ -42,14 +42,16 @@ class IpSetActivity : ComponentActivity() {
         with(sharedPref.edit()) {
             putInt(DataSingleton.PORT_KEY, p)
             putString(DataSingleton.IP_KEY, ip)
+            putBoolean(DataSingleton.RECORD_LOCALLY_KEY, recordLocally)
             apply()
         }
 
         // update data singleton
         DataSingleton.setImuPort(p)
         DataSingleton.setIp(ip)
+        DataSingleton.setRecordLocally(recordLocally)
 
-        Log.d(TAG, "set target IP to $ip and IMU PORT to $p")
+        Log.d(TAG, "set target IP to $ip and IMU PORT to $p and record locally to $recordLocally")
         this.finish() // activity done
     }
 
