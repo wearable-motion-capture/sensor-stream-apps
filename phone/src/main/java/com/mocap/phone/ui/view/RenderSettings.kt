@@ -13,8 +13,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 
-import androidx.compose.foundation.layout.Box
-
 import androidx.compose.foundation.layout.fillMaxSize
 
 import androidx.compose.foundation.layout.wrapContentSize
@@ -43,12 +41,9 @@ fun RenderSettings(setIpAndPortCallback: (String, Boolean, Boolean) -> Unit) {
 
     // hand mode variables
     val port by DataSingleton.imuPort.collectAsState()
+    var ipText by remember { mutableStateOf(DataSingleton.ip.value) }
     val recordLocally by DataSingleton.recordLocally.collectAsState()
     var leftHandMode by remember { mutableStateOf(port == DataSingleton.IMU_PORT_LEFT) }
-    val recordActivity by DataSingleton.recordActivityName.collectAsState()
-
-    // formatting
-    var ipText by remember { mutableStateOf(DataSingleton.ip.value) }
 
     LazyColumn(
         modifier = Modifier
@@ -74,17 +69,19 @@ fun RenderSettings(setIpAndPortCallback: (String, Boolean, Boolean) -> Unit) {
 
 
         item {
-            DefaultHeadline(text = "Set Hand Mode")
+            DefaultHeadline(text = "Data Processing Modes")
         }
         item {
             SmallCard() {
-                Text(
-                    text = "Right Hand Mode is experimental. Thus far, only the Left Hand Mode is fully supported.",
-                    modifier = Modifier.padding(8.dp),
-                    textAlign = TextAlign.Left,
-                    style = MaterialTheme.typography.body2,
-                    color = Color.White
-                )
+                if (!leftHandMode){
+                    Text(
+                        text = "Right Hand Mode is experimental. Thus far, only the Left Hand Mode is fully supported.",
+                        modifier = Modifier.padding(8.dp),
+                        textAlign = TextAlign.Left,
+                        style = MaterialTheme.typography.body2,
+                        color = Color.White
+                    )
+                }
                 Text(
                     text = if (leftHandMode) "Left Hand Mode"
                     else "Right Hand Mode",
@@ -102,14 +99,6 @@ fun RenderSettings(setIpAndPortCallback: (String, Boolean, Boolean) -> Unit) {
 
         item {
             SmallCard() {
-                var expanded by remember { mutableStateOf(false) }
-                Text(
-                    text = "Record Locally is for developer use only. Full documentation to be added in future versions.",
-                    modifier = Modifier.padding(8.dp),
-                    textAlign = TextAlign.Left,
-                    style = MaterialTheme.typography.body2,
-                    color = Color.White
-                )
                 Text(
                     text = if (recordLocally) "Record Locally" else "Broadcast",
                     modifier = Modifier.padding(8.dp),
@@ -122,28 +111,69 @@ fun RenderSettings(setIpAndPortCallback: (String, Boolean, Boolean) -> Unit) {
                     onCheckedChange = { DataSingleton.setRecordLocally(!recordLocally) }
                 )
 
-                DefaultText(text = recordActivity)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .wrapContentSize(Alignment.TopEnd)
-                ) {
-                    IconButton(onClick = { expanded = !expanded }) {
-                        androidx.compose.material.Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "More"
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
+                if (recordLocally) {
+                    val recordActivityA by DataSingleton.recordActivityNameA.collectAsState()
+                    val recordActivityB by DataSingleton.recordActivityNameB.collectAsState()
+                    var expandedA by remember { mutableStateOf(false) }
+                    var expandedB by remember { mutableStateOf(false) }
+
+
+                    Text(
+                        text = "Record Locally is for developer use only. Full documentation to be added in future versions.",
+                        modifier = Modifier.padding(8.dp),
+                        textAlign = TextAlign.Left,
+                        style = MaterialTheme.typography.body2,
+                        color = Color.White
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        for (a in DataSingleton.activityOptions) {
-                            DropdownMenuItem(onClick = {
-                                DataSingleton.setRecordActivityName(a)
-                                expanded = false
-                            }) {
-                                Text(a)
+                        Row(
+                            modifier = Modifier.wrapContentSize(Alignment.TopEnd)
+                        ) {
+                            IconButton(onClick = { expandedA = !expandedA }) {
+                                androidx.compose.material.Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "More"
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = expandedA,
+                                onDismissRequest = { expandedA = false }
+                            ) {
+                                for (a in DataSingleton.activityOptions) {
+                                    DropdownMenuItem(onClick = {
+                                        DataSingleton.setRecordActivityNameA(a)
+                                        expandedA = false
+                                    }) {
+                                        Text(a)
+                                    }
+                                }
+                            }
+                        }
+                        DefaultText(text = "$recordActivityA -> $recordActivityB")
+                        Row(
+                            modifier = Modifier.wrapContentSize(Alignment.TopEnd)
+                        ){
+                            IconButton(onClick = { expandedB = !expandedB }) {
+                                androidx.compose.material.Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "More"
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = expandedB,
+                                onDismissRequest = { expandedB = false }
+                            ) {
+                                for (a in DataSingleton.activityOptions) {
+                                    DropdownMenuItem(onClick = {
+                                        DataSingleton.setRecordActivityNameB(a)
+                                        expandedB = false
+                                    }) {
+                                        Text(a)
+                                    }
+                                }
                             }
                         }
                     }
