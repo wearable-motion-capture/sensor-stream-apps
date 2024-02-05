@@ -8,10 +8,10 @@ import androidx.activity.compose.setContent
 import androidx.preference.PreferenceManager.getDefaultSharedPreferences
 import com.mocap.phone.DataSingleton
 import com.mocap.phone.ui.theme.PhoneTheme
-import com.mocap.phone.ui.view.RenderIpSetting
+import com.mocap.phone.ui.view.RenderSettings
 
 
-class IpSetActivity : ComponentActivity() {
+class SettingsActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "IpSetActivity"  // for logging
@@ -22,7 +22,7 @@ class IpSetActivity : ComponentActivity() {
 
         setContent {
             PhoneTheme {
-                RenderIpSetting(
+                RenderSettings(
                     setIpAndPortCallback = this::setIpPort
                 )
             }
@@ -31,6 +31,12 @@ class IpSetActivity : ComponentActivity() {
 
     private fun setIpPort(ip: String, leftHandMode: Boolean, recordLocally : Boolean) {
 
+        // Make sure the text contains a valid IP
+        var confirmedIp = ip
+        val regex = """^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$""".toRegex()
+        if (!regex.containsMatchIn(ip)) {
+            confirmedIp = "ERROR - Malformed"
+        }
         // decide on port based on hand mode
         var p = DataSingleton.IMU_PORT_RIGHT
         if (leftHandMode) {
@@ -41,7 +47,7 @@ class IpSetActivity : ComponentActivity() {
         val sharedPref = getDefaultSharedPreferences(this)
         with(sharedPref.edit()) {
             putInt(DataSingleton.PORT_KEY, p)
-            putString(DataSingleton.IP_KEY, ip)
+            putString(DataSingleton.IP_KEY, confirmedIp)
             putBoolean(DataSingleton.RECORD_LOCALLY_KEY, recordLocally)
             apply()
         }

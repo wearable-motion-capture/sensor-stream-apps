@@ -1,5 +1,4 @@
 package com.mocap.watch.service.channel
-
 import android.content.Intent
 import android.util.Log
 import com.google.android.gms.wearable.Wearable
