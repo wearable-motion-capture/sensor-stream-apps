@@ -70,7 +70,7 @@ object DataSingleton {
         if (st.equals(recordActivityNameBStateFlow.value)) {
             recordActivityNameCombinedStateFlow.value = st
         } else {
-            recordActivityNameCombinedStateFlow.value = "$st->${recordActivityNameBStateFlow.value}"
+            recordActivityNameCombinedStateFlow.value = "seq_$st--${recordActivityNameBStateFlow.value}"
         }
     }
 
@@ -82,7 +82,7 @@ object DataSingleton {
         if (st.equals(recordActivityNameAStateFlow.value)) {
             recordActivityNameCombinedStateFlow.value = st
         } else {
-            recordActivityNameCombinedStateFlow.value = "${recordActivityNameAStateFlow.value}->$st"
+            recordActivityNameCombinedStateFlow.value = "seq_${recordActivityNameAStateFlow.value}--$st"
         }
     }
 
