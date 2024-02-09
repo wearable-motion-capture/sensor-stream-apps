@@ -119,7 +119,9 @@ fun RenderSettings(setIpAndPortCallback: (String, Boolean, Boolean) -> Unit) {
 
 
                     Text(
-                        text = "Record Locally is for developer use only. Full documentation to be added in future versions.",
+                        text = "Record Locally is for developer use only. " +
+                                "Full documentation to be added in future versions. " +
+                                "Select distinct activities for sequences.",
                         modifier = Modifier.padding(8.dp),
                         textAlign = TextAlign.Left,
                         style = MaterialTheme.typography.body2,
