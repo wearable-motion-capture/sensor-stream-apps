@@ -160,7 +160,7 @@ class ImuService : Service() {
         _swOutCount = 0
     }
 
-    /** reads watch IMU messages from _imuPpgQueue and broadcasts them via UDP */
+    /** reads watch IMU messages from _imuPpgQueue and writes them to a file */
     private suspend fun recordImuMessages(c: ChannelClient.Channel) {
         try {
             withContext(Dispatchers.IO) {

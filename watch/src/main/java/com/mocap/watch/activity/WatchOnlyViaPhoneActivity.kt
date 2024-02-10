@@ -1,60 +1,56 @@
 package com.mocap.watch.activity
 
-import RenderWatchOnlyUdp
-import android.Manifest
-import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.Sensor
 import android.hardware.SensorManager
+import android.net.Uri
 import android.os.*
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.annotation.RequiresPermission
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import androidx.preference.PreferenceManager
+import com.google.android.gms.wearable.CapabilityClient
+import com.google.android.gms.wearable.CapabilityInfo
+import com.google.android.gms.wearable.MessageClient
+import com.google.android.gms.wearable.MessageEvent
+import com.google.android.gms.wearable.Wearable
 import com.mocap.watch.DataSingleton
 import com.mocap.watch.modules.SensorListener
 import com.mocap.watch.modules.ServiceBroadcastReceiver
+import com.mocap.watch.modules.WatchChannelCallback
 import com.mocap.watch.ui.theme.WatchTheme
-import com.mocap.watch.viewmodel.WatchOnlyUdpViewModel
+import com.mocap.watch.ui.view.RenderWatchOnlyViaPhone
+import com.mocap.watch.viewmodel.WatchOnlyViaPhoneViewModel
 
 
-class WatchOnlyActivity : ComponentActivity() {
+class WatchOnlyViaPhoneActivity : ComponentActivity(),
+    MessageClient.OnMessageReceivedListener,
+    CapabilityClient.OnCapabilityChangedListener {
 
     companion object {
-        private const val TAG = "WatchOnlyActivity"  // for logging
+        private const val TAG = "WatchOnlyViaPhoneActivity"  // for logging
     }
 
-    private val _viewModel by viewModels<WatchOnlyUdpViewModel>()
+    private val _channelClient by lazy { Wearable.getChannelClient(this) }
+    private val _capabilityClient by lazy { Wearable.getCapabilityClient(this) }
+    private val _messageClient by lazy { Wearable.getMessageClient(this) }
+    private val _viewModel by viewModels<WatchOnlyViaPhoneViewModel>()
     private lateinit var _sensorManager: SensorManager
     private var _listeners = listOf<SensorListener>()
+    private val _channelCallback = WatchChannelCallback(
+        closeCallback = { _viewModel.onChannelClose(it) }
+    )
     private val _br =
         ServiceBroadcastReceiver(
             onServiceClose = { _viewModel.onServiceClose(it) },
             onServiceUpdate = { _viewModel.onServiceUpdate(it) }
         )
 
-    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
-
-            // keep screen on
-            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-
-            // retrieve stored IP and update DataSingleton
-            val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
-            val ip = sharedPref.getString(DataSingleton.IP_KEY, DataSingleton.IP_DEFAULT)
-            if (ip == null) {
-                DataSingleton.setIp(DataSingleton.IP_DEFAULT)
-                DataSingleton.IP_DEFAULT
-            } else {
-                DataSingleton.setIp(ip)
-            }
-
             // add Sensor Listeners with our calibrator callbacks
             _sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
             _listeners = listOf(
@@ -69,38 +65,47 @@ class WatchOnlyActivity : ComponentActivity() {
                 ) { _viewModel.onGravReadout(it) }
             )
 
+            // with the vibration service, create the view model
+            _viewModel.queryCapabilities()
+            _viewModel.regularConnectionCheck()
             registerListeners()
             registerIMUListeners()
             _viewModel.gravityCheck()
 
+            // keep screen on
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             WatchTheme {
-                RenderWatchOnlyUdp(
-                    audioStreamStateFlow = _viewModel.audioStrState,
-                    imuStreamStateFlow = _viewModel.sensorStrState,
+                RenderWatchOnlyViaPhone(
+                    connected = _viewModel.pingSuccessState,
+                    connectedNodeName = _viewModel.nodeName,
                     calibrated = _viewModel.calSuccessState,
                     gravDiff = _viewModel.gravDiff,
-                    ipSetCallback = {
-                        startActivity(Intent("com.mocap.watch.SET_IP"))
-                    },
+                    imuStreamStateFlow = _viewModel.sensorStreamState,
                     imuStreamCallback = { _viewModel.imuStreamTrigger(it) },
-                    audioStreamCallback = { _viewModel.audioStreamTrigger(it) },
                     finishCallback = ::finish
                 )
             }
         }
     }
 
+    override fun onMessageReceived(messageEvent: MessageEvent) {
+        _viewModel.onMessageReceived(messageEvent)
+    }
+
+    override fun onCapabilityChanged(capabilityInfo: CapabilityInfo) {
+        _viewModel.onCapabilityChanged(capabilityInfo)
+    }
+
     private fun registerIMUListeners() {
         if (this::_sensorManager.isInitialized) {
             for (l in _listeners) {
-                if (_sensorManager.getDefaultSensor(l.code) != null){
+                if (_sensorManager.getDefaultSensor(l.code) != null) {
                     _sensorManager.registerListener(
                         l,
                         _sensorManager.getDefaultSensor(l.code),
                         SensorManager.SENSOR_DELAY_FASTEST
                     )
-                }
-                else {
+                } else {
                     throw Exception("Sensor code ${l.code} is not present on this device")
                 }
             }
@@ -114,7 +119,8 @@ class WatchOnlyActivity : ComponentActivity() {
     }
 
     /**
-     * To register all listeners for all used channels
+     * Register all listeners with their assigned codes.
+     * Called on app startup and whenever app resumes
      */
     private fun registerListeners() {
         // broadcasts inform about stopped services
@@ -122,21 +128,40 @@ class WatchOnlyActivity : ComponentActivity() {
         filter.addAction(DataSingleton.BROADCAST_CLOSE)
         filter.addAction(DataSingleton.BROADCAST_UPDATE)
         LocalBroadcastManager.getInstance(applicationContext).registerReceiver(_br, filter)
+
+        // listen for ping messages
+        _messageClient.addListener(this)
+        // to handle incoming data streams
+        _channelClient.registerChannelCallback(_channelCallback)
+        // for the phone app to detect this phone
+        _capabilityClient.addLocalCapability(DataSingleton.WATCH_APP_ACTIVE)
+        // checks for a connected device with the Phone capability
+        _capabilityClient.addListener(
+            this,
+            Uri.parse("wear://"),
+            CapabilityClient.FILTER_REACHABLE
+        )
+        _viewModel.queryCapabilities()
     }
 
     /**
-     * clear all listeners
+     * Unregister listeners and cancel vibration signals when exiting
+     * the calibration activity
      */
     private fun unregisterListeners() {
         unregisterIMUListeners()
-        _viewModel.resetAllStreamStates()
         LocalBroadcastManager.getInstance(applicationContext).unregisterReceiver(_br)
+        _viewModel.resetAllStreamStates()
+        _messageClient.removeListener(this)
+        _channelClient.unregisterChannelCallback(_channelCallback)
+        _capabilityClient.removeListener(this)
+        _capabilityClient.removeLocalCapability(DataSingleton.WATCH_APP_ACTIVE)
+        this.finish()
     }
 
-    override fun onResume() {
-        super.onResume()
-        registerIMUListeners()
-        registerListeners()
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterListeners()
     }
 
     override fun onPause() {
@@ -144,11 +169,9 @@ class WatchOnlyActivity : ComponentActivity() {
         unregisterListeners()
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        unregisterListeners()
+    override fun onResume() {
+        super.onResume()
+        registerIMUListeners()
+        registerListeners()
     }
 }
-
-
-

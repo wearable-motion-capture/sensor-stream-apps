@@ -31,7 +31,7 @@
             android:value="true" />
 
         <activity
-            android:name=".activity.WatchMain"
+            android:name=".activity.WatchModeSelection"
             android:exported="true"
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
@@ -62,11 +62,11 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".activity.WatchOnlyCalibActivity"
+            android:name=".activity.WatchOnlyViaPhoneActivity"
             android:exported="true"
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
-                <action android:name="com.mocap.watch.WATCH_ONLY_CALIBRATION" />
+                <action android:name="com.mocap.watch.WATCH_ONLY_VIA_PHONE" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>

@@ -207,6 +207,7 @@ class PhoneViewModel(application: Application) :
             // reset self-calibration count and skip calibration activity
             DataSingleton.CALIBRATION_PATH -> {
                 val b = ByteBuffer.wrap(messageEvent.data)
+                // Watch calibration data
                 DataSingleton.setWatchForwardQuat(
                     floatArrayOf(
                         b.getFloat(0), b.getFloat(4),
@@ -214,8 +215,10 @@ class PhoneViewModel(application: Application) :
                     )
                 )
                 DataSingleton.setWatchRelPres(b.getFloat(16))
+
+                // now check the mode
                 when (b.getInt(20)) {
-                    2 -> { // self-calibration without confirmation
+                    2 -> { // Mode 2: self-calibration with immediate reply to watch
                         DataSingleton.calib_count = 0
                         _scope.launch {
                             val buffer = ByteBuffer.allocate(4) // [mode (int)]

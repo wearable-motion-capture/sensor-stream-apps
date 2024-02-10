@@ -159,9 +159,9 @@ class DualCalibViewModel(
                 val buffer = ByteBuffer.allocate(4 * 6) // [quat (4), pres, mode]
                 for (v in avgQuat) buffer.putFloat(v)
                 buffer.putFloat(relPres.toFloat())
-                buffer.putInt(1) // mode
+                buffer.putInt(1) // mode 1: no automatic calibration reply send manual message later
 
-                // send byte array in a message
+                // Send byte array in a message
                 val sendMessageTask = _messageClient.sendMessage(
                     node.id, DataSingleton.CALIBRATION_PATH, buffer.array()
                 )

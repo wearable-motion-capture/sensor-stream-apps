@@ -21,7 +21,7 @@ import com.mocap.watch.ui.RedButton
 import com.mocap.watch.ui.StreamToggle
 
 @Composable
-fun RenderWatchOnly(
+fun RenderWatchOnlyUdp(
     audioStreamStateFlow: StateFlow<AudioStreamState>,
     imuStreamStateFlow: StateFlow<ImuStreamState>,
     calibrated: StateFlow<Boolean>,
@@ -88,48 +88,3 @@ fun RenderWatchOnly(
         }
     }
 }
-
-///**
-// * The simple state display when recording or streaming data. Switches between:
-// * ready, streaming, Error
-// */
-//@Composable
-//fun SensorStateDisplay(state: ImuStreamState, modifier: Modifier = Modifier) {
-//    var color = Color.Red
-//    if (state == ImuStreamState.Idle) {
-//        color = Color.Yellow
-//    } else if (state == ImuStreamState.Streaming) {
-//        color = Color.Green
-//    }
-//    Text(
-//        modifier = modifier,
-//        textAlign = TextAlign.Center,
-//        text = state.name,
-//        style = MaterialTheme.typography.body1.copy(
-//            color = color
-//        )
-//    )
-//}
-//
-//
-///**
-// * The simple state display when recording or streaming data. Switches between:
-// * ready, streaming, Error
-// */
-//@Composable
-//fun SoundStateDisplay(state: AudioStreamState, modifier: Modifier = Modifier) {
-//    var color = Color.Red
-//    if (state == AudioStreamState.Idle) {
-//        color = Color.Yellow
-//    } else if (state == AudioStreamState.Streaming) {
-//        color = Color.Green
-//    }
-//    Text(
-//        modifier = modifier,
-//        textAlign = TextAlign.Center,
-//        text = state.name,
-//        style = MaterialTheme.typography.body1.copy(
-//            color = color
-//        )
-//    )
-//}

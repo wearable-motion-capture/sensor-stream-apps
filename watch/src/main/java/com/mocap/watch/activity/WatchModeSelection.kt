@@ -28,7 +28,7 @@ import kotlinx.coroutines.launch
  * The MainActivity is where the app starts. For the watch app, this is the main selection between
  * Dual and Standalone mode
  */
-class WatchMain : ComponentActivity(),
+class WatchModeSelection : ComponentActivity(),
     CapabilityClient.OnCapabilityChangedListener {
 
     companion object {
@@ -64,9 +64,10 @@ class WatchMain : ComponentActivity(),
             WatchTheme {
                 RenderModeSelection(
                     standaloneSF = _standalone,
-                    standaloneCallback = { startActivity(Intent("com.mocap.watch.WATCH_ONLY")) },
-                    dualCallback = { startActivity(Intent("com.mocap.watch.PHONE_ARM")) },
-                    freeHipsCallback = { startActivity(Intent("com.mocap.watch.PHONE_POCKET")) }
+                    watchOnlyUdpCallback = { startActivity(Intent("com.mocap.watch.WATCH_ONLY")) },
+                    watchViaPhoneCallback = { startActivity(Intent("com.mocap.watch.WATCH_ONLY_VIA_PHONE")) },
+                    upperArmCallback = { startActivity(Intent("com.mocap.watch.PHONE_ARM")) },
+                    pocketCallback = { startActivity(Intent("com.mocap.watch.PHONE_POCKET")) }
                 )
             }
         }
