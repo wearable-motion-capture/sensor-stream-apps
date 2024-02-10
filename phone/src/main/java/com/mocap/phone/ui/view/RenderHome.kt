@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -50,7 +49,7 @@ fun RenderHome(
     val ip by DataSingleton.ip.collectAsState()
     val port by DataSingleton.imuPort.collectAsState()
     val recordLocally by DataSingleton.recordLocally.collectAsState()
-    val recordActivityName by DataSingleton.recordActivityName.collectAsState()
+    val recordActivityName by DataSingleton.recordActivityNameCombined.collectAsState()
 
     val nodeName by connectedNodeSF.collectAsState()
     val appState by appActiveSF.collectAsState()
@@ -150,6 +149,7 @@ fun RenderHome(
                                     "O: $imuOutHz Hz\n" +
                                     "Queue: $imuQueueSize"
                         )
+                        // This is an experimental Button. Stored for later use.
 //                        Button(
 //                            onClick = imuStreamTrigger,
 //                            modifier = Modifier.padding(8.dp)

@@ -59,11 +59,35 @@ object DataSingleton {
     const val RECORD_LOCALLY_KEY = "com.mocap.phone.record_locally"
     const val RECORD_LOCALLY_DEFAULT = false
 
-    private val recordActivityNameStateFlow = MutableStateFlow(activityOptions[0])
-    val recordActivityName = recordActivityNameStateFlow.asStateFlow()
-    fun setRecordActivityName(st: String) {
-        recordActivityNameStateFlow.value = st
+    private val recordActivityNameCombinedStateFlow = MutableStateFlow(activityOptions[0])
+    val recordActivityNameCombined = recordActivityNameCombinedStateFlow.asStateFlow()
+
+    // For recording sequences we record activity A ...
+    private val recordActivityNameAStateFlow = MutableStateFlow(activityOptions[0])
+    val recordActivityNameA = recordActivityNameAStateFlow.asStateFlow()
+    fun setRecordActivityNameA(st: String) {
+        recordActivityNameAStateFlow.value = st
+        if (st.equals(recordActivityNameBStateFlow.value)) {
+            recordActivityNameCombinedStateFlow.value = st
+        } else {
+            recordActivityNameCombinedStateFlow.value =
+                "seq_$st--${recordActivityNameBStateFlow.value}"
+        }
     }
+
+    // ... and activity B. See method above.
+    private val recordActivityNameBStateFlow = MutableStateFlow(activityOptions[0])
+    val recordActivityNameB = recordActivityNameBStateFlow.asStateFlow()
+    fun setRecordActivityNameB(st: String) {
+        recordActivityNameBStateFlow.value = st
+        if (st.equals(recordActivityNameAStateFlow.value)) {
+            recordActivityNameCombinedStateFlow.value = st
+        } else {
+            recordActivityNameCombinedStateFlow.value =
+                "seq_${recordActivityNameAStateFlow.value}--$st"
+        }
+    }
+
 
     // as state flow to update UI elements when IP changes
     private val ipStateFlow = MutableStateFlow(IP_DEFAULT)

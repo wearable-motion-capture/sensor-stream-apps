@@ -179,7 +179,7 @@ class ImuService : Service() {
                 // create unique filename from current date and time
                 val currentDate =
                     (DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss-SSS")).format(LocalDateTime.now())
-                val activityName = DataSingleton.recordActivityName.value
+                val activityName = DataSingleton.recordActivityNameCombined.value
                 val fileName = "rec_phone_pocket_${activityName}_${currentDate}.csv"
 
                 // permission rules only allow to write into the public shared directory
@@ -261,7 +261,8 @@ class ImuService : Service() {
                             }
                         }
                         var wstr = ""
-                        for (entry in swData.slice(0..22).toFloatArray() + phoneData + calibrationDat) {
+                        for (entry in swData.slice(0..22)
+                            .toFloatArray() + phoneData + calibrationDat) {
                             wstr += "$entry,"
                         }
                         fOut.write(wstr + "$activityName\n") // new line at the end
@@ -298,14 +299,13 @@ class ImuService : Service() {
                 udpSocket.use {
                     // register all sensor listeners
                     for (l in _listeners) {
-                        if (_sensorManager.getDefaultSensor(l.code) != null){
+                        if (_sensorManager.getDefaultSensor(l.code) != null) {
                             _sensorManager.registerListener(
                                 l,
                                 _sensorManager.getDefaultSensor(l.code),
                                 SensorManager.SENSOR_DELAY_FASTEST
                             )
-                        }
-                        else {
+                        } else {
                             throw Exception("Sensor code ${l.code} is not present on this device")
                         }
                     }
