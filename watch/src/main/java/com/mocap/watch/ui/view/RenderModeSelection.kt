@@ -15,9 +15,10 @@ import kotlinx.coroutines.flow.StateFlow
 @Composable
 fun RenderModeSelection(
     standaloneSF: StateFlow<Boolean>,
-    standaloneCallback: () -> Unit,
-    dualCallback: () -> Unit,
-    freeHipsCallback: () -> Unit
+    watchOnlyUdpCallback: () -> Unit,
+    watchViaPhoneCallback: () -> Unit,
+    upperArmCallback: () -> Unit,
+    pocketCallback: () -> Unit
 ) {
     val standalone by standaloneSF.collectAsState()
 
@@ -33,7 +34,7 @@ fun RenderModeSelection(
         item {
             DefaultButton(
                 enabled = standalone,
-                onClick = { standaloneCallback() },
+                onClick = { watchOnlyUdpCallback() },
                 text = "Watch Only"
             )
         }
@@ -41,15 +42,22 @@ fun RenderModeSelection(
         item {
             DefaultButton(
                 enabled = !standalone,
-                onClick = { dualCallback() },
-                text = "+ Phone Upper Arm"
+                onClick = { upperArmCallback() },
+                text = "Phone Upper Arm"
             )
         }
         item {
             DefaultButton(
                 enabled = !standalone,
-                onClick = { freeHipsCallback() },
-                text = "+ Phone Pocket"
+                onClick = { pocketCallback() },
+                text = "Phone Pocket"
+            )
+        }
+        item {
+            DefaultButton(
+                enabled = !standalone,
+                onClick = { watchViaPhoneCallback() },
+                text = "Watch Only via Phone"
             )
         }
         item {

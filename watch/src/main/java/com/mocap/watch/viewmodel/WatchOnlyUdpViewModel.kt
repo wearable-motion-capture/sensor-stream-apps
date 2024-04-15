@@ -21,13 +21,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
-import java.nio.ByteBuffer
 import java.time.Duration
 import java.time.LocalDateTime
 
 
-class WatchOnlyViewModel(application: Application) :
+class WatchOnlyUdpViewModel(application: Application) :
     AndroidViewModel(application) {
 
     /** setup-specific parameters */

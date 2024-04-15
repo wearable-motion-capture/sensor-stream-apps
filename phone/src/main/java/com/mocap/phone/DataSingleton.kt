@@ -43,12 +43,16 @@ object DataSingleton {
     // recording parameters
     val activityOptions = listOf<String>(
         "other",
+        "still",
         "brush_teeth",
-        "shave",
+        "shave_face",
         "deodorant",
         "wash_hands",
         "lotion",
-        "hairstyling"
+        "hairstyling",
+        "wash_hair",
+        "shave_legs",
+        "soap_body"
     )
 
     // shared preferences lookup
@@ -87,7 +91,6 @@ object DataSingleton {
                 "seq_${recordActivityNameAStateFlow.value}--$st"
         }
     }
-
 
     // as state flow to update UI elements when IP changes
     private val ipStateFlow = MutableStateFlow(IP_DEFAULT)
