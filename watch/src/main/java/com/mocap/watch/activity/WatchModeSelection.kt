@@ -6,9 +6,11 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.*
 import android.util.Log
+import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.wear.input.WearableButtons
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.CapabilityInfo
@@ -43,6 +45,16 @@ class WatchModeSelection : ComponentActivity(),
         super.onCreate(savedInstanceState)
 
         setContent {
+
+            val count = WearableButtons.getButtonCount(this.baseContext)
+
+            if (count > 1) {
+                Log.d(TAG, "there are ${count} buttons available")
+            }
+
+            val buttonInfo = WearableButtons.getButtonInfo(this, KeyEvent.KEYCODE_STEM_1)
+            Log.d(TAG, "KEYCODE_STEM_1 is present on the device")
+
 
             // check whether permissions for body sensors (HR) are granted
             if (
