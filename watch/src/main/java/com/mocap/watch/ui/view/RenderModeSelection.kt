@@ -18,7 +18,8 @@ fun RenderModeSelection(
     watchOnlyUdpCallback: () -> Unit,
     watchViaPhoneCallback: () -> Unit,
     upperArmCallback: () -> Unit,
-    pocketCallback: () -> Unit
+    pocketCallback: () -> Unit,
+    selfLabellingCallback: () -> Unit
 ) {
     val standalone by standaloneSF.collectAsState()
 
@@ -58,6 +59,14 @@ fun RenderModeSelection(
                 enabled = !standalone,
                 onClick = { watchViaPhoneCallback() },
                 text = "Watch Only via Phone"
+            )
+        }
+        item { DefaultText(text = "Experimental") }
+        item {
+            DefaultButton(
+                enabled = !standalone,
+                onClick = { selfLabellingCallback() },
+                text = "Self-Label Recording"
             )
         }
         item {

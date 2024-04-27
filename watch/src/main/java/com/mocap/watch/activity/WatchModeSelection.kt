@@ -6,11 +6,9 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.*
 import android.util.Log
-import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.wear.input.WearableButtons
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.CapabilityInfo
@@ -46,16 +44,6 @@ class WatchModeSelection : ComponentActivity(),
 
         setContent {
 
-            val count = WearableButtons.getButtonCount(this.baseContext)
-
-            if (count > 1) {
-                Log.d(TAG, "there are ${count} buttons available")
-            }
-
-            val buttonInfo = WearableButtons.getButtonInfo(this, KeyEvent.KEYCODE_STEM_1)
-            Log.d(TAG, "KEYCODE_STEM_1 is present on the device")
-
-
             // check whether permissions for body sensors (HR) are granted
             if (
                 (checkSelfPermission(Manifest.permission.BODY_SENSORS) != PackageManager.PERMISSION_GRANTED) ||
@@ -79,7 +67,8 @@ class WatchModeSelection : ComponentActivity(),
                     watchOnlyUdpCallback = { startActivity(Intent("com.mocap.watch.WATCH_ONLY")) },
                     watchViaPhoneCallback = { startActivity(Intent("com.mocap.watch.WATCH_ONLY_VIA_PHONE")) },
                     upperArmCallback = { startActivity(Intent("com.mocap.watch.PHONE_ARM")) },
-                    pocketCallback = { startActivity(Intent("com.mocap.watch.PHONE_POCKET")) }
+                    pocketCallback = { startActivity(Intent("com.mocap.watch.PHONE_POCKET")) },
+                    selfLabellingCallback = { startActivity(Intent("com.mocap.watch.SELF_LABELLING")) }
                 )
             }
         }

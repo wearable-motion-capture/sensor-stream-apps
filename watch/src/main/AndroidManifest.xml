@@ -89,6 +89,15 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".activity.SelfLabellingActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.DeviceDefault">
+            <intent-filter>
+                <action android:name="com.mocap.watch.SELF_LABELLING" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <activity
             android:name=".activity.PhoneArmCalibActivity"
             android:exported="false"
             android:theme="@android:style/Theme.DeviceDefault">
