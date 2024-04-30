@@ -10,24 +10,20 @@ import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.mocap.watch.ImuStreamState
 import com.mocap.watch.ui.RedButton
-import com.mocap.watch.ui.StreamToggle
 import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 fun RenderSelfLabelling(
     connected: StateFlow<Boolean>,
     connectedNodeName: StateFlow<String>,
-    calibrated: StateFlow<Boolean>,
-    gravDiff: StateFlow<Float>,
     imuStreamStateFlow: StateFlow<ImuStreamState>,
-    imuStreamCallback: (Boolean) -> Unit,
+    recordLabel: StateFlow<String>,
     finishCallback: () -> Unit
 ) {
     val streamSt by imuStreamStateFlow.collectAsState()
     val nodeName by connectedNodeName.collectAsState()
-    val gravNum by gravDiff.collectAsState()
     val con by connected.collectAsState()
-    val cal by calibrated.collectAsState()
+    val label by recordLabel.collectAsState()
 
     ScalingLazyColumn(
         modifier = Modifier.fillMaxWidth(),
@@ -44,20 +40,19 @@ fun RenderSelfLabelling(
         }
         item {
             Text(
-                text = if (cal) "Posture Good" else "Hold watch level to ground and parallel to Hip\n" +
-                        "%.2f".format(gravNum),
-                color = if (cal) Color.Green else Color.Red,
+                text = if (streamSt == ImuStreamState.Streaming) "Streaming IMU" else "Not streaming",
+                color = if (streamSt == ImuStreamState.Streaming) Color.Green else Color.Red,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.body1
             )
         }
         item {
-            StreamToggle(
-                enabled = (con and cal) or (streamSt == ImuStreamState.Streaming),
-                text = "Stream IMU",
-                checked = (streamSt == ImuStreamState.Streaming),
-                onChecked = { imuStreamCallback(it) }
+            Text(
+                text = label,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.body1
             )
         }
         item {
