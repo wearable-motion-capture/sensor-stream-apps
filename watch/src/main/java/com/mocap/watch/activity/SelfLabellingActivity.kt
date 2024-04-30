@@ -104,6 +104,20 @@ class SelfLabellingActivity : ComponentActivity(),
         }
     }
 
+    // Activity
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+         when (keyCode) {
+                 KeyEvent.KEYCODE_BACK -> {
+                    Log.d(TAG, "KEYCODE_STEM_1 is down")
+                    }
+                else -> {
+                    Log.d(TAG, "Unhandled key ${keyCode}")
+                }
+            }
+        return false
+    }
+
+
     override fun onMessageReceived(messageEvent: MessageEvent) {
         _viewModel.onMessageReceived(messageEvent)
     }

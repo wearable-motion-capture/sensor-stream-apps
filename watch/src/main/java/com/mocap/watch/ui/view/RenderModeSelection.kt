@@ -64,7 +64,7 @@ fun RenderModeSelection(
         item { DefaultText(text = "Experimental") }
         item {
             DefaultButton(
-                enabled = !standalone,
+                enabled = true,//!standalone,
                 onClick = { selfLabellingCallback() },
                 text = "Self-Label Recording"
             )
