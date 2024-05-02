@@ -9,6 +9,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
+    <!-- required for enabling wet mode -->
+    <uses-permission android:name="com.google.android.clockwork.settings.WATCH_TOUCH" />
+    <uses-permission android:name="com.google.android.clockwork.settings.END_WET_MODE" />
 
     <uses-feature android:name="android.hardware.type.watch" />
 
