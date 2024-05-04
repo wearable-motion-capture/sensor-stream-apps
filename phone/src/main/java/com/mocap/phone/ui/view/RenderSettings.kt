@@ -37,7 +37,7 @@ import com.mocap.phone.ui.SmallCard
 
 
 @Composable
-fun RenderSettings(setIpAndPortCallback: (String, Boolean, Boolean) -> Unit) {
+fun RenderSettings(saveSettingsCallback: (String, Boolean, Boolean) -> Unit) {
 
     // hand mode variables
     val port by DataSingleton.imuPort.collectAsState()
@@ -186,7 +186,7 @@ fun RenderSettings(setIpAndPortCallback: (String, Boolean, Boolean) -> Unit) {
         item {
             DefaultButton(
                 onClick = {
-                    setIpAndPortCallback(
+                    saveSettingsCallback(
                         ipText,
                         leftHandMode,
                         recordLocally

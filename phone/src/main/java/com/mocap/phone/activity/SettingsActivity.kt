@@ -23,13 +23,13 @@ class SettingsActivity : ComponentActivity() {
         setContent {
             PhoneTheme {
                 RenderSettings(
-                    setIpAndPortCallback = this::setIpPort
+                    saveSettingsCallback = this::saveSettings
                 )
             }
         }
     }
 
-    private fun setIpPort(ip: String, leftHandMode: Boolean, recordLocally : Boolean) {
+    private fun saveSettings(ip: String, leftHandMode: Boolean, recordLocally : Boolean) {
 
         // Make sure the text contains a valid IP
         var confirmedIp = ip

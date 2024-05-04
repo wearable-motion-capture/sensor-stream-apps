@@ -2,8 +2,10 @@ package com.mocap.phone.activity
 
 import android.content.Intent
 import android.content.IntentFilter
+import android.media.session.MediaSession
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,9 +22,10 @@ import com.mocap.phone.modules.ServiceBroadcastReceiver
 import com.mocap.phone.service.AudioService
 import com.mocap.phone.service.ImuService
 import com.mocap.phone.service.PpgService
-import com.mocap.phone.viewmodel.PhoneViewModel
 import com.mocap.phone.ui.theme.PhoneTheme
 import com.mocap.phone.ui.view.RenderHome
+import com.mocap.phone.modules.MediaSessionButtonsCallback
+import com.mocap.phone.viewmodel.PhoneViewModel
 import java.nio.ByteBuffer
 
 class PhoneMain : ComponentActivity(),
@@ -42,24 +45,41 @@ class PhoneMain : ComponentActivity(),
             onServiceUpdate = { _viewModel.onServiceUpdate(it) }
         )
 
+    /** listen to media buttons to affect recording sessions **/
+    private lateinit var session: MediaSession
+    private val callback = MediaSessionButtonsCallback(
+        {Log.d(TAG, "trigger")}
+    )
+
     /** Starting point of the application */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+
+            // enabling a media session allows to control recording labels with media buttons
+            // Currently, the play/pause button switches the label if the phone is in recording mode
+            session = MediaSession(this, TAG)
+            session.setCallback(callback)
+            session.setActive(true)
+
             // retrieve stored IP and PORT to update DataSingleton
             val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
             val storedIp = sharedPref.getString(DataSingleton.IP_KEY, DataSingleton.IP_DEFAULT)
             if (storedIp != null) {
                 DataSingleton.setIp(storedIp)
             }
-            DataSingleton.setImuPort(sharedPref.getInt(
-                DataSingleton.PORT_KEY,
-                DataSingleton.IMU_PORT_DEFAULT)
+            DataSingleton.setImuPort(
+                sharedPref.getInt(
+                    DataSingleton.PORT_KEY,
+                    DataSingleton.IMU_PORT_DEFAULT
+                )
             )
-            DataSingleton.setRecordLocally(sharedPref.getBoolean(
-                DataSingleton.RECORD_LOCALLY_KEY,
-                DataSingleton.RECORD_LOCALLY_DEFAULT
-            ))
+            DataSingleton.setRecordLocally(
+                sharedPref.getBoolean(
+                    DataSingleton.RECORD_LOCALLY_KEY,
+                    DataSingleton.RECORD_LOCALLY_DEFAULT
+                )
+            )
 
             PhoneTheme {
                 // keep screen on
