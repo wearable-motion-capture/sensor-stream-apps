@@ -50,6 +50,7 @@ fun RenderHome(
     val ip by DataSingleton.ip.collectAsState()
     val port by DataSingleton.imuPort.collectAsState()
     val recordLocally by DataSingleton.recordLocally.collectAsState()
+    val mediaButtons by DataSingleton.listenToMediaButtons.collectAsState()
     val recordActivityName by DataSingleton.recordActivityNameCombined.collectAsState()
 
     val nodeName by connectedNodeSF.collectAsState()
@@ -124,19 +125,20 @@ fun RenderHome(
 
                 SmallCard() {
                     // Media Control Buttons require the additional IMU trigger
-                    if (DataSingleton.getListenToMediaButtons()) {
+                    if (mediaButtons and recordLocally) {
                         DefaultHighlight(
-                            text = "Record w. Media Buttons"
+                            text = "Record - Media Button Ctrl."
                         )
                         Text(
                             text = recordActivityName,
                             modifier = Modifier.padding(8.dp),
                             textAlign = TextAlign.Center,
-                            color = if (port == DataSingleton.IMU_PORT_LEFT) Color.Yellow else Color.Magenta,
+                            color = Color.White,
                             style = MaterialTheme.typography.h6
                         )
                         // This is an experimental Button. Stored for later use.
                         DefaultButton(
+                            enabled = appState,
                             onClick = imuStreamTrigger,
                             text = "IMU Trigger"
                         )

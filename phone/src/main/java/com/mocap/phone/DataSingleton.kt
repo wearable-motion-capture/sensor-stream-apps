@@ -1,5 +1,6 @@
 package com.mocap.phone
 
+import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -117,10 +118,6 @@ object DataSingleton {
     val listenToMediaButtons = listenToMediaButtonsSF.asStateFlow()
     fun setListenToMediaButtons(b: Boolean) {
         listenToMediaButtonsSF.value = b
-    }
-
-    fun getListenToMediaButtons(): Boolean {
-        return listenToMediaButtons.value and recordLocally.value
     }
 
     // as state flow to update UI elements when IP changes

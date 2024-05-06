@@ -50,7 +50,6 @@ fun RenderSettings(saveSettingsCallback: (String, Boolean, Boolean, Boolean) -> 
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colors.background),
-        userScrollEnabled = false,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         item {

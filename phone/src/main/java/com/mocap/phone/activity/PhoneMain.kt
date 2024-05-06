@@ -9,6 +9,7 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.runtime.collectAsState
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.preference.PreferenceManager
 import com.google.android.gms.wearable.CapabilityClient
@@ -67,25 +68,26 @@ class PhoneMain : ComponentActivity(),
                     DataSingleton.IMU_PORT_DEFAULT
                 )
             )
-            DataSingleton.setRecordLocally(
-                sharedPref.getBoolean(
-                    DataSingleton.RECORD_LOCALLY_KEY,
-                    DataSingleton.RECORD_LOCALLY_DEFAULT
-                )
+            val rl = sharedPref.getBoolean(
+                DataSingleton.RECORD_LOCALLY_KEY,
+                DataSingleton.RECORD_LOCALLY_DEFAULT
             )
-            DataSingleton.setListenToMediaButtons(
-                sharedPref.getBoolean(
-                    DataSingleton.MEDIA_BUTTONS_KEY,
-                    DataSingleton.MEDIA_BUTTONS_DEFAULT
-                )
-            )
+            DataSingleton.setRecordLocally(rl)
 
-            if (DataSingleton.getListenToMediaButtons()) {
-                // enabling a media session allows to control recording labels with media buttons
-                // Currently, the play/pause button switches the label if the phone is in recording mode
-                _mediaSession = MediaSession(this, TAG)
-                _mediaSession.setCallback(_callback)
+            val mb = sharedPref.getBoolean(
+                DataSingleton.MEDIA_BUTTONS_KEY,
+                DataSingleton.MEDIA_BUTTONS_DEFAULT
+            )
+            DataSingleton.setListenToMediaButtons(mb)
+
+            // enabling a media session allows to control recording labels with media buttons
+            // Currently, the play/pause button switches the label if the phone is in recording mode
+            _mediaSession = MediaSession(this, TAG)
+            _mediaSession.setCallback(_callback)
+            if (rl and mb) {
                 _mediaSession.setActive(true)
+            } else {
+                _mediaSession.setActive(false)
             }
 
             PhoneTheme {
@@ -164,6 +166,14 @@ class PhoneMain : ComponentActivity(),
         // check if a phone is connected and set state flows accordingly
         _viewModel.queryCapabilities()
 
+        if (this::_mediaSession.isInitialized) {
+            if (DataSingleton.listenToMediaButtons.value and DataSingleton.recordLocally.value) {
+                _mediaSession.setActive(true)
+            } else {
+                _mediaSession.setActive(false)
+            }
+        }
+
         val imuIntent = Intent(this, ImuService::class.java)
         this.startService(imuIntent)
         val ppgIntent = Intent(this, PpgService::class.java)
@@ -187,6 +197,10 @@ class PhoneMain : ComponentActivity(),
         this.stopService(ppgIntent)
         val audioIntent = Intent(this, AudioService::class.java)
         this.stopService(audioIntent)
+
+        if (this::_mediaSession.isInitialized) {
+            _mediaSession.setActive(false)
+        }
     }
 
     override fun onResume() {
