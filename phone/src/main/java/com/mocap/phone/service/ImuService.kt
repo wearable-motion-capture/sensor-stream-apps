@@ -180,7 +180,7 @@ class ImuService : Service() {
                 val currentDate =
                     (DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss-SSS")).format(LocalDateTime.now())
                 val fileName =
-                    "rec_phone_pocket_${DataSingleton.recordActivityNameCombined.value}_${currentDate}.csv"
+                    "rec_phone_pocket_${DataSingleton.recordActivityLabel.value}_${currentDate}.csv"
 
                 // permission rules only allow to write into the public shared directory
                 // /storage/emulated/0/Documents/_2022-09-273_05-08-49.csv
@@ -266,7 +266,7 @@ class ImuService : Service() {
                             wstr += "$entry,"
                         }
                         // new line at the end
-                        fOut.write(wstr + "${DataSingleton.recordActivityNameCombined.value}\n")
+                        fOut.write(wstr + "${DataSingleton.recordActivityLabel.value}\n")
 
                         _swOutCount += 1 // for Hz estimation
                     }

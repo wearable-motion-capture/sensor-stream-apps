@@ -139,10 +139,8 @@ fun RenderSettings(saveSettingsCallback: (String, Boolean, Boolean, Boolean) -> 
 
 
                     if (!mediaButtons) {
-                        val recordActivityA by DataSingleton.recordActivityNameA.collectAsState()
-                        val recordActivityB by DataSingleton.recordActivityNameB.collectAsState()
-                        var expandedA by remember { mutableStateOf(false) }
-                        var expandedB by remember { mutableStateOf(false) }
+                        val recordActivity by DataSingleton.recordActivityLabel.collectAsState()
+                        var expandedLabels by remember { mutableStateOf(false) }
 
                         Text(
                             text = "Select distinct activities for sequences.",
@@ -158,50 +156,27 @@ fun RenderSettings(saveSettingsCallback: (String, Boolean, Boolean, Boolean) -> 
                             Row(
                                 modifier = Modifier.wrapContentSize(Alignment.TopEnd)
                             ) {
-                                IconButton(onClick = { expandedA = !expandedA }) {
+                                IconButton(onClick = { expandedLabels = !expandedLabels }) {
                                     androidx.compose.material.Icon(
                                         imageVector = Icons.Default.MoreVert,
                                         contentDescription = "More"
                                     )
                                 }
                                 DropdownMenu(
-                                    expanded = expandedA,
-                                    onDismissRequest = { expandedA = false }
+                                    expanded = expandedLabels,
+                                    onDismissRequest = { expandedLabels = false }
                                 ) {
-                                    for (a in DataSingleton.activityOptions) {
+                                    for (a in DataSingleton.activityLabels) {
                                         DropdownMenuItem(onClick = {
-                                            DataSingleton.setRecordActivityNameA(a)
-                                            expandedA = false
+                                            DataSingleton.setRecordActivityLabel(a)
+                                            expandedLabels = false
                                         }) {
                                             Text(a)
                                         }
                                     }
                                 }
                             }
-                            DefaultText(text = "$recordActivityA -> $recordActivityB")
-                            Row(
-                                modifier = Modifier.wrapContentSize(Alignment.TopEnd)
-                            ) {
-                                IconButton(onClick = { expandedB = !expandedB }) {
-                                    androidx.compose.material.Icon(
-                                        imageVector = Icons.Default.MoreVert,
-                                        contentDescription = "More"
-                                    )
-                                }
-                                DropdownMenu(
-                                    expanded = expandedB,
-                                    onDismissRequest = { expandedB = false }
-                                ) {
-                                    for (a in DataSingleton.activityOptions) {
-                                        DropdownMenuItem(onClick = {
-                                            DataSingleton.setRecordActivityNameB(a)
-                                            expandedB = false
-                                        }) {
-                                            Text(a)
-                                        }
-                                    }
-                                }
-                            }
+                            DefaultText(text = recordActivity)
                         }
                     } else {
                         Text(

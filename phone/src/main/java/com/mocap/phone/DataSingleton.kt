@@ -1,11 +1,10 @@
 package com.mocap.phone
 
-import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 object DataSingleton {
-    const val VERSION = "0.3.7"
+    const val VERSION = "0.3.8"
 
     // message paths
     const val IMU_PATH = "/imu"
@@ -43,30 +42,22 @@ object DataSingleton {
     const val DUAL_IMU_MSG_SIZE = (55) * 4 // dT + SW IMU msg without calib + PH IMU MSG
 
     // recording parameters
-    val activityOptions = listOf<String>(
-        "other",
-        "still",
-        "brush_teeth",
-        "shave_face",
-        "deodorant",
-        "wash_hands",
-        "lotion",
-        "hairstyling",
-        "wash_hair",
-        "shave_legs",
-        "soap_body"
+    val activityLabels = listOf<String>(
+        "other", // 0
+        "still", // 1
+        "brush_teeth", // 2
+        "shave_face", // 3
+        "deodorant", // 4
+        "wash_hands", // 5
+        "lotion", // 6
+        "hairstyling", // 7
+        "wash_hair", // 8
+        "shave_legs", // 9
+        "soap_body" // 10
     )
 
-    val mediaButtonRecordingOptions = listOf<String>(
-        "START",
-        "other",
-        "brush_teeth",
-        "wash_hair",
-        "soap_body",
-        "shave_legs",
-        "still",
-        "DONE"
-    )
+    // Media Button recording cycles through labels. See the activityLabels for reference
+    val mediaButtonRecordingSequence = listOf<Int>(0, 2, 0, 8, 0, 10, 0, 9, 0, 6, 0, 7, 0)
 
     // shared preferences lookup
     const val IP_KEY = "com.mocap.phone.ip"
@@ -78,40 +69,10 @@ object DataSingleton {
     const val MEDIA_BUTTONS_KEY = "com.mocap.phone.media_buttons"
     const val MEDIA_BUTTONS_DEFAULT = false
 
-    private val recordActivityNameCombinedStateFlow = MutableStateFlow(activityOptions[0])
-    val recordActivityNameCombined = recordActivityNameCombinedStateFlow.asStateFlow()
-
-    fun setRecordActivityNameCombined(st: String) {
-        recordActivityNameAStateFlow.value = st
-        recordActivityNameBStateFlow.value = st
-        recordActivityNameCombinedStateFlow.value = st
-    }
-
-    // For recording sequences we record activity A ...
-    private val recordActivityNameAStateFlow = MutableStateFlow(activityOptions[0])
-    val recordActivityNameA = recordActivityNameAStateFlow.asStateFlow()
-
-    fun setRecordActivityNameA(st: String) {
-        recordActivityNameAStateFlow.value = st
-        if (st.equals(recordActivityNameBStateFlow.value)) {
-            recordActivityNameCombinedStateFlow.value = st
-        } else {
-            recordActivityNameCombinedStateFlow.value =
-                "seq_$st--${recordActivityNameBStateFlow.value}"
-        }
-    }
-
-    // ... and activity B. See method above.
-    private val recordActivityNameBStateFlow = MutableStateFlow(activityOptions[0])
-    val recordActivityNameB = recordActivityNameBStateFlow.asStateFlow()
-    fun setRecordActivityNameB(st: String) {
-        recordActivityNameBStateFlow.value = st
-        if (st.equals(recordActivityNameAStateFlow.value)) {
-            recordActivityNameCombinedStateFlow.value = st
-        } else {
-            recordActivityNameCombinedStateFlow.value =
-                "seq_${recordActivityNameAStateFlow.value}--$st"
-        }
+    private val recordActivityLabelStateFlow = MutableStateFlow(activityLabels[0])
+    val recordActivityLabel = recordActivityLabelStateFlow.asStateFlow()
+    fun setRecordActivityLabel(st: String) {
+        recordActivityLabelStateFlow.value = st
     }
 
     private val listenToMediaButtonsSF = MutableStateFlow(false)

@@ -51,7 +51,7 @@ fun RenderHome(
     val port by DataSingleton.imuPort.collectAsState()
     val recordLocally by DataSingleton.recordLocally.collectAsState()
     val mediaButtons by DataSingleton.listenToMediaButtons.collectAsState()
-    val recordActivityName by DataSingleton.recordActivityNameCombined.collectAsState()
+    val recordActivityName by DataSingleton.recordActivityLabel.collectAsState()
 
     val nodeName by connectedNodeSF.collectAsState()
     val appState by appActiveSF.collectAsState()

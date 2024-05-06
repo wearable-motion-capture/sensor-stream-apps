@@ -9,7 +9,6 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.runtime.collectAsState
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.preference.PreferenceManager
 import com.google.android.gms.wearable.CapabilityClient
@@ -86,6 +85,7 @@ class PhoneMain : ComponentActivity(),
             _mediaSession.setCallback(_callback)
             if (rl and mb) {
                 _mediaSession.setActive(true)
+                _viewModel.resetMediaButtonRecordingSequence()
             } else {
                 _mediaSession.setActive(false)
             }
@@ -119,7 +119,7 @@ class PhoneMain : ComponentActivity(),
                         _viewModel.sendImuTrigger()
                     },
                     labelCycleReset = {
-                        _viewModel.resetMediaButtonRecordingState()
+                        _viewModel.resetMediaButtonRecordingSequence()
                     }
                 )
             }
@@ -169,6 +169,7 @@ class PhoneMain : ComponentActivity(),
         if (this::_mediaSession.isInitialized) {
             if (DataSingleton.listenToMediaButtons.value and DataSingleton.recordLocally.value) {
                 _mediaSession.setActive(true)
+                _viewModel.resetMediaButtonRecordingSequence()
             } else {
                 _mediaSession.setActive(false)
             }

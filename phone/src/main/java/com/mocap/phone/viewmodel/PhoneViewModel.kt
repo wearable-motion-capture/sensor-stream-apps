@@ -75,12 +75,15 @@ class PhoneViewModel(application: Application) :
     private val _ppgQueueSize = MutableStateFlow(0)
     val ppgQueueSize = _ppgQueueSize.asStateFlow()
 
-    private var _mediaButtonRecordingState = 0
+    // deep copy the list
+    private var _mediaButtonRecordingSequence =
+        DataSingleton.mediaButtonRecordingSequence.toMutableList()
 
 
-    fun resetMediaButtonRecordingState() {
-        _mediaButtonRecordingState = 0
-        onMediaButtonDown()
+    fun resetMediaButtonRecordingSequence() {
+        // deep copy the list
+        _mediaButtonRecordingSequence = DataSingleton.mediaButtonRecordingSequence.toMutableList()
+        DataSingleton.setRecordActivityLabel("START")
     }
 
     /**
@@ -94,26 +97,27 @@ class PhoneViewModel(application: Application) :
             return
         }
 
+        // no more labels
+        if (_mediaButtonRecordingSequence.size <= 0) {
+            DataSingleton.setRecordActivityLabel("END")
+            return
+        }
+
         // assign current value
-        val stateLabel = DataSingleton.mediaButtonRecordingOptions[_mediaButtonRecordingState]
-        DataSingleton.setRecordActivityNameCombined(stateLabel)
-        Log.d(TAG, "Updated Recording Label to $stateLabel")
+        val labelIdx = _mediaButtonRecordingSequence.removeAt(0)
+        val label = DataSingleton.activityLabels[labelIdx]
+        DataSingleton.setRecordActivityLabel(label)
+        Log.d(TAG, "Updated Recording Label to $label")
 
-        // iterate through Recording Options until we reach the end
-        if (_mediaButtonRecordingState < (DataSingleton.mediaButtonRecordingOptions.size - 1)) {
-
-            // send a trigger message to the connected watch app
-            _scope.launch {
-                val buffer = ByteBuffer.allocate(4) // [state (int)]
-                buffer.putInt(_mediaButtonRecordingState)
-                _messageClient.sendMessage( // trigger watch calibration and streaming
-                    _connectedNodeId,
-                    DataSingleton.RECORDING_LABEL_CHANGED,
-                    buffer.array()
-                ).await()
-            }
-
-            _mediaButtonRecordingState += 1
+        // send a trigger message to the connected watch app
+        _scope.launch {
+            val buffer = ByteBuffer.allocate(4) // [state (int)]
+            buffer.putInt(labelIdx)
+            _messageClient.sendMessage( // trigger watch calibration and streaming
+                _connectedNodeId,
+                DataSingleton.RECORDING_LABEL_CHANGED,
+                buffer.array()
+            ).await()
         }
     }
 
