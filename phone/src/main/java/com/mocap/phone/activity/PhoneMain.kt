@@ -5,7 +5,6 @@ import android.content.IntentFilter
 import android.media.session.MediaSession
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -46,21 +45,15 @@ class PhoneMain : ComponentActivity(),
         )
 
     /** listen to media buttons to affect recording sessions **/
-    private lateinit var session: MediaSession
-    private val callback = MediaSessionButtonsCallback(
-        {Log.d(TAG, "trigger")}
+    private lateinit var _mediaSession: MediaSession
+    private val _callback = MediaSessionButtonsCallback(
+        onTrigger = { _viewModel.onMediaButtonDown() }
     )
 
     /** Starting point of the application */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-
-            // enabling a media session allows to control recording labels with media buttons
-            // Currently, the play/pause button switches the label if the phone is in recording mode
-            session = MediaSession(this, TAG)
-            session.setCallback(callback)
-            session.setActive(true)
 
             // retrieve stored IP and PORT to update DataSingleton
             val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
@@ -80,6 +73,20 @@ class PhoneMain : ComponentActivity(),
                     DataSingleton.RECORD_LOCALLY_DEFAULT
                 )
             )
+            DataSingleton.setListenToMediaButtons(
+                sharedPref.getBoolean(
+                    DataSingleton.MEDIA_BUTTONS_KEY,
+                    DataSingleton.MEDIA_BUTTONS_DEFAULT
+                )
+            )
+
+            if (DataSingleton.getListenToMediaButtons()) {
+                // enabling a media session allows to control recording labels with media buttons
+                // Currently, the play/pause button switches the label if the phone is in recording mode
+                _mediaSession = MediaSession(this, TAG)
+                _mediaSession.setCallback(_callback)
+                _mediaSession.setActive(true)
+            }
 
             PhoneTheme {
                 // keep screen on
@@ -108,6 +115,9 @@ class PhoneMain : ComponentActivity(),
                     },
                     imuStreamTrigger = {
                         _viewModel.sendImuTrigger()
+                    },
+                    labelCycleReset = {
+                        _viewModel.resetMediaButtonRecordingState()
                     }
                 )
             }

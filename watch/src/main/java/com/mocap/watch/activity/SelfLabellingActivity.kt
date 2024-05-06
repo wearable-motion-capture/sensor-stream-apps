@@ -1,19 +1,15 @@
 package com.mocap.watch.activity
 
-import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
 import android.os.*
 import android.util.Log
 import android.view.KeyEvent
-import android.view.MotionEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.core.content.PermissionChecker
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import androidx.wear.input.WearableButtons
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.CapabilityInfo
 import com.google.android.gms.wearable.MessageClient
@@ -33,12 +29,12 @@ class SelfLabellingActivity : ComponentActivity(),
 
     companion object {
         private const val TAG = "SelfLabelling"  // for logging
-        private const val REQCODE_WATCHTOUCH = 0
-        private const val PERMISSION_WATCH_TOUCH =
-            "com.google.android.clockwork.settings.WATCH_TOUCH"
-
-        private const val ACTION_ENABLE_WET_MODE =
-            "com.google.android.wearable.action.ENABLE_WET_MODE"
+//        private const val REQCODE_WATCHTOUCH = 0
+//        private const val PERMISSION_WATCH_TOUCH =
+//            "com.google.android.clockwork.settings.WATCH_TOUCH"
+//
+//        private const val ACTION_ENABLE_WET_MODE =
+//            "com.google.android.wearable.action.ENABLE_WET_MODE"
     }
 
     private val _channelClient by lazy { Wearable.getChannelClient(this) }
@@ -59,24 +55,22 @@ class SelfLabellingActivity : ComponentActivity(),
 
         setContent {
 
-            if (PermissionChecker.checkSelfPermission(
-                    this,
-                    PERMISSION_WATCH_TOUCH
-                ) != PermissionChecker.PERMISSION_GRANTED
-            ) {
-                requestPermissions(arrayOf(PERMISSION_WATCH_TOUCH), REQCODE_WATCHTOUCH)
-            } else {
-                Log.d(TAG, "touch lock permission granted")
-            }
-
-            val count = WearableButtons.getButtonCount(this.baseContext)
-
-            if (count > 1) {
-                Log.d(TAG, "there are ${count} buttons available")
-            }
-
-            val buttonInfo = WearableButtons.getButtonInfo(this, KeyEvent.KEYCODE_STEM_1)
-            Log.d(TAG, "KEYCODE_STEM_1 is present on the device")
+// LEFTOVER FROM WET MODE EXPERIMENTS TODO: Cleanup
+//            if (PermissionChecker.checkSelfPermission(
+//                    this,
+//                    PERMISSION_WATCH_TOUCH
+//                ) != PermissionChecker.PERMISSION_GRANTED
+//            ) {
+//                requestPermissions(arrayOf(PERMISSION_WATCH_TOUCH), REQCODE_WATCHTOUCH)
+//            } else {
+//                Log.d(TAG, "touch lock permission granted")
+//            }
+//            val count = WearableButtons.getButtonCount(this.baseContext)
+//            if (count > 1) {
+//                Log.d(TAG, "there are ${count} buttons available")
+//            }
+//            val buttonInfo = WearableButtons.getButtonInfo(this, KeyEvent.KEYCODE_STEM_1)
+//            Log.d(TAG, "KEYCODE_STEM_1 is present on the device")
 
             // with the vibration service, create the view model
             _viewModel.queryCapabilities()
@@ -109,18 +103,18 @@ class SelfLabellingActivity : ComponentActivity(),
         return false
     }
 
-    /**
-     * Catch BACK KEY events
-     */
-    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BACK) {
-            _viewModel.keyTrigger()
-            Log.d(TAG, "Starting wet mode...")
-            sendBroadcast(Intent(ACTION_ENABLE_WET_MODE))
-            return true
-        }
-        return false
-    }
+//    /**
+//     * Use WET MODE
+//     */
+//    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+//        if (keyCode == KeyEvent.KEYCODE_BACK) {
+//            _viewModel.keyTrigger()
+//            Log.d(TAG, "Starting wet mode...")
+//            sendBroadcast(Intent(ACTION_ENABLE_WET_MODE))
+//            return true
+//        }
+//        return false
+//    }
 
     override fun onMessageReceived(messageEvent: MessageEvent) {
         _viewModel.onMessageReceived(messageEvent)

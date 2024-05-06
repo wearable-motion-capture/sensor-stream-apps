@@ -179,8 +179,8 @@ class ImuService : Service() {
                 // create unique filename from current date and time
                 val currentDate =
                     (DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss-SSS")).format(LocalDateTime.now())
-                val activityName = DataSingleton.recordActivityNameCombined.value
-                val fileName = "rec_phone_pocket_${activityName}_${currentDate}.csv"
+                val fileName =
+                    "rec_phone_pocket_${DataSingleton.recordActivityNameCombined.value}_${currentDate}.csv"
 
                 // permission rules only allow to write into the public shared directory
                 // /storage/emulated/0/Documents/_2022-09-273_05-08-49.csv
@@ -265,7 +265,8 @@ class ImuService : Service() {
                             .toFloatArray() + phoneData + calibrationDat) {
                             wstr += "$entry,"
                         }
-                        fOut.write(wstr + "$activityName\n") // new line at the end
+                        // new line at the end
+                        fOut.write(wstr + "${DataSingleton.recordActivityNameCombined.value}\n")
 
                         _swOutCount += 1 // for Hz estimation
                     }

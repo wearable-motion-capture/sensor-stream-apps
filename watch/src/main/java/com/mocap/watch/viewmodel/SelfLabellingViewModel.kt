@@ -3,7 +3,6 @@ package com.mocap.watch.viewmodel
 import android.app.Application
 import android.content.Intent
 import android.util.Log
-import android.view.KeyEvent
 import androidx.lifecycle.AndroidViewModel
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.CapabilityClient
@@ -13,7 +12,6 @@ import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
 import com.mocap.watch.DataSingleton
 import com.mocap.watch.ImuStreamState
-import com.mocap.watch.activity.SelfLabellingActivity
 import com.mocap.watch.service.channel.ChannelImuService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,6 +22,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.nio.ByteBuffer
 import java.time.Duration
 import java.time.LocalDateTime
 
@@ -80,18 +79,6 @@ class SelfLabellingViewModel(application: Application) :
         endImu()
     }
 
-    fun keyTrigger() {
-        if (_imuStreamState.value == ImuStreamState.Idle) {
-            val intent = Intent(_application.applicationContext, ChannelImuService::class.java)
-            intent.putExtra("sourceNodeId", connectedNodeId)
-            _application.startService(intent)
-            _imuStreamState.value = ImuStreamState.Streaming
-        } else {
-            endImu()
-        }
-
-    }
-
     /** a simple loop that ensures both apps are active */
     fun regularConnectionCheck() {
         _scope.launch {
@@ -144,6 +131,27 @@ class SelfLabellingViewModel(application: Application) :
                         .await()
                 }
             }
+
+            // feedback from the phone that calibration is complete
+            DataSingleton.CALIBRATION_PATH -> {
+                val b = ByteBuffer.wrap(messageEvent.data)
+                when (b.getInt(0)) {
+                    3 -> { // mode == 3 means trigger IMU stream
+                        if (_imuStreamState.value == ImuStreamState.Idle) {
+                            val intent = Intent(
+                                _application.applicationContext,
+                                ChannelImuService::class.java
+                            )
+                            intent.putExtra("sourceNodeId", connectedNodeId)
+                            _application.startService(intent)
+                            _imuStreamState.value = ImuStreamState.Streaming
+                        } else {
+                            endImu()
+                        }
+                    }
+                }
+            }
+
         }
     }
 

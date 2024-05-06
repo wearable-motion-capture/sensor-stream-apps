@@ -41,7 +41,8 @@ fun RenderHome(
     ppgOutHzSF: StateFlow<Float>,
     ppgQueueSizeSF: StateFlow<Int>,
     ipSetCallback: () -> Unit,
-    imuStreamTrigger: () -> Unit
+    imuStreamTrigger: () -> Unit,
+    labelCycleReset: () -> Unit
 ) {
     val phoneForwardQuat by DataSingleton.phoneQuat.collectAsState()
     val watchForwardQuat by DataSingleton.watchQuat.collectAsState()
@@ -122,17 +123,40 @@ fun RenderHome(
                 DefaultHeadline(text = "Data Processing")
 
                 SmallCard() {
-                    DefaultHighlight(
-                        text = if (recordLocally) "Record - $recordActivityName"  else ip
-                    )
-                    Text(
-                        text = if (port == DataSingleton.IMU_PORT_LEFT) "Left Hand Mode"
-                        else "Right Hand Mode",
-                        modifier = Modifier.padding(8.dp),
-                        textAlign = TextAlign.Center,
-                        color = if (port == DataSingleton.IMU_PORT_LEFT) Color.Yellow else Color.Magenta,
-                        style = MaterialTheme.typography.h6
-                    )
+                    // Media Control Buttons require the additional IMU trigger
+                    if (DataSingleton.getListenToMediaButtons()) {
+                        DefaultHighlight(
+                            text = "Record w. Media Buttons"
+                        )
+                        Text(
+                            text = recordActivityName,
+                            modifier = Modifier.padding(8.dp),
+                            textAlign = TextAlign.Center,
+                            color = if (port == DataSingleton.IMU_PORT_LEFT) Color.Yellow else Color.Magenta,
+                            style = MaterialTheme.typography.h6
+                        )
+                        // This is an experimental Button. Stored for later use.
+                        DefaultButton(
+                            onClick = imuStreamTrigger,
+                            text = "IMU Trigger"
+                        )
+                        DefaultButton(
+                            onClick = labelCycleReset,
+                            text = "Reset Label Cycle"
+                        )
+                    } else {
+                        DefaultHighlight(
+                            text = if (recordLocally) "Record - $recordActivityName" else ip
+                        )
+                        Text(
+                            text = if (port == DataSingleton.IMU_PORT_LEFT) "Left Hand Mode"
+                            else "Right Hand Mode",
+                            modifier = Modifier.padding(8.dp),
+                            textAlign = TextAlign.Center,
+                            color = if (port == DataSingleton.IMU_PORT_LEFT) Color.Yellow else Color.Magenta,
+                            style = MaterialTheme.typography.h6
+                        )
+                    }
                     DefaultButton(onClick = ipSetCallback, text = "IP And Other Settings")
                 }
 
@@ -149,13 +173,6 @@ fun RenderHome(
                                     "O: $imuOutHz Hz\n" +
                                     "Queue: $imuQueueSize"
                         )
-                        // This is an experimental Button. Stored for later use.
-//                        Button(
-//                            onClick = imuStreamTrigger,
-//                            modifier = Modifier.padding(8.dp)
-//                        ) {
-//                            Text(text = "trigger")
-//                        }
                     }
                     SmallCard() {
                         DefaultHighlight(text = ":" + DataSingleton.UDP_AUDIO_PORT.toString())

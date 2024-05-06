@@ -4,13 +4,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 object DataSingleton {
-    const val VERSION = "0.3.6"
+    const val VERSION = "0.3.7"
 
     // message paths
     const val IMU_PATH = "/imu"
     const val PPG_PATH = "/ppg"
     const val AUDIO_PATH = "/audio"
     const val CALIBRATION_PATH = "/calibration" // calibration message path
+    const val RECORDING_LABEL_CHANGED = "/rec_label_changed"
     const val PING_REQ = "/ping_request"
     const val PING_REP = "/ping_reply"
 
@@ -55,6 +56,17 @@ object DataSingleton {
         "soap_body"
     )
 
+    val mediaButtonRecordingOptions = listOf<String>(
+        "START",
+        "other",
+        "brush_teeth",
+        "wash_hair",
+        "soap_body",
+        "shave_legs",
+        "still",
+        "DONE"
+    )
+
     // shared preferences lookup
     const val IP_KEY = "com.mocap.phone.ip"
     const val IP_DEFAULT = "192.168.1.138"
@@ -62,13 +74,22 @@ object DataSingleton {
     const val IMU_PORT_DEFAULT = IMU_PORT_LEFT
     const val RECORD_LOCALLY_KEY = "com.mocap.phone.record_locally"
     const val RECORD_LOCALLY_DEFAULT = false
+    const val MEDIA_BUTTONS_KEY = "com.mocap.phone.media_buttons"
+    const val MEDIA_BUTTONS_DEFAULT = false
 
     private val recordActivityNameCombinedStateFlow = MutableStateFlow(activityOptions[0])
     val recordActivityNameCombined = recordActivityNameCombinedStateFlow.asStateFlow()
 
+    fun setRecordActivityNameCombined(st: String) {
+        recordActivityNameAStateFlow.value = st
+        recordActivityNameBStateFlow.value = st
+        recordActivityNameCombinedStateFlow.value = st
+    }
+
     // For recording sequences we record activity A ...
     private val recordActivityNameAStateFlow = MutableStateFlow(activityOptions[0])
     val recordActivityNameA = recordActivityNameAStateFlow.asStateFlow()
+
     fun setRecordActivityNameA(st: String) {
         recordActivityNameAStateFlow.value = st
         if (st.equals(recordActivityNameBStateFlow.value)) {
@@ -90,6 +111,16 @@ object DataSingleton {
             recordActivityNameCombinedStateFlow.value =
                 "seq_${recordActivityNameAStateFlow.value}--$st"
         }
+    }
+
+    private val listenToMediaButtonsSF = MutableStateFlow(false)
+    val listenToMediaButtons = listenToMediaButtonsSF.asStateFlow()
+    fun setListenToMediaButtons(b: Boolean) {
+        listenToMediaButtonsSF.value = b
+    }
+
+    fun getListenToMediaButtons(): Boolean {
+        return listenToMediaButtons.value and recordLocally.value
     }
 
     // as state flow to update UI elements when IP changes

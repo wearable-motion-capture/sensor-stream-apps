@@ -37,12 +37,13 @@ import com.mocap.phone.ui.SmallCard
 
 
 @Composable
-fun RenderSettings(saveSettingsCallback: (String, Boolean, Boolean) -> Unit) {
+fun RenderSettings(saveSettingsCallback: (String, Boolean, Boolean, Boolean) -> Unit) {
 
     // hand mode variables
     val port by DataSingleton.imuPort.collectAsState()
     var ipText by remember { mutableStateOf(DataSingleton.ip.value) }
     val recordLocally by DataSingleton.recordLocally.collectAsState()
+    val mediaButtons by DataSingleton.listenToMediaButtons.collectAsState()
     var leftHandMode by remember { mutableStateOf(port == DataSingleton.IMU_PORT_LEFT) }
 
     LazyColumn(
@@ -73,15 +74,6 @@ fun RenderSettings(saveSettingsCallback: (String, Boolean, Boolean) -> Unit) {
         }
         item {
             SmallCard() {
-                if (!leftHandMode){
-                    Text(
-                        text = "Right Hand Mode is experimental. Thus far, only the Left Hand Mode is fully supported.",
-                        modifier = Modifier.padding(8.dp),
-                        textAlign = TextAlign.Left,
-                        style = MaterialTheme.typography.body2,
-                        color = Color.White
-                    )
-                }
                 Text(
                     text = if (leftHandMode) "Left Hand Mode"
                     else "Right Hand Mode",
@@ -94,6 +86,17 @@ fun RenderSettings(saveSettingsCallback: (String, Boolean, Boolean) -> Unit) {
                     checked = !leftHandMode,
                     onCheckedChange = { leftHandMode = !leftHandMode }
                 )
+
+                if (!leftHandMode) {
+                    Text(
+                        text = "Right Hand Mode is experimental. Thus far, only the Left Hand Mode is fully supported.",
+                        modifier = Modifier.padding(8.dp),
+                        textAlign = TextAlign.Left,
+                        style = MaterialTheme.typography.body2,
+                        color = Color.White
+                    )
+                }
+
             }
         }
 
@@ -107,77 +110,109 @@ fun RenderSettings(saveSettingsCallback: (String, Boolean, Boolean) -> Unit) {
                     style = MaterialTheme.typography.h6
                 )
                 androidx.compose.material.Switch(
-                    checked = recordLocally,
-                    onCheckedChange = { DataSingleton.setRecordLocally(!recordLocally) }
+                    checked = !recordLocally,
+                    onCheckedChange = {
+                        DataSingleton.setRecordLocally(!recordLocally)
+                    }
                 )
 
                 if (recordLocally) {
-                    val recordActivityA by DataSingleton.recordActivityNameA.collectAsState()
-                    val recordActivityB by DataSingleton.recordActivityNameB.collectAsState()
-                    var expandedA by remember { mutableStateOf(false) }
-                    var expandedB by remember { mutableStateOf(false) }
-
-
                     Text(
                         text = "Record Locally is for developer use only. " +
-                                "Full documentation to be added in future versions. " +
-                                "Select distinct activities for sequences.",
+                                "Full documentation to be added in future versions.",
                         modifier = Modifier.padding(8.dp),
                         textAlign = TextAlign.Left,
                         style = MaterialTheme.typography.body2,
                         color = Color.White
                     )
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    Text(
+                        text = if (mediaButtons) "Media Buttons" else "Fixed Label",
+                        modifier = Modifier.padding(8.dp),
+                        textAlign = TextAlign.Center,
+                        color = if (mediaButtons) Color.White else Color.White,
+                        style = MaterialTheme.typography.h6
+                    )
+                    androidx.compose.material.Switch(
+                        checked = mediaButtons,
+                        onCheckedChange = { DataSingleton.setListenToMediaButtons(!mediaButtons) }
+                    )
+
+
+                    if (!mediaButtons) {
+                        val recordActivityA by DataSingleton.recordActivityNameA.collectAsState()
+                        val recordActivityB by DataSingleton.recordActivityNameB.collectAsState()
+                        var expandedA by remember { mutableStateOf(false) }
+                        var expandedB by remember { mutableStateOf(false) }
+
+                        Text(
+                            text = "Select distinct activities for sequences.",
+                            modifier = Modifier.padding(8.dp),
+                            textAlign = TextAlign.Left,
+                            style = MaterialTheme.typography.body2,
+                            color = Color.White
+                        )
+
                         Row(
-                            modifier = Modifier.wrapContentSize(Alignment.TopEnd)
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            IconButton(onClick = { expandedA = !expandedA }) {
-                                androidx.compose.material.Icon(
-                                    imageVector = Icons.Default.MoreVert,
-                                    contentDescription = "More"
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = expandedA,
-                                onDismissRequest = { expandedA = false }
+                            Row(
+                                modifier = Modifier.wrapContentSize(Alignment.TopEnd)
                             ) {
-                                for (a in DataSingleton.activityOptions) {
-                                    DropdownMenuItem(onClick = {
-                                        DataSingleton.setRecordActivityNameA(a)
-                                        expandedA = false
-                                    }) {
-                                        Text(a)
+                                IconButton(onClick = { expandedA = !expandedA }) {
+                                    androidx.compose.material.Icon(
+                                        imageVector = Icons.Default.MoreVert,
+                                        contentDescription = "More"
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = expandedA,
+                                    onDismissRequest = { expandedA = false }
+                                ) {
+                                    for (a in DataSingleton.activityOptions) {
+                                        DropdownMenuItem(onClick = {
+                                            DataSingleton.setRecordActivityNameA(a)
+                                            expandedA = false
+                                        }) {
+                                            Text(a)
+                                        }
+                                    }
+                                }
+                            }
+                            DefaultText(text = "$recordActivityA -> $recordActivityB")
+                            Row(
+                                modifier = Modifier.wrapContentSize(Alignment.TopEnd)
+                            ) {
+                                IconButton(onClick = { expandedB = !expandedB }) {
+                                    androidx.compose.material.Icon(
+                                        imageVector = Icons.Default.MoreVert,
+                                        contentDescription = "More"
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = expandedB,
+                                    onDismissRequest = { expandedB = false }
+                                ) {
+                                    for (a in DataSingleton.activityOptions) {
+                                        DropdownMenuItem(onClick = {
+                                            DataSingleton.setRecordActivityNameB(a)
+                                            expandedB = false
+                                        }) {
+                                            Text(a)
+                                        }
                                     }
                                 }
                             }
                         }
-                        DefaultText(text = "$recordActivityA -> $recordActivityB")
-                        Row(
-                            modifier = Modifier.wrapContentSize(Alignment.TopEnd)
-                        ){
-                            IconButton(onClick = { expandedB = !expandedB }) {
-                                androidx.compose.material.Icon(
-                                    imageVector = Icons.Default.MoreVert,
-                                    contentDescription = "More"
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = expandedB,
-                                onDismissRequest = { expandedB = false }
-                            ) {
-                                for (a in DataSingleton.activityOptions) {
-                                    DropdownMenuItem(onClick = {
-                                        DataSingleton.setRecordActivityNameB(a)
-                                        expandedB = false
-                                    }) {
-                                        Text(a)
-                                    }
-                                }
-                            }
-                        }
+                    } else {
+                        Text(
+                            text = "Cycle through labels by pressing the Play/Pause \n" +
+                                    "button of a connected BT device",
+                            modifier = Modifier.padding(8.dp),
+                            textAlign = TextAlign.Left,
+                            style = MaterialTheme.typography.body2,
+                            color = Color.White
+                        )
                     }
                 }
             }
@@ -189,7 +224,8 @@ fun RenderSettings(saveSettingsCallback: (String, Boolean, Boolean) -> Unit) {
                     saveSettingsCallback(
                         ipText,
                         leftHandMode,
-                        recordLocally
+                        recordLocally,
+                        mediaButtons
                     )
                 },
                 text = "Done"

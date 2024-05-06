@@ -75,6 +75,48 @@ class PhoneViewModel(application: Application) :
     private val _ppgQueueSize = MutableStateFlow(0)
     val ppgQueueSize = _ppgQueueSize.asStateFlow()
 
+    private var _mediaButtonRecordingState = 0
+
+
+    fun resetMediaButtonRecordingState() {
+        _mediaButtonRecordingState = 0
+        onMediaButtonDown()
+    }
+
+    /**
+     * If local recording is active, pressing a Media Button on a connected bluetooth devices triggers a label change.
+     * This allows to label data in settings where the phone is not accessible. For example, in the shower.
+     */
+    fun onMediaButtonDown() {
+        // Media buttons should only affect recording labels.
+        // Ignore this trigger in broadcasting mode
+        if (!DataSingleton.recordLocally.value) {
+            return
+        }
+
+        // assign current value
+        val stateLabel = DataSingleton.mediaButtonRecordingOptions[_mediaButtonRecordingState]
+        DataSingleton.setRecordActivityNameCombined(stateLabel)
+        Log.d(TAG, "Updated Recording Label to $stateLabel")
+
+        // iterate through Recording Options until we reach the end
+        if (_mediaButtonRecordingState < (DataSingleton.mediaButtonRecordingOptions.size - 1)) {
+
+            // send a trigger message to the connected watch app
+            _scope.launch {
+                val buffer = ByteBuffer.allocate(4) // [state (int)]
+                buffer.putInt(_mediaButtonRecordingState)
+                _messageClient.sendMessage( // trigger watch calibration and streaming
+                    _connectedNodeId,
+                    DataSingleton.RECORDING_LABEL_CHANGED,
+                    buffer.array()
+                ).await()
+            }
+
+            _mediaButtonRecordingState += 1
+        }
+    }
+
     fun onServiceUpdate(intent: Intent) {
         when (intent.getStringExtra(DataSingleton.BROADCAST_SERVICE_KEY)) {
             DataSingleton.IMU_PATH -> {
@@ -235,6 +277,9 @@ class PhoneViewModel(application: Application) :
         }
     }
 
+    /**
+     * sends a trigger to the watch to start IMU streaming
+     */
     fun sendImuTrigger() {
         _scope.launch {
             val buffer = ByteBuffer.allocate(4) // [mode (int)]

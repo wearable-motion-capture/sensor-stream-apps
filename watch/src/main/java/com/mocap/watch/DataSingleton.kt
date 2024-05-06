@@ -27,6 +27,7 @@ object DataSingleton {
     const val PPG_PATH = "/ppg"
     const val AUDIO_PATH = "/audio"
     const val CALIBRATION_PATH = "/calibration"
+    const val RECORDING_LABEL_CHANGED = "/rec_label_changed"
     const val PING_REQ = "/ping_request"
     const val PING_REP = "/ping_reply"
     const val BROADCAST_CLOSE = "mocap.broadcast.close"
