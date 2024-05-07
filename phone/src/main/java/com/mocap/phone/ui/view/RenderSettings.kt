@@ -37,11 +37,12 @@ import com.mocap.phone.ui.SmallCard
 
 
 @Composable
-fun RenderSettings(saveSettingsCallback: (String, Boolean, Boolean, Boolean) -> Unit) {
+fun RenderSettings(saveSettingsCallback: (String, Boolean, Boolean, Boolean, String) -> Unit) {
 
     // hand mode variables
     val port by DataSingleton.imuPort.collectAsState()
     var ipText by remember { mutableStateOf(DataSingleton.ip.value) }
+    var addFileID by remember { mutableStateOf(DataSingleton.addFileId.value) }
     val recordLocally by DataSingleton.recordLocally.collectAsState()
     val mediaButtons by DataSingleton.listenToMediaButtons.collectAsState()
     var leftHandMode by remember { mutableStateOf(port == DataSingleton.IMU_PORT_LEFT) }
@@ -52,21 +53,6 @@ fun RenderSettings(saveSettingsCallback: (String, Boolean, Boolean, Boolean) -> 
             .background(MaterialTheme.colors.background),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        item {
-            DefaultHeadline(text = "Set Target IP")
-        }
-        item {
-            SmallCard() {
-                OutlinedTextField(
-                    value = ipText,
-                    onValueChange = { ipText = it },
-                    label = { Text("Set IP to stream to") },
-                    textStyle = TextStyle(color = Color.White),
-                    singleLine = true
-                )
-            }
-        }
-
 
         item {
             DefaultHeadline(text = "Data Processing Modes")
@@ -115,7 +101,25 @@ fun RenderSettings(saveSettingsCallback: (String, Boolean, Boolean, Boolean) -> 
                     }
                 )
 
-                if (recordLocally) {
+                // Broadcast mode
+                if (!recordLocally) {
+                    Text(
+                        text = "Broadcasts via UDP to a device in the same WiFi",
+                        modifier = Modifier.padding(8.dp),
+                        textAlign = TextAlign.Left,
+                        style = MaterialTheme.typography.body2,
+                        color = Color.White
+                    )
+                    OutlinedTextField(
+                        value = ipText,
+                        onValueChange = { ipText = it },
+                        label = { Text("Set IP to stream to") },
+                        textStyle = TextStyle(color = Color.White),
+                        singleLine = true
+                    )
+                }
+                // Record Locally Mode
+                else {
                     Text(
                         text = "Record Locally is for developer use only. " +
                                 "Full documentation to be added in future versions.",
@@ -123,6 +127,14 @@ fun RenderSettings(saveSettingsCallback: (String, Boolean, Boolean, Boolean) -> 
                         textAlign = TextAlign.Left,
                         style = MaterialTheme.typography.body2,
                         color = Color.White
+                    )
+
+                    OutlinedTextField(
+                        value = addFileID,
+                        onValueChange = { addFileID = it },
+                        label = { Text("Set additional file ID") },
+                        textStyle = TextStyle(color = Color.White),
+                        singleLine = true
                     )
 
                     Text(
@@ -199,7 +211,8 @@ fun RenderSettings(saveSettingsCallback: (String, Boolean, Boolean, Boolean) -> 
                         ipText,
                         leftHandMode,
                         recordLocally,
-                        mediaButtons
+                        mediaButtons,
+                        addFileID
                     )
                 },
                 text = "Done"

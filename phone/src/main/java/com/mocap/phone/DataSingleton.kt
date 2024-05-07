@@ -68,6 +68,8 @@ object DataSingleton {
     const val RECORD_LOCALLY_DEFAULT = false
     const val MEDIA_BUTTONS_KEY = "com.mocap.phone.media_buttons"
     const val MEDIA_BUTTONS_DEFAULT = false
+    const val ADD_FILE_ID_KEY = "com.mocap.phone.add_file_id"
+    const val ADD_FILE_ID_DEFAULT = ""
 
     private val recordActivityLabelStateFlow = MutableStateFlow(activityLabels[0])
     val recordActivityLabel = recordActivityLabelStateFlow.asStateFlow()
@@ -86,6 +88,13 @@ object DataSingleton {
     val ip = ipStateFlow.asStateFlow()
     fun setIp(st: String) {
         ipStateFlow.value = st
+    }
+
+    // this flag decides whether the phone broadcasts or records
+    private val addFileIdSF = MutableStateFlow("")
+    val addFileId = addFileIdSF.asStateFlow()
+    fun setAddFileId(st: String) {
+        addFileIdSF.value = st
     }
 
     // this flag decides whether the phone broadcasts or records

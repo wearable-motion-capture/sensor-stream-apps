@@ -48,6 +48,7 @@ fun RenderHome(
     val watchForwardQuat by DataSingleton.watchQuat.collectAsState()
     val watchPressure by DataSingleton.watchPres.collectAsState()
     val ip by DataSingleton.ip.collectAsState()
+    val addFileId by DataSingleton.addFileId.collectAsState()
     val port by DataSingleton.imuPort.collectAsState()
     val recordLocally by DataSingleton.recordLocally.collectAsState()
     val mediaButtons by DataSingleton.listenToMediaButtons.collectAsState()
@@ -124,19 +125,47 @@ fun RenderHome(
                 DefaultHeadline(text = "Data Processing")
 
                 SmallCard() {
-                    // Media Control Buttons require the additional IMU trigger
-                    if (mediaButtons and recordLocally) {
-                        DefaultHighlight(
-                            text = "Record - Media Button Ctrl."
+
+                    // Mode display
+                    Row() {
+                        Text(
+                            text = if (recordLocally) "Record" else "Broadcast",
+                            modifier = Modifier.padding(8.dp),
+                            textAlign = TextAlign.Center,
+                            color = if (recordLocally) Color.Yellow else Color.Magenta,
+                            style = MaterialTheme.typography.subtitle1
                         )
                         Text(
-                            text = recordActivityName,
+                            text = if (port == DataSingleton.IMU_PORT_LEFT) "Left Hand Mode"
+                            else "Right Hand Mode",
+                            modifier = Modifier.padding(8.dp),
+                            textAlign = TextAlign.Center,
+                            color = if (port == DataSingleton.IMU_PORT_LEFT) Color.Yellow else Color.Magenta,
+                            style = MaterialTheme.typography.subtitle1
+                        )
+                    }
+                    if (recordLocally) {
+                        DefaultHighlight(text = "FileID: $addFileId")
+                        Text(
+                            text = "Label: $recordActivityName",
                             modifier = Modifier.padding(8.dp),
                             textAlign = TextAlign.Center,
                             color = Color.White,
                             style = MaterialTheme.typography.h6
                         )
-                        // This is an experimental Button. Stored for later use.
+                    } else {
+                        DefaultHighlight(text = ip)
+                    }
+
+                    // Additional Mode Info
+                    if (mediaButtons and recordLocally) {
+                        Text(
+                            text = "Media Buttons Control",
+                            modifier = Modifier.padding(8.dp),
+                            textAlign = TextAlign.Center,
+                            color = Color.White,
+                            style = MaterialTheme.typography.subtitle1
+                        )
                         DefaultButton(
                             enabled = appState,
                             onClick = imuStreamTrigger,
@@ -146,20 +175,8 @@ fun RenderHome(
                             onClick = labelCycleReset,
                             text = "Reset Label Cycle"
                         )
-                    } else {
-                        DefaultHighlight(
-                            text = if (recordLocally) "Record - $recordActivityName" else ip
-                        )
-                        Text(
-                            text = if (port == DataSingleton.IMU_PORT_LEFT) "Left Hand Mode"
-                            else "Right Hand Mode",
-                            modifier = Modifier.padding(8.dp),
-                            textAlign = TextAlign.Center,
-                            color = if (port == DataSingleton.IMU_PORT_LEFT) Color.Yellow else Color.Magenta,
-                            style = MaterialTheme.typography.h6
-                        )
                     }
-                    DefaultButton(onClick = ipSetCallback, text = "IP And Other Settings")
+                    DefaultButton(onClick = ipSetCallback, text = "Settings")
                 }
 
                 Row() {

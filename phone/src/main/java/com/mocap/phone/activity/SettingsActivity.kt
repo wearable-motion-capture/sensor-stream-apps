@@ -33,7 +33,8 @@ class SettingsActivity : ComponentActivity() {
         ip: String,
         leftHandMode: Boolean,
         recordLocally: Boolean,
-        mediaButtons: Boolean
+        mediaButtons: Boolean,
+        addFileId: String
     ) {
 
         // Make sure the text contains a valid IP
@@ -55,6 +56,7 @@ class SettingsActivity : ComponentActivity() {
             putString(DataSingleton.IP_KEY, confirmedIp)
             putBoolean(DataSingleton.RECORD_LOCALLY_KEY, recordLocally)
             putBoolean(DataSingleton.MEDIA_BUTTONS_KEY, mediaButtons)
+            putString(DataSingleton.ADD_FILE_ID_KEY, addFileId)
             apply()
         }
 
@@ -63,6 +65,7 @@ class SettingsActivity : ComponentActivity() {
         DataSingleton.setIp(ip)
         DataSingleton.setRecordLocally(recordLocally)
         DataSingleton.setListenToMediaButtons(mediaButtons)
+        DataSingleton.setAddFileId(addFileId)
 
         Log.d(TAG, "set target IP to $ip and IMU PORT to $p and record locally to $recordLocally")
         this.finish() // activity done

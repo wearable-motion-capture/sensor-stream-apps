@@ -56,18 +56,27 @@ class PhoneMain : ComponentActivity(),
         super.onCreate(savedInstanceState)
         setContent {
 
-            // retrieve stored IP and PORT to update DataSingleton
+            // retrieve stored values from shared preferences and update DataSingleton
             val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
             val storedIp = sharedPref.getString(DataSingleton.IP_KEY, DataSingleton.IP_DEFAULT)
             if (storedIp != null) {
                 DataSingleton.setIp(storedIp)
             }
+
+            val addFileId = sharedPref.getString(
+                DataSingleton.ADD_FILE_ID_KEY, DataSingleton.ADD_FILE_ID_DEFAULT
+            )
+            if (addFileId != null) {
+                DataSingleton.setAddFileId(addFileId)
+            }
+
             DataSingleton.setImuPort(
                 sharedPref.getInt(
                     DataSingleton.PORT_KEY,
                     DataSingleton.IMU_PORT_DEFAULT
                 )
             )
+
             val rl = sharedPref.getBoolean(
                 DataSingleton.RECORD_LOCALLY_KEY,
                 DataSingleton.RECORD_LOCALLY_DEFAULT
