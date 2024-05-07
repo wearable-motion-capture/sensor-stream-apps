@@ -50,6 +50,22 @@ object DataSingleton {
     const val IP_DEFAULT = "192.168.0.12"
     const val IP_KEY = "com.mocap.watch.ip" // shared preferences lookup
 
+    // display recording activity labels in self-labelling mode
+    // these labels must be identical to the DataSingleton on the phone
+    val activityLabels = listOf<String>(
+        "other", // 0
+        "still", // 1
+        "brush_teeth", // 2
+        "shave_face", // 3
+        "deodorant", // 4
+        "wash_hands", // 5
+        "lotion", // 6
+        "hairstyling", // 7
+        "wash_hair", // 8
+        "shave_legs", // 9
+        "soap_body" // 10
+    )
+
     // as state flow to update UI elements when IP changes
     private val ipStateFlow = MutableStateFlow(IP_DEFAULT)
     val ip = ipStateFlow.asStateFlow()

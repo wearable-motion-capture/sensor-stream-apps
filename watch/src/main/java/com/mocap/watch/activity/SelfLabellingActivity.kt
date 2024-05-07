@@ -84,7 +84,8 @@ class SelfLabellingActivity : ComponentActivity(),
                     connected = _viewModel.pingSuccessState,
                     connectedNodeName = _viewModel.nodeName,
                     imuStreamStateFlow = _viewModel.sensorStreamState,
-                    recordLabel = _viewModel.recLabel,
+                    curLabelSF = _viewModel.curLabel,
+                    nxtLabelSF = _viewModel.nxtLabel,
                     finishCallback = ::finish
                 )
             }

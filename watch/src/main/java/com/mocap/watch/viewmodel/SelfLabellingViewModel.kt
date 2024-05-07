@@ -53,6 +53,12 @@ class SelfLabellingViewModel(application: Application) :
     private val _imuStreamState = MutableStateFlow(ImuStreamState.Idle)
     val sensorStreamState = _imuStreamState.asStateFlow()
 
+    private val _curLabel = MutableStateFlow(-1)
+    val curLabel = _curLabel.asStateFlow()
+
+    private val _nxtLabel = MutableStateFlow(-1)
+    val nxtLabel = _nxtLabel.asStateFlow()
+
 
     fun endImu() {
         _imuStreamState.value = ImuStreamState.Idle
@@ -79,7 +85,10 @@ class SelfLabellingViewModel(application: Application) :
         endImu()
     }
 
-    /** a simple loop that ensures both apps are active */
+    /**
+     * A simple loop that ensures the phone app is active.
+     * Sending pings in a regular interval
+     */
     fun regularConnectionCheck() {
         _scope.launch {
             while (true) {
@@ -97,7 +106,9 @@ class SelfLabellingViewModel(application: Application) :
 //        }
     }
 
-    /** send a ping request */
+    /**
+     * send a ping request to the connected phone
+     */
     private fun requestPing() {
         _scope.launch {
             try {
@@ -114,7 +125,7 @@ class SelfLabellingViewModel(application: Application) :
     }
 
     /**
-     * check for ping messages
+     * Checks, filters, and processes incoming messages.
      * This function is called by the listener registered in the PhoneMain Activity
      */
     fun onMessageReceived(messageEvent: MessageEvent) {
@@ -150,6 +161,14 @@ class SelfLabellingViewModel(application: Application) :
                         }
                     }
                 }
+            }
+
+            // trigger from the phone that recording labels have changed
+            DataSingleton.RECORDING_LABEL_CHANGED -> {
+                val b = ByteBuffer.wrap(messageEvent.data)
+                _curLabel.value = b.getInt(0)
+                _nxtLabel.value = b.getInt(4)
+                Log.d(TAG, "Label Update Received ${_curLabel.value} -> ${_nxtLabel.value}")
             }
 
         }
@@ -193,7 +212,7 @@ class SelfLabellingViewModel(application: Application) :
     }
 
     /**
-     * kill the calibration procedure if activity finishes unexpectedly
+     * Makes sure to kill the all procedures if activity finishes unexpectedly
      */
     override fun onCleared() {
         super.onCleared()
