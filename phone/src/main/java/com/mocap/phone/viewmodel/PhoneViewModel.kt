@@ -96,7 +96,7 @@ class PhoneViewModel(application: Application) :
         _scope.launch {
             val buffer = ByteBuffer.allocate(8) // [cur label, nxt label]
             buffer.putInt(-1)
-            buffer.putInt(-1)
+            buffer.putInt(_mediaButtonRecordingSequence.getOrElse(0) { -1 })
             _messageClient.sendMessage( // trigger watch calibration and streaming
                 _connectedNodeId,
                 DataSingleton.RECORDING_LABEL_CHANGED,
@@ -116,20 +116,27 @@ class PhoneViewModel(application: Application) :
             return
         }
 
-        // The sequence has ended
+        var labelIdx = -1
+        var nextLabelIdx = -1
+
         if (_mediaButtonRecordingSequence.size <= 0) {
+            // The sequence has ended
             DataSingleton.setRecordActivityLabel("END")
-            return
+            Log.d(TAG, "Finished recording label sequence")
+            sendImuTrigger(start = false) // stop watch IMU streaming
+        } else {
+            // Iterate through the labels and update the data recording
+            labelIdx = _mediaButtonRecordingSequence.removeAt(0)
+            nextLabelIdx = _mediaButtonRecordingSequence.getOrElse(0) { -1 }
+            // update UI feedback
+            val label = DataSingleton.activityLabels[labelIdx]
+            DataSingleton.setRecordActivityLabel(label)
+            Log.d(TAG, "Updated Recording Label to $label")
+            sendImuTrigger(start = true) // start watch IMU streaming
         }
 
-        // Iterate through the labels and update the data recording
-        val labelIdx = _mediaButtonRecordingSequence.removeAt(0)
-        val nextLabelIdx = _mediaButtonRecordingSequence.getOrElse(0) { -1 }
-        val label = DataSingleton.activityLabels[labelIdx]
-        DataSingleton.setRecordActivityLabel(label)
-        Log.d(TAG, "Updated Recording Label to $label")
 
-        // send a trigger message to the connected watch app informing it
+        // send a message to the connected watch app informing it
         // about the current and upcoming label
         _scope.launch {
             val buffer = ByteBuffer.allocate(8) // [cur label, nxt label]
@@ -310,12 +317,20 @@ class PhoneViewModel(application: Application) :
     }
 
     /**
-     * sends a trigger to the watch to start IMU streaming
+     * sends a trigger to the watch to start/end IMU streaming
+     * The input flag "start" defines whether IMU streaming should be started or ended.
+     * If no flag is provided, switch the streaming off or on (streaming = !streaming)
      */
-    fun sendImuTrigger() {
+    fun sendImuTrigger(start: Boolean? = null) {
         _scope.launch {
             val buffer = ByteBuffer.allocate(4) // [mode (int)]
-            buffer.putInt(3)
+            if (start == null) {
+                buffer.putInt(5) // mode 5 turn off IMU stream if running, otherwise, start it
+            } else if (start) {
+                buffer.putInt(3) // mode 3 == start the IMU stream
+            } else {
+                buffer.putInt(4) // mode 4 == end the IMU stream
+            }
             _messageClient.sendMessage( // trigger watch calibration and streaming
                 _connectedNodeId,
                 DataSingleton.CALIBRATION_PATH,

@@ -43,9 +43,6 @@ class SelfLabellingViewModel(application: Application) :
     val nodeName = _connectedNodeDisplayName.asStateFlow()
     var connectedNodeId: String = "none" // this will hold the connected Phone ID
 
-    private val _recordingLabel = MutableStateFlow("Unknown")
-    val recLabel = _recordingLabel.asStateFlow()
-
     private val _pingSuccess = MutableStateFlow(false)
     val pingSuccessState = _pingSuccess.asStateFlow()
     private var _lastPing = LocalDateTime.now()
@@ -60,11 +57,21 @@ class SelfLabellingViewModel(application: Application) :
     val nxtLabel = _nxtLabel.asStateFlow()
 
 
-    fun endImu() {
-        _imuStreamState.value = ImuStreamState.Idle
+    private fun endImu() {
         Intent(_application.applicationContext, ChannelImuService::class.java).also { intent ->
             _application.stopService(intent)
         }
+        _imuStreamState.value = ImuStreamState.Idle
+    }
+
+    private fun startIMU() {
+        val intent = Intent(
+            _application.applicationContext,
+            ChannelImuService::class.java
+        )
+        intent.putExtra("sourceNodeId", connectedNodeId)
+        _application.startService(intent)
+        _imuStreamState.value = ImuStreamState.Streaming
     }
 
     fun onServiceClose(serviceKey: String?) {
@@ -147,15 +154,19 @@ class SelfLabellingViewModel(application: Application) :
             DataSingleton.CALIBRATION_PATH -> {
                 val b = ByteBuffer.wrap(messageEvent.data)
                 when (b.getInt(0)) {
-                    3 -> { // mode == 3 means trigger IMU stream
+                    3 -> { // mode == 3 means start IMU stream
                         if (_imuStreamState.value == ImuStreamState.Idle) {
-                            val intent = Intent(
-                                _application.applicationContext,
-                                ChannelImuService::class.java
-                            )
-                            intent.putExtra("sourceNodeId", connectedNodeId)
-                            _application.startService(intent)
-                            _imuStreamState.value = ImuStreamState.Streaming
+                            startIMU()
+                        }
+                    }
+
+                    4 -> {  // mode == 4 means end IMU stream
+                        endImu()
+                    }
+
+                    5 -> {
+                        if (_imuStreamState.value == ImuStreamState.Idle) {
+                            startIMU()
                         } else {
                             endImu()
                         }

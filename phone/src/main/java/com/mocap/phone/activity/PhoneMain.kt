@@ -5,6 +5,7 @@ import android.content.IntentFilter
 import android.media.session.MediaSession
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -81,13 +82,12 @@ class PhoneMain : ComponentActivity(),
 
             // enabling a media session allows to control recording labels with media buttons
             // Currently, the play/pause button switches the label if the phone is in recording mode
-            _mediaSession = MediaSession(this, TAG)
-            _mediaSession.setCallback(_callback)
             if (rl and mb) {
+                _mediaSession = MediaSession(this, TAG)
+                _mediaSession.setCallback(_callback)
                 _mediaSession.setActive(true)
                 _viewModel.resetMediaButtonRecordingSequence()
-            } else {
-                _mediaSession.setActive(false)
+                Log.d(TAG, "ONCREATE - Media Session Active")
             }
 
             PhoneTheme {
@@ -166,14 +166,21 @@ class PhoneMain : ComponentActivity(),
         // check if a phone is connected and set state flows accordingly
         _viewModel.queryCapabilities()
 
-        if (this::_mediaSession.isInitialized) {
-            if (DataSingleton.listenToMediaButtons.value and DataSingleton.recordLocally.value) {
-                _mediaSession.setActive(true)
-                _viewModel.resetMediaButtonRecordingSequence()
-            } else {
-                _mediaSession.setActive(false)
-            }
+        // start the media session if listening for buttons but not initialized yet
+        if (DataSingleton.listenToMediaButtons.value
+            and DataSingleton.recordLocally.value
+        ) {
+            _mediaSession = MediaSession(this, TAG)
+            _mediaSession.setCallback(_callback)
+            _mediaSession.setActive(true)
+            _viewModel.resetMediaButtonRecordingSequence()
+            Log.d(TAG, "ONRESUME - Media Session Active")
+        } else if (this::_mediaSession.isInitialized) {
+            _mediaSession.setActive(false)
+            _mediaSession.release()
+            Log.d(TAG, "ONRESUME Media Session Inactive")
         }
+
 
         val imuIntent = Intent(this, ImuService::class.java)
         this.startService(imuIntent)
@@ -183,10 +190,15 @@ class PhoneMain : ComponentActivity(),
         this.startService(audioIntent)
     }
 
-    /**
-     * clear all listeners
-     */
-    private fun unregisterListeners() {
+    override fun onResume() {
+        super.onResume()
+        registerListeners()
+    }
+
+    override fun onPause() {
+        super.onPause()
+
+        // Clear all listeners
         LocalBroadcastManager.getInstance(applicationContext).unregisterReceiver(_br)
         _messageClient.removeListener(this)
         _capabilityClient.removeListener(this)
@@ -201,16 +213,8 @@ class PhoneMain : ComponentActivity(),
 
         if (this::_mediaSession.isInitialized) {
             _mediaSession.setActive(false)
+            _mediaSession.release()
+            Log.d(TAG, "ONPAUSE - Media Session Inactive")
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        registerListeners()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        unregisterListeners()
     }
 }
