@@ -82,6 +82,11 @@ fun RenderModeSelection(
 
             if (expMode) {
                 item {
+                    DefaultText(
+                        text = "In development and not fully documented yet:",
+                    )
+                }
+                item {
                     DefaultButton(
                         onClick = { watchViaPhoneCallback() },
                         text = "Watch Only via Phone"

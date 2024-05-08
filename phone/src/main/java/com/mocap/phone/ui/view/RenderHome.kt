@@ -133,7 +133,7 @@ fun RenderHome(
                             modifier = Modifier.padding(8.dp),
                             textAlign = TextAlign.Center,
                             color = if (recordLocally) Color.Yellow else Color.Magenta,
-                            style = MaterialTheme.typography.subtitle1
+                            style = MaterialTheme.typography.h6
                         )
                         Text(
                             text = if (port == DataSingleton.IMU_PORT_LEFT) "Left Hand Mode"
@@ -141,11 +141,11 @@ fun RenderHome(
                             modifier = Modifier.padding(8.dp),
                             textAlign = TextAlign.Center,
                             color = if (port == DataSingleton.IMU_PORT_LEFT) Color.Yellow else Color.Magenta,
-                            style = MaterialTheme.typography.subtitle1
+                            style = MaterialTheme.typography.h6
                         )
                     }
                     if (recordLocally) {
-                        DefaultHighlight(text = "FileID: $addFileId")
+                        DefaultHighlight(text = "File ID: $addFileId")
                         Text(
                             text = "Label: $recordActivityName",
                             modifier = Modifier.padding(8.dp),
@@ -154,7 +154,7 @@ fun RenderHome(
                             style = MaterialTheme.typography.h6
                         )
                     } else {
-                        DefaultHighlight(text = ip)
+                        DefaultHighlight(text = "IP: $ip")
                     }
 
                     // Additional Mode Info
@@ -164,7 +164,7 @@ fun RenderHome(
                             modifier = Modifier.padding(8.dp),
                             textAlign = TextAlign.Center,
                             color = Color.White,
-                            style = MaterialTheme.typography.subtitle1
+                            style = MaterialTheme.typography.h6
                         )
                         DefaultButton(
                             enabled = appState,
