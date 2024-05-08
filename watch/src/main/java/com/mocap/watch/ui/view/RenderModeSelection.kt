@@ -57,13 +57,13 @@ fun RenderModeSelection(
             item {
                 DefaultButton(
                     onClick = { upperArmCallback() },
-                    text = "Phone Upper Arm"
+                    text = "Upper Arm"
                 )
             }
             item {
                 DefaultButton(
                     onClick = { pocketCallback() },
-                    text = "Phone Pocket"
+                    text = "Pocket"
                 )
             }
 
