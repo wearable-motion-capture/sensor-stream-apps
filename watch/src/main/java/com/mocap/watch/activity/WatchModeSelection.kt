@@ -9,6 +9,7 @@ import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.preference.PreferenceManager
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.CapabilityInfo
@@ -57,6 +58,16 @@ class WatchModeSelection : ComponentActivity(),
                 Log.d(TAG, "body sensor and audio recording permissions already granted")
             }
 
+            // retrieve stored values from shared preferences and update DataSingleton
+            val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+            DataSingleton.setExpMode(
+                sharedPref.getBoolean(
+                    DataSingleton.EXP_MODE_KEY,
+                    DataSingleton.EXP_MODE_KEY_DEFAULT
+                )
+            )
+
+
             // keep screen on
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
@@ -68,10 +79,22 @@ class WatchModeSelection : ComponentActivity(),
                     watchViaPhoneCallback = { startActivity(Intent("com.mocap.watch.WATCH_ONLY_VIA_PHONE")) },
                     upperArmCallback = { startActivity(Intent("com.mocap.watch.PHONE_ARM")) },
                     pocketCallback = { startActivity(Intent("com.mocap.watch.PHONE_POCKET")) },
-                    selfLabellingCallback = { startActivity(Intent("com.mocap.watch.SELF_LABELLING")) }
+                    selfLabellingCallback = { startActivity(Intent("com.mocap.watch.SELF_LABELLING")) },
+                    expModeCallback = { expModeSelect(it) }
                 )
             }
         }
+    }
+
+    private fun expModeSelect(b: Boolean) {
+        // update Data Singleton and shared preferences to store the decision
+        DataSingleton.setExpMode(b)
+        val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+        with(sharedPref.edit()) {
+            putBoolean(DataSingleton.EXP_MODE_KEY, b)
+            apply()
+        }
+
     }
 
     private fun queryCapabilities() {

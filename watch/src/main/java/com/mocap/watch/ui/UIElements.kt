@@ -41,11 +41,12 @@ fun StreamToggle(
 }
 
 @Composable
-fun DefaultText(text: String) {
+fun DefaultText(text: String, color: Color = Color.White) {
     Text(
         text = text,
         modifier = Modifier.fillMaxWidth(),
-        textAlign = TextAlign.Center
+        textAlign = TextAlign.Center,
+        color = color
     )
 }
 

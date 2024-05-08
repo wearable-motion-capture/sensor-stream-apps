@@ -20,7 +20,7 @@ enum class AudioStreamState {
 }
 
 object DataSingleton {
-    const val VERSION = "0.3.11"
+    const val VERSION = "0.4.0"
 
     // dual mode communication paths
     const val IMU_PATH = "/imu"
@@ -33,6 +33,10 @@ object DataSingleton {
     const val BROADCAST_CLOSE = "mocap.broadcast.close"
     const val BROADCAST_SERVICE_KEY = "service.id"
     const val BROADCAST_UPDATE = "mocap.broadcast.update"
+
+    // shared preferences for saved settings
+    const val EXP_MODE_KEY = "mocap.exp_mode"
+    const val EXP_MODE_KEY_DEFAULT = false
 
     // capabilities
     const val PHONE_APP_ACTIVE = "phone_app" // indicates if the phone app is active
@@ -65,6 +69,13 @@ object DataSingleton {
         "shave_legs", // 9
         "soap_body" // 10
     )
+
+    // experimental mode enables additional options in the WatchModeSelection
+    private val experimentalModeSF = MutableStateFlow(false)
+    val expMode = experimentalModeSF.asStateFlow()
+    fun setExpMode(b: Boolean) {
+        experimentalModeSF.value = b
+    }
 
     // as state flow to update UI elements when IP changes
     private val ipStateFlow = MutableStateFlow(IP_DEFAULT)
