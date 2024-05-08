@@ -20,18 +20,23 @@ enum class AudioStreamState {
 }
 
 object DataSingleton {
-    const val VERSION = "0.3.10"
+    const val VERSION = "0.4.1"
 
     // dual mode communication paths
     const val IMU_PATH = "/imu"
     const val PPG_PATH = "/ppg"
     const val AUDIO_PATH = "/audio"
     const val CALIBRATION_PATH = "/calibration"
+    const val RECORDING_LABEL_CHANGED = "/rec_label_changed"
     const val PING_REQ = "/ping_request"
     const val PING_REP = "/ping_reply"
     const val BROADCAST_CLOSE = "mocap.broadcast.close"
     const val BROADCAST_SERVICE_KEY = "service.id"
     const val BROADCAST_UPDATE = "mocap.broadcast.update"
+
+    // shared preferences for saved settings
+    const val EXP_MODE_KEY = "mocap.exp_mode"
+    const val EXP_MODE_KEY_DEFAULT = false
 
     // capabilities
     const val PHONE_APP_ACTIVE = "phone_app" // indicates if the phone app is active
@@ -48,6 +53,29 @@ object DataSingleton {
     const val UDP_AUDIO_PORT = 65001
     const val IP_DEFAULT = "192.168.0.12"
     const val IP_KEY = "com.mocap.watch.ip" // shared preferences lookup
+
+    // display recording activity labels in self-labelling mode
+    // these labels must be identical to the DataSingleton on the phone
+    val activityLabels = listOf<String>(
+        "other", // 0
+        "still", // 1
+        "brush_teeth", // 2
+        "shave_face", // 3
+        "deodorant", // 4
+        "wash_hands", // 5
+        "lotion", // 6
+        "hairstyling", // 7
+        "wash_hair", // 8
+        "shave_legs", // 9
+        "soap_body" // 10
+    )
+
+    // experimental mode enables additional options in the WatchModeSelection
+    private val experimentalModeSF = MutableStateFlow(false)
+    val expMode = experimentalModeSF.asStateFlow()
+    fun setExpMode(b: Boolean) {
+        experimentalModeSF.value = b
+    }
 
     // as state flow to update UI elements when IP changes
     private val ipStateFlow = MutableStateFlow(IP_DEFAULT)

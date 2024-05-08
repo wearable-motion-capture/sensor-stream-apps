@@ -4,13 +4,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 object DataSingleton {
-    const val VERSION = "0.3.6"
+    const val VERSION = "0.4.1"
 
     // message paths
     const val IMU_PATH = "/imu"
     const val PPG_PATH = "/ppg"
     const val AUDIO_PATH = "/audio"
     const val CALIBRATION_PATH = "/calibration" // calibration message path
+    const val RECORDING_LABEL_CHANGED = "/rec_label_changed"
     const val PING_REQ = "/ping_request"
     const val PING_REP = "/ping_reply"
 
@@ -41,19 +42,22 @@ object DataSingleton {
     const val DUAL_IMU_MSG_SIZE = (55) * 4 // dT + SW IMU msg without calib + PH IMU MSG
 
     // recording parameters
-    val activityOptions = listOf<String>(
-        "other",
-        "still",
-        "brush_teeth",
-        "shave_face",
-        "deodorant",
-        "wash_hands",
-        "lotion",
-        "hairstyling",
-        "wash_hair",
-        "shave_legs",
-        "soap_body"
+    val activityLabels = listOf<String>(
+        "other", // 0
+        "still", // 1
+        "brush_teeth", // 2
+        "shave_face", // 3
+        "deodorant", // 4
+        "wash_hands", // 5
+        "lotion", // 6
+        "hairstyling", // 7
+        "wash_hair", // 8
+        "shave_legs", // 9
+        "soap_body" // 10
     )
+
+    // Media Button recording cycles through labels. See the activityLabels for reference
+    val mediaButtonRecordingSequence = listOf<Int>(0, 2, 0, 8, 0, 10, 0, 9, 0, 6, 0, 7, 0)
 
     // shared preferences lookup
     const val IP_KEY = "com.mocap.phone.ip"
@@ -62,34 +66,21 @@ object DataSingleton {
     const val IMU_PORT_DEFAULT = IMU_PORT_LEFT
     const val RECORD_LOCALLY_KEY = "com.mocap.phone.record_locally"
     const val RECORD_LOCALLY_DEFAULT = false
+    const val MEDIA_BUTTONS_KEY = "com.mocap.phone.media_buttons"
+    const val MEDIA_BUTTONS_DEFAULT = false
+    const val ADD_FILE_ID_KEY = "com.mocap.phone.add_file_id"
+    const val ADD_FILE_ID_DEFAULT = ""
 
-    private val recordActivityNameCombinedStateFlow = MutableStateFlow(activityOptions[0])
-    val recordActivityNameCombined = recordActivityNameCombinedStateFlow.asStateFlow()
-
-    // For recording sequences we record activity A ...
-    private val recordActivityNameAStateFlow = MutableStateFlow(activityOptions[0])
-    val recordActivityNameA = recordActivityNameAStateFlow.asStateFlow()
-    fun setRecordActivityNameA(st: String) {
-        recordActivityNameAStateFlow.value = st
-        if (st.equals(recordActivityNameBStateFlow.value)) {
-            recordActivityNameCombinedStateFlow.value = st
-        } else {
-            recordActivityNameCombinedStateFlow.value =
-                "seq_$st--${recordActivityNameBStateFlow.value}"
-        }
+    private val recordActivityLabelStateFlow = MutableStateFlow(activityLabels[0])
+    val recordActivityLabel = recordActivityLabelStateFlow.asStateFlow()
+    fun setRecordActivityLabel(st: String) {
+        recordActivityLabelStateFlow.value = st
     }
 
-    // ... and activity B. See method above.
-    private val recordActivityNameBStateFlow = MutableStateFlow(activityOptions[0])
-    val recordActivityNameB = recordActivityNameBStateFlow.asStateFlow()
-    fun setRecordActivityNameB(st: String) {
-        recordActivityNameBStateFlow.value = st
-        if (st.equals(recordActivityNameAStateFlow.value)) {
-            recordActivityNameCombinedStateFlow.value = st
-        } else {
-            recordActivityNameCombinedStateFlow.value =
-                "seq_${recordActivityNameAStateFlow.value}--$st"
-        }
+    private val listenToMediaButtonsSF = MutableStateFlow(false)
+    val listenToMediaButtons = listenToMediaButtonsSF.asStateFlow()
+    fun setListenToMediaButtons(b: Boolean) {
+        listenToMediaButtonsSF.value = b
     }
 
     // as state flow to update UI elements when IP changes
@@ -97,6 +88,13 @@ object DataSingleton {
     val ip = ipStateFlow.asStateFlow()
     fun setIp(st: String) {
         ipStateFlow.value = st
+    }
+
+    // this flag decides whether the phone broadcasts or records
+    private val addFileIdSF = MutableStateFlow("")
+    val addFileId = addFileIdSF.asStateFlow()
+    fun setAddFileId(st: String) {
+        addFileIdSF.value = st
     }
 
     // this flag decides whether the phone broadcasts or records

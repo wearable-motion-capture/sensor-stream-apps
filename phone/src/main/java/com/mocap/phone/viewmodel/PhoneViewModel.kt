@@ -34,7 +34,7 @@ class PhoneViewModel(application: Application) :
     private val _messageClient by lazy { Wearable.getMessageClient(application) }
     private val _scope = CoroutineScope(Job() + Dispatchers.IO)
 
-    // UI elements to inform the user about the internal state
+    // UI elements to inform the user about the connection to the watch
     private var _connectedNodeId: String = "none"
     private val _connectedNodeDisplayName = MutableStateFlow("none")
     val nodeName = _connectedNodeDisplayName.asStateFlow()
@@ -42,20 +42,19 @@ class PhoneViewModel(application: Application) :
     val appActive = _pingSuccess.asStateFlow()
     private var _lastPing = LocalDateTime.now()
 
+    // AUDIO State Flows
     private val _audioStreamState = MutableStateFlow(false)
     val audioStreamState = _audioStreamState.asStateFlow()
-
-    private val _ppgStreamState = MutableStateFlow(false)
-    val ppgStreamState = _ppgStreamState.asStateFlow()
-
-    private val _imuStreamState = MutableStateFlow(false)
-    val imuStreamState = _imuStreamState.asStateFlow()
 
     private val _audioBroadcastHz = MutableStateFlow(0.0F)
     val audioBroadcastHz = _audioBroadcastHz.asStateFlow()
 
     private val _audioStreamQueue = MutableStateFlow(0)
     val audioStreamQueue = _audioStreamQueue.asStateFlow()
+
+    // IMU State Flows
+    private val _imuStreamState = MutableStateFlow(false)
+    val imuStreamState = _imuStreamState.asStateFlow()
 
     private val _imuInHz = MutableStateFlow(0.0F)
     val imuInHz = _imuInHz.asStateFlow()
@@ -66,6 +65,10 @@ class PhoneViewModel(application: Application) :
     private val _imuQueueSize = MutableStateFlow(0)
     val imuQueueSize = _imuQueueSize.asStateFlow()
 
+    // PPG State Flows
+    private val _ppgStreamState = MutableStateFlow(false)
+    val ppgStreamState = _ppgStreamState.asStateFlow()
+
     private val _ppgInHz = MutableStateFlow(0.0F)
     val ppgInHz = _ppgInHz.asStateFlow()
 
@@ -75,6 +78,82 @@ class PhoneViewModel(application: Application) :
     private val _ppgQueueSize = MutableStateFlow(0)
     val ppgQueueSize = _ppgQueueSize.asStateFlow()
 
+    // Media Button-controlled data collection
+    // deep copy the label sequence list
+    private var _mediaButtonRecordingSequence =
+        DataSingleton.mediaButtonRecordingSequence.toMutableList()
+
+
+    /**
+     * Resets the label sequence for Media Button-controlled data collection.
+     */
+    fun resetMediaButtonRecordingSequence() {
+        // deep copy the list
+        _mediaButtonRecordingSequence = DataSingleton.mediaButtonRecordingSequence.toMutableList()
+        DataSingleton.setRecordActivityLabel("START")
+
+        // send a trigger message to the connected watch app clearing all labels
+        _scope.launch {
+            val buffer = ByteBuffer.allocate(8) // [cur label, nxt label]
+            buffer.putInt(-1)
+            buffer.putInt(_mediaButtonRecordingSequence.getOrElse(0) { -1 })
+            _messageClient.sendMessage( // trigger watch calibration and streaming
+                _connectedNodeId,
+                DataSingleton.RECORDING_LABEL_CHANGED,
+                buffer.array()
+            ).await()
+        }
+    }
+
+    /**
+     * If local recording is active, pressing a Media Button on a connected bluetooth devices triggers a label change.
+     * This allows to label data in settings where the phone is not accessible. For example, in the shower.
+     */
+    fun onMediaButtonDown() {
+        // Media buttons should only affect recording labels.
+        // Ignore this trigger in broadcasting mode
+        if (!DataSingleton.recordLocally.value) {
+            return
+        }
+
+        var labelIdx = -1
+        var nextLabelIdx = -1
+
+        if (_mediaButtonRecordingSequence.size <= 0) {
+            // The sequence has ended
+            DataSingleton.setRecordActivityLabel("END")
+            Log.d(TAG, "Finished recording label sequence")
+            sendImuTrigger(start = false) // stop watch IMU streaming
+        } else {
+            // Iterate through the labels and update the data recording
+            labelIdx = _mediaButtonRecordingSequence.removeAt(0)
+            nextLabelIdx = _mediaButtonRecordingSequence.getOrElse(0) { -1 }
+            // update UI feedback
+            val label = DataSingleton.activityLabels[labelIdx]
+            DataSingleton.setRecordActivityLabel(label)
+            Log.d(TAG, "Updated Recording Label to $label")
+            sendImuTrigger(start = true) // start watch IMU streaming
+        }
+
+
+        // send a message to the connected watch app informing it
+        // about the current and upcoming label
+        _scope.launch {
+            val buffer = ByteBuffer.allocate(8) // [cur label, nxt label]
+            buffer.putInt(labelIdx)
+            buffer.putInt(nextLabelIdx)
+            _messageClient.sendMessage( // trigger watch calibration and streaming
+                _connectedNodeId,
+                DataSingleton.RECORDING_LABEL_CHANGED,
+                buffer.array()
+            ).await()
+        }
+    }
+
+    /**
+     * The service update gets called in a regular interval. It updates transmission frequencies and
+     * other service activities
+     */
     fun onServiceUpdate(intent: Intent) {
         when (intent.getStringExtra(DataSingleton.BROADCAST_SERVICE_KEY)) {
             DataSingleton.IMU_PATH -> {
@@ -167,7 +246,9 @@ class PhoneViewModel(application: Application) :
         requestPing() // check if the app is answering to pings
     }
 
-    /** send a ping request */
+    /**
+     * Check if the watch responds by sending a ping request
+     */
     private fun requestPing() {
         _scope.launch {
             try {
@@ -235,10 +316,21 @@ class PhoneViewModel(application: Application) :
         }
     }
 
-    fun sendImuTrigger() {
+    /**
+     * sends a trigger to the watch to start/end IMU streaming
+     * The input flag "start" defines whether IMU streaming should be started or ended.
+     * If no flag is provided, switch the streaming off or on (streaming = !streaming)
+     */
+    fun sendImuTrigger(start: Boolean? = null) {
         _scope.launch {
             val buffer = ByteBuffer.allocate(4) // [mode (int)]
-            buffer.putInt(3)
+            if (start == null) {
+                buffer.putInt(5) // mode 5 turn off IMU stream if running, otherwise, start it
+            } else if (start) {
+                buffer.putInt(3) // mode 3 == start the IMU stream
+            } else {
+                buffer.putInt(4) // mode 4 == end the IMU stream
+            }
             _messageClient.sendMessage( // trigger watch calibration and streaming
                 _connectedNodeId,
                 DataSingleton.CALIBRATION_PATH,

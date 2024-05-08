@@ -23,13 +23,19 @@ class SettingsActivity : ComponentActivity() {
         setContent {
             PhoneTheme {
                 RenderSettings(
-                    setIpAndPortCallback = this::setIpPort
+                    saveSettingsCallback = this::saveSettings
                 )
             }
         }
     }
 
-    private fun setIpPort(ip: String, leftHandMode: Boolean, recordLocally : Boolean) {
+    private fun saveSettings(
+        ip: String,
+        leftHandMode: Boolean,
+        recordLocally: Boolean,
+        mediaButtons: Boolean,
+        addFileId: String
+    ) {
 
         // Make sure the text contains a valid IP
         var confirmedIp = ip
@@ -49,6 +55,8 @@ class SettingsActivity : ComponentActivity() {
             putInt(DataSingleton.PORT_KEY, p)
             putString(DataSingleton.IP_KEY, confirmedIp)
             putBoolean(DataSingleton.RECORD_LOCALLY_KEY, recordLocally)
+            putBoolean(DataSingleton.MEDIA_BUTTONS_KEY, mediaButtons)
+            putString(DataSingleton.ADD_FILE_ID_KEY, addFileId)
             apply()
         }
 
@@ -56,6 +64,8 @@ class SettingsActivity : ComponentActivity() {
         DataSingleton.setImuPort(p)
         DataSingleton.setIp(ip)
         DataSingleton.setRecordLocally(recordLocally)
+        DataSingleton.setListenToMediaButtons(mediaButtons)
+        DataSingleton.setAddFileId(addFileId)
 
         Log.d(TAG, "set target IP to $ip and IMU PORT to $p and record locally to $recordLocally")
         this.finish() // activity done

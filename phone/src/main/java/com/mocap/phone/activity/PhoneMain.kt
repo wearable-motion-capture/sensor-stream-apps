@@ -2,8 +2,10 @@ package com.mocap.phone.activity
 
 import android.content.Intent
 import android.content.IntentFilter
+import android.media.session.MediaSession
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,9 +22,10 @@ import com.mocap.phone.modules.ServiceBroadcastReceiver
 import com.mocap.phone.service.AudioService
 import com.mocap.phone.service.ImuService
 import com.mocap.phone.service.PpgService
-import com.mocap.phone.viewmodel.PhoneViewModel
 import com.mocap.phone.ui.theme.PhoneTheme
 import com.mocap.phone.ui.view.RenderHome
+import com.mocap.phone.modules.MediaSessionButtonsCallback
+import com.mocap.phone.viewmodel.PhoneViewModel
 import java.nio.ByteBuffer
 
 class PhoneMain : ComponentActivity(),
@@ -42,24 +45,59 @@ class PhoneMain : ComponentActivity(),
             onServiceUpdate = { _viewModel.onServiceUpdate(it) }
         )
 
+    /** listen to media buttons to affect recording sessions **/
+    private lateinit var _mediaSession: MediaSession
+    private val _callback = MediaSessionButtonsCallback(
+        onTrigger = { _viewModel.onMediaButtonDown() }
+    )
+
     /** Starting point of the application */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            // retrieve stored IP and PORT to update DataSingleton
+
+            // retrieve stored values from shared preferences and update DataSingleton
             val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
             val storedIp = sharedPref.getString(DataSingleton.IP_KEY, DataSingleton.IP_DEFAULT)
             if (storedIp != null) {
                 DataSingleton.setIp(storedIp)
             }
-            DataSingleton.setImuPort(sharedPref.getInt(
-                DataSingleton.PORT_KEY,
-                DataSingleton.IMU_PORT_DEFAULT)
+
+            val addFileId = sharedPref.getString(
+                DataSingleton.ADD_FILE_ID_KEY, DataSingleton.ADD_FILE_ID_DEFAULT
             )
-            DataSingleton.setRecordLocally(sharedPref.getBoolean(
+            if (addFileId != null) {
+                DataSingleton.setAddFileId(addFileId)
+            }
+
+            DataSingleton.setImuPort(
+                sharedPref.getInt(
+                    DataSingleton.PORT_KEY,
+                    DataSingleton.IMU_PORT_DEFAULT
+                )
+            )
+
+            val rl = sharedPref.getBoolean(
                 DataSingleton.RECORD_LOCALLY_KEY,
                 DataSingleton.RECORD_LOCALLY_DEFAULT
-            ))
+            )
+            DataSingleton.setRecordLocally(rl)
+
+            val mb = sharedPref.getBoolean(
+                DataSingleton.MEDIA_BUTTONS_KEY,
+                DataSingleton.MEDIA_BUTTONS_DEFAULT
+            )
+            DataSingleton.setListenToMediaButtons(mb)
+
+            // enabling a media session allows to control recording labels with media buttons
+            // Currently, the play/pause button switches the label if the phone is in recording mode
+            if (rl and mb) {
+                _mediaSession = MediaSession(this, TAG)
+                _mediaSession.setCallback(_callback)
+                _mediaSession.setActive(true)
+                _viewModel.resetMediaButtonRecordingSequence()
+                Log.d(TAG, "ONCREATE - Media Session Active")
+            }
 
             PhoneTheme {
                 // keep screen on
@@ -88,6 +126,9 @@ class PhoneMain : ComponentActivity(),
                     },
                     imuStreamTrigger = {
                         _viewModel.sendImuTrigger()
+                    },
+                    labelCycleReset = {
+                        _viewModel.resetMediaButtonRecordingSequence()
                     }
                 )
             }
@@ -134,6 +175,22 @@ class PhoneMain : ComponentActivity(),
         // check if a phone is connected and set state flows accordingly
         _viewModel.queryCapabilities()
 
+        // start the media session if listening for buttons but not initialized yet
+        if (DataSingleton.listenToMediaButtons.value
+            and DataSingleton.recordLocally.value
+        ) {
+            _mediaSession = MediaSession(this, TAG)
+            _mediaSession.setCallback(_callback)
+            _mediaSession.setActive(true)
+            _viewModel.resetMediaButtonRecordingSequence()
+            Log.d(TAG, "ONRESUME - Media Session Active")
+        } else if (this::_mediaSession.isInitialized) {
+            _mediaSession.setActive(false)
+            _mediaSession.release()
+            Log.d(TAG, "ONRESUME Media Session Inactive")
+        }
+
+
         val imuIntent = Intent(this, ImuService::class.java)
         this.startService(imuIntent)
         val ppgIntent = Intent(this, PpgService::class.java)
@@ -142,10 +199,15 @@ class PhoneMain : ComponentActivity(),
         this.startService(audioIntent)
     }
 
-    /**
-     * clear all listeners
-     */
-    private fun unregisterListeners() {
+    override fun onResume() {
+        super.onResume()
+        registerListeners()
+    }
+
+    override fun onPause() {
+        super.onPause()
+
+        // Clear all listeners
         LocalBroadcastManager.getInstance(applicationContext).unregisterReceiver(_br)
         _messageClient.removeListener(this)
         _capabilityClient.removeListener(this)
@@ -157,15 +219,11 @@ class PhoneMain : ComponentActivity(),
         this.stopService(ppgIntent)
         val audioIntent = Intent(this, AudioService::class.java)
         this.stopService(audioIntent)
-    }
 
-    override fun onResume() {
-        super.onResume()
-        registerListeners()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        unregisterListeners()
+        if (this::_mediaSession.isInitialized) {
+            _mediaSession.setActive(false)
+            _mediaSession.release()
+            Log.d(TAG, "ONPAUSE - Media Session Inactive")
+        }
     }
 }

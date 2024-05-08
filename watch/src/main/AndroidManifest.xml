@@ -9,6 +9,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
+    <!-- required for enabling wet mode -->
+    <uses-permission android:name="com.google.android.clockwork.settings.WATCH_TOUCH" />
+    <uses-permission android:name="com.google.android.clockwork.settings.END_WET_MODE" />
 
     <uses-feature android:name="android.hardware.type.watch" />
 
@@ -33,6 +36,7 @@
         <activity
             android:name=".activity.WatchModeSelection"
             android:exported="true"
+            android:taskAffinity=""
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -46,6 +50,7 @@
         <activity
             android:name=".activity.IpSetActivity"
             android:exported="true"
+            android:taskAffinity=""
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
                 <action android:name="com.mocap.watch.SET_IP" />
@@ -55,6 +60,7 @@
         <activity
             android:name=".activity.WatchOnlyActivity"
             android:exported="true"
+            android:taskAffinity=""
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
                 <action android:name="com.mocap.watch.WATCH_ONLY" />
@@ -64,6 +70,7 @@
         <activity
             android:name=".activity.WatchOnlyViaPhoneActivity"
             android:exported="true"
+            android:taskAffinity=""
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
                 <action android:name="com.mocap.watch.WATCH_ONLY_VIA_PHONE" />
@@ -73,6 +80,7 @@
         <activity
             android:name=".activity.PhoneArmActivity"
             android:exported="true"
+            android:taskAffinity=""
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
                 <action android:name="com.mocap.watch.PHONE_ARM" />
@@ -82,6 +90,7 @@
         <activity
             android:name=".activity.PhonePocketActivity"
             android:exported="true"
+            android:taskAffinity=""
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
                 <action android:name="com.mocap.watch.PHONE_POCKET" />
@@ -89,9 +98,19 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".activity.SelfLabellingActivity"
+            android:exported="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.DeviceDefault">
+            <intent-filter>
+                <action android:name="com.mocap.watch.SELF_LABELLING" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <activity
             android:name=".activity.PhoneArmCalibActivity"
             android:exported="false"
-            android:theme="@android:style/Theme.DeviceDefault">
+            android:taskAffinity="" android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
                 <action android:name="com.mocap.watch.PHONE_ARM_CALIBRATION" />
                 <category android:name="android.intent.category.DEFAULT" />
